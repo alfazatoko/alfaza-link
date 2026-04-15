@@ -6,7 +6,7 @@ import {
   getSettings, updateSettings,
   getTransactions, getSaldoHistory, getBalance, resetBalance,
   getAttendance, getIzinList, createIzin, updateIzin,
-  resetAllData, getDailyNotes, unlockReport,
+  resetAllData, getDailyNotes,
   type UserRecord, type SettingsRecord, type TransactionRecord, type AttendanceRecord, type IzinRecord, type SaldoHistoryRecord, type CategoryLabels,
 } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Users, BarChart3, TrendingUp, FileText, DollarSign, Fingerprint,
   Database, Settings, ArrowLeft, Plus, Trash2, Edit, Eye, EyeOff,
-  Shield, Check, X, Clock, CalendarDays, Download, RefreshCw,
+  Shield, Check, X, CalendarDays, Download, RefreshCw,
   BookOpen, AlertTriangle, Star, Activity, Loader2, Lock
 } from "lucide-react";
 import { format } from "date-fns";
@@ -861,14 +861,10 @@ function SettingPage({ goBack }: { goBack: () => void }) {
   const [pinEnabled, setPinEnabled] = useState(false);
   const [quotes, setQuotes] = useState("");
   const [runningText, setRunningText] = useState("");
-  const [autoLockHour, setAutoLockHour] = useState(1);
-  const [autoLockMinute, setAutoLockMinute] = useState(0);
   const [autoResetHour, setAutoResetHour] = useState(2);
   const [autoResetMinute, setAutoResetMinute] = useState(0);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [unlockingKasir, setUnlockingKasir] = useState("");
-  const [unlockUsers, setUnlockUsers] = useState<UserRecord[]>([]);
   const defaultLabels: CategoryLabels = {
     BANK: { name: "BANK", visible: true },
     FLIP: { name: "FLIP", visible: true },
@@ -887,15 +883,12 @@ function SettingPage({ goBack }: { goBack: () => void }) {
       setPinEnabled(s.pinEnabled || false);
       setQuotes(s.mutiaraQuotes || "");
       setRunningText(s.runningText || "");
-      setAutoLockHour(s.autoLockHour ?? 1);
-      setAutoLockMinute(s.autoLockMinute ?? 0);
       setAutoResetHour(s.autoResetHour ?? 2);
       setAutoResetMinute(s.autoResetMinute ?? 0);
       if (s.categoryLabels) {
         setCatLabels(s.categoryLabels);
       }
     }).catch(() => {});
-    getUsers().then(u => setUnlockUsers(u)).catch(() => {});
   }, []);
 
   const handleSave = async () => {
@@ -907,8 +900,6 @@ function SettingPage({ goBack }: { goBack: () => void }) {
         pinEnabled,
         mutiaraQuotes: quotes,
         runningText,
-        autoLockHour,
-        autoLockMinute,
         autoResetHour,
         autoResetMinute,
         categoryLabels: catLabels,
@@ -953,23 +944,11 @@ function SettingPage({ goBack }: { goBack: () => void }) {
     }
   };
 
-  const handleUnlock = async (kasirName: string) => {
-    const today = getWibDate();
-    setUnlockingKasir(kasirName);
-    try {
-      await unlockReport(kasirName, today);
-      toast({ title: `Laporan ${kasirName} hari ini dibuka` });
-    } catch {
-      toast({ title: "Gagal unlock", variant: "destructive" });
-    } finally { setUnlockingKasir(""); }
-  };
-
   const updateCatLabel = (key: keyof CategoryLabels, field: "name" | "visible", value: string | boolean) => {
     setCatLabels(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
   };
 
   const catKeys: (keyof CategoryLabels)[] = ["BANK", "FLIP", "APP", "DANA", "AKS", "TARIK"];
-  const unlockKasirList = unlockUsers.filter(u => u.role !== "owner" && u.isActive);
 
   return (
     <div className="px-3 pt-3 pb-20 min-h-screen bg-gray-50">
@@ -1007,24 +986,6 @@ function SettingPage({ goBack }: { goBack: () => void }) {
 
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-amber-500" /> Jam Otomatis Kunci Laporan
-          </h3>
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 block mb-1">Jam</label>
-              <input type="number" min={0} max={23} value={autoLockHour} onChange={e => setAutoLockHour(parseInt(e.target.value) || 0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none text-center font-bold" />
-            </div>
-            <span className="font-bold text-lg mt-4">:</span>
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 block mb-1">Menit</label>
-              <input type="number" min={0} max={59} value={autoLockMinute} onChange={e => setAutoLockMinute(parseInt(e.target.value) || 0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none text-center font-bold" />
-            </div>
-          </div>
-          <p className="text-[10px] text-gray-400 mt-2">Laporan akan otomatis terkunci pada jam ini (WIB)</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
             <RefreshCw className="w-4 h-4 text-green-500" /> Jam Reset Otomatis Saldo
           </h3>
           <div className="flex items-center gap-2">
@@ -1039,28 +1000,6 @@ function SettingPage({ goBack }: { goBack: () => void }) {
             </div>
           </div>
           <p className="text-[10px] text-gray-400 mt-2">Saldo semua kasir akan direset otomatis pada jam ini (WIB)</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
-            <Lock className="w-4 h-4 text-emerald-500" /> Unlock Laporan Hari Ini
-          </h3>
-          {unlockKasirList.length === 0 ? (
-            <p className="text-xs text-gray-400">Tidak ada kasir aktif</p>
-          ) : (
-            <div className="space-y-2">
-              {unlockKasirList.map(k => (
-                <div key={k.name} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
-                  <span className="text-xs font-semibold">{k.name}</span>
-                  <button onClick={() => handleUnlock(k.name)} disabled={unlockingKasir === k.name} className="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 disabled:opacity-50">
-                    {unlockingKasir === k.name ? <Loader2 className="w-3 h-3 animate-spin" /> : <Lock className="w-3 h-3" />}
-                    Unlock
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <p className="text-[10px] text-gray-400 mt-2">Buka kunci laporan yang sudah dikunci hari ini</p>
         </div>
 
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
