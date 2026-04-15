@@ -1253,14 +1253,10 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="bg-red-50 rounded-xl p-2.5 text-center">
                     <p className="text-xs font-extrabold text-red-600">{formatRupiah(data.tarik)}</p>
                     <p className="text-[9px] text-red-500">Tarik Tunai</p>
-                  </div>
-                  <div className="bg-green-50 rounded-xl p-2.5 text-center">
-                    <p className="text-xs font-extrabold text-green-700">{formatRupiah(data.nonTunai)}</p>
-                    <p className="text-[9px] text-green-500">Non Tunai</p>
                   </div>
                   <div className="bg-red-50 rounded-xl p-2.5 text-center">
                     <p className="text-xs font-extrabold text-red-600">{formatRupiah(data.totalUangCash)}</p>

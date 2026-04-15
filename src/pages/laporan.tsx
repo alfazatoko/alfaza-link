@@ -3,8 +3,8 @@ import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import {
   getTransactions, getSaldoHistory, getDailySnapshot, getDailyNotes,
-  lockReport, resetBalance,
-  type TransactionRecord, type SaldoHistoryRecord, type DailyNoteRecord
+  lockReport, resetBalance, getUsers,
+  type TransactionRecord, type SaldoHistoryRecord, type DailyNoteRecord, type UserRecord
 } from "@/lib/firestore";
 import { formatRupiah, getWibDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -14,8 +14,16 @@ export default function Laporan() {
   const { user, shift } = useAuth();
   const { toast } = useToast();
   const today = getWibDate();
+  const now = new Date();
+
+  const isOwner = user?.role === "owner";
 
   const [date, setDate] = useState(today);
+  const [month, setMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const [viewMode, setViewMode] = useState<"day" | "month">("day");
+  const [kasirFilter, setKasirFilter] = useState("Semua");
+  const [kasirList, setKasirList] = useState<UserRecord[]>([]);
+
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [saldoHistory, setSaldoHistory] = useState<SaldoHistoryRecord[]>([]);
   const [isLocked, setIsLocked] = useState(false);
@@ -26,25 +34,47 @@ export default function Laporan() {
 
   const reportRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (isOwner) {
+      getUsers().then(u => setKasirList(u.filter(k => k.role !== "owner" && k.isActive))).catch(() => {});
+    }
+  }, [isOwner]);
+
+  const getDateRange = useCallback(() => {
+    if (viewMode === "day") return { startDate: date, endDate: date };
+    const [y, m] = month.split("-").map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    return {
+      startDate: `${y}-${String(m).padStart(2, "0")}-01`,
+      endDate: `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+    };
+  }, [viewMode, date, month]);
+
   const loadData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const kasirName = user.role === "owner" ? undefined : user.name;
+      const { startDate, endDate } = getDateRange();
+      let kasirName: string | undefined;
+      if (!isOwner) {
+        kasirName = user.name;
+      } else if (kasirFilter !== "Semua") {
+        kasirName = kasirFilter;
+      }
       const [txs, saldo, snap, notes] = await Promise.all([
-        getTransactions({ kasirName, startDate: date, endDate: date }),
-        getSaldoHistory({ kasirName, startDate: date, endDate: date }),
-        getDailySnapshot(user.name, date),
-        getDailyNotes(user.name, date),
+        getTransactions({ kasirName, startDate, endDate }),
+        getSaldoHistory({ kasirName, startDate, endDate }),
+        isOwner ? Promise.resolve(null) : getDailySnapshot(user.name, startDate),
+        isOwner ? Promise.resolve({ sisaSaldoBank: 0, saldoRealApp: 0 }) : getDailyNotes(user.name, startDate),
       ]);
       setTransactions(txs);
       setSaldoHistory(saldo);
-      setIsLocked(snap?.locked || false);
-      setDailyNotes(notes);
+      setIsLocked((snap as any)?.locked || false);
+      setDailyNotes(notes as DailyNoteRecord);
     } catch {} finally {
       setLoading(false);
     }
-  }, [user, date]);
+  }, [user, isOwner, kasirFilter, getDateRange]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -235,13 +265,45 @@ export default function Laporan() {
     <div className="px-3 pt-3 pb-24">
       <Header />
 
+      {isOwner && (
+        <>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <button onClick={() => setViewMode("day")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "day" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}>
+              Per Hari
+            </button>
+            <button onClick={() => setViewMode("month")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "month" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}>
+              Per Bulan
+            </button>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 mb-2 scrollbar-hide">
+            {["Semua", ...kasirList.map(k => k.name)].map(name => (
+              <button
+                key={name}
+                onClick={() => setKasirFilter(name)}
+                className={`whitespace-nowrap px-3 py-1.5 rounded-full text-[11px] font-bold transition flex-shrink-0 ${kasirFilter === name ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
       <div className="flex items-center gap-2 mb-3">
-        <input
-          type="date"
-          value={date}
-          onChange={e => setDate(e.target.value)}
-          className="flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-xs bg-white outline-none"
-        />
+        {viewMode === "day" ? (
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-xs bg-white outline-none"
+          />
+        ) : (
+          <input
+            type="month"
+            value={month}
+            onChange={e => setMonth(e.target.value)}
+            className="flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-xs bg-white outline-none"
+          />
+        )}
         <button
           onClick={() => loadData()}
           className="bg-blue-600 text-white px-5 py-2.5 rounded-full text-xs font-bold active:scale-95 transition"
