@@ -253,25 +253,19 @@ async function updateBalance(kasirName: string, tx: Omit<TransactionRecord, "id"
 
   if (tx.category === "NON TUNAI" || isNonTunai) {
     bal.bankNonTunai += nominal;
-  } else if (tx.category === "BANK") {
-    bal.bank += nominal;
-    if (isNonTunai) bal.bankNonTunai += nominal;
-  } else if (tx.category === "FLIP") {
-    bal.bank += nominal;
-  } else if (tx.category === "APP PULSA") {
-    bal.bank += nominal;
-  } else if (tx.category === "DANA") {
-    bal.bank += nominal;
+  } else if (["BANK", "FLIP", "APP PULSA", "DANA"].includes(tx.category)) {
+    bal.cash += nominal;
+    bal.bank -= nominal;
   } else if (tx.category === "TARIK TUNAI") {
     bal.tarik += nominal;
-    if (isNonTunai) bal.tarikNonTunai += nominal;
+    bal.cash -= nominal;
   } else if (tx.category === "AKSESORIS") {
     bal.aks += nominal;
-    if (isNonTunai) bal.aksNonTunai += nominal;
   }
 
-  bal.adminTotal += admin;
-  bal.cash = bal.bank - bal.tarik + bal.adminTotal + bal.aks;
+  if (!(tx.category === "NON TUNAI" || isNonTunai)) {
+    bal.adminTotal += admin;
+  }
 
   if (snap.exists()) {
     await updateDoc(ref, bal as any);
@@ -293,15 +287,18 @@ async function reverseBalance(kasirName: string, tx: TransactionRecord) {
   if (tx.category === "NON TUNAI" || isNonTunai) {
     bal.bankNonTunai -= nominal;
   } else if (["BANK", "FLIP", "APP PULSA", "DANA"].includes(tx.category)) {
-    bal.bank -= nominal;
+    bal.cash -= nominal;
+    bal.bank += nominal;
   } else if (tx.category === "TARIK TUNAI") {
     bal.tarik -= nominal;
+    bal.cash += nominal;
   } else if (tx.category === "AKSESORIS") {
     bal.aks -= nominal;
   }
 
-  bal.adminTotal -= admin;
-  bal.cash = bal.bank - bal.tarik + bal.adminTotal + bal.aks;
+  if (!(tx.category === "NON TUNAI" || isNonTunai)) {
+    bal.adminTotal -= admin;
+  }
 
   await updateDoc(ref, bal as any);
 }
