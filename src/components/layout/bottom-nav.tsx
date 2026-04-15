@@ -27,7 +27,11 @@ export function BottomNav() {
     { icon: LogOut, label: "Keluar", href: "logout", isLogout: true },
   ];
 
-  const navItems = isOwnerMode ? ownerNav : kasirNav.filter(item => !item.ownerOnly || user?.role === "owner");
+  const navItems = isOwnerMode ? ownerNav : kasirNav.filter(item => {
+    if (item.ownerOnly && user?.role !== "owner") return false;
+    if (item.href === "/non-tunai" && user?.role === "owner") return false;
+    return true;
+  });
 
   const handleLogout = () => {
     logout();
