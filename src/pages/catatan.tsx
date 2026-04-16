@@ -4,7 +4,7 @@ import { Header } from "@/components/layout/header";
 import { getHutangList, createHutang, updateHutang, deleteHutang, getKontakList, createKontak, updateKontak, deleteKontak, type HutangRecord, type KontakRecord } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Receipt, BookUser, Plus, Trash2, Edit, Check, Search, Ban, Phone } from "lucide-react";
+import { Receipt, BookUser, Plus, Trash2, Edit, Check, Search, Ban, Phone, Copy } from "lucide-react";
 
 export default function Catatan() {
   const { user } = useAuth();
@@ -195,7 +195,10 @@ export default function Catatan() {
                   <span className={`font-extrabold text-sm ${h.lunas ? 'text-green-600 line-through' : 'text-red-600'}`}>{formatRupiah(h.nominal)}</span>
                 </div>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-[10px] text-gray-400">{h.tanggal}{h.lunas && h.tglLunas ? ` • Lunas: ${h.tglLunas}` : ""}</span>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-gray-400">{h.tanggal}{h.lunas && h.tglLunas ? ` • Lunas: ${h.tglLunas}` : ""}</span>
+                    {h.createdBy && <span className="text-[10px] text-blue-400 mt-0.5">Dibuat oleh: {h.createdBy}</span>}
+                  </div>
                   <div className="flex gap-1.5">
                     <button onClick={() => handleLunas(h)} className={`text-[10px] px-2 py-1 rounded-lg font-bold ${h.lunas ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
                       {h.lunas ? <Ban className="w-3 h-3 inline" /> : <Check className="w-3 h-3 inline" />} {h.lunas ? "Batal" : "Lunas"}
@@ -221,12 +224,20 @@ export default function Catatan() {
             filteredKontak.map(k => (
               <div key={k.id} className="bg-white rounded-2xl p-3.5 mb-2 shadow-sm border border-gray-100">
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <span className="font-bold text-sm text-gray-800">{k.nama}</span>
-                    {k.nomor && <p className="text-[11px] text-blue-500 mt-0.5 flex items-center gap-1"><Phone className="w-3 h-3" /> {k.nomor}</p>}
-                    {k.keterangan && <p className="text-[10px] text-gray-400 mt-0.5">{k.keterangan}</p>}
+                    {k.nomor && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-base font-bold text-blue-600 flex items-center gap-1"><Phone className="w-4 h-4" /> {k.nomor}</p>
+                        <button onClick={() => { navigator.clipboard.writeText(k.nomor || ""); toast({ title: "Nomor disalin" }); }} className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-0.5 active:scale-95 transition">
+                          <Copy className="w-3 h-3" /> Copy
+                        </button>
+                      </div>
+                    )}
+                    {k.keterangan && <p className="text-[11px] text-gray-500 mt-0.5">{k.keterangan}</p>}
+                    {k.createdBy && <p className="text-[10px] text-blue-400 mt-0.5">Dibuat oleh: {k.createdBy}</p>}
                   </div>
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5 flex-shrink-0 ml-2">
                     <button onClick={() => openEditKontak(k)} className="text-[10px] px-2 py-1 rounded-lg font-bold bg-blue-100 text-blue-600"><Edit className="w-3 h-3 inline" /></button>
                     <button onClick={() => handleDeleteKontak(k.id)} className="text-[10px] px-2 py-1 rounded-lg font-bold bg-red-100 text-red-600"><Trash2 className="w-3 h-3 inline" /></button>
                   </div>
