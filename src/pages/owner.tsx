@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import {
@@ -15,10 +15,12 @@ import {
   Users, BarChart3, TrendingUp, FileText, DollarSign, Fingerprint,
   Database, Settings, ArrowLeft, Plus, Trash2, Edit, Eye, EyeOff,
   Shield, Check, X, CalendarDays, Download, RefreshCw,
-  BookOpen, AlertTriangle, Star, Activity, Loader2, Lock
+  BookOpen, AlertTriangle, Star, Activity, Loader2, Lock,
+  Share2, ImageIcon
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
+import html2canvas from "html2canvas";
 
 type OwnerPage = "main" | "kasir" | "grafik" | "performa" | "izin" | "gajih" | "absen" | "backup" | "setting" | "ringkasan";
 
@@ -273,21 +275,45 @@ function KasirPage({ goBack }: { goBack: () => void }) {
 
 function GrafikPage({ goBack }: { goBack: () => void }) {
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+  const [users, setUsers] = useState<UserRecord[]>([]);
+  const [filterKasir, setFilterKasir] = useState("Semua");
   const today = getWibDate();
+  const now = new Date();
+  const [viewMode, setViewMode] = useState<"range" | "bulan">("range");
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
     return d.toISOString().split("T")[0];
   });
   const [endDate, setEndDate] = useState(today);
+  const [month, setMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
 
   useEffect(() => {
-    getTransactions({ startDate, endDate }).then(setTransactions).catch(() => {});
-  }, [startDate, endDate]);
+    let sDate: string, eDate: string;
+    if (viewMode === "bulan") {
+      const [y, m] = month.split("-").map(Number);
+      sDate = `${y}-${String(m).padStart(2, "0")}-01`;
+      const lastDay = new Date(y, m, 0).getDate();
+      eDate = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    } else {
+      sDate = startDate;
+      eDate = endDate;
+    }
+    Promise.all([
+      getTransactions({ startDate: sDate, endDate: eDate }),
+      getUsers(),
+    ]).then(([t, u]) => {
+      setTransactions(t);
+      setUsers(u);
+    }).catch(() => {});
+  }, [startDate, endDate, month, viewMode]);
+
+  const kasirList = users.filter(u => u.role !== "owner" && u.isActive);
+  const filteredTx = filterKasir === "Semua" ? transactions : transactions.filter(t => t.kasirName === filterKasir);
 
   const dailyData = useMemo(() => {
     const map = new Map<string, { bank: number; flip: number; app: number; dana: number; tarik: number; aks: number; admin: number }>();
-    transactions.forEach(tx => {
+    filteredTx.forEach(tx => {
       const d = tx.transDate;
       if (!map.has(d)) map.set(d, { bank: 0, flip: 0, app: 0, dana: 0, tarik: 0, aks: 0, admin: 0 });
       const entry = map.get(d)!;
@@ -300,7 +326,7 @@ function GrafikPage({ goBack }: { goBack: () => void }) {
       entry.admin += tx.admin || 0;
     });
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([date, data]) => ({ date: date.slice(5), ...data }));
-  }, [transactions]);
+  }, [filteredTx]);
 
   const maxVal = Math.max(1, ...dailyData.map(d => Math.max(d.bank, d.flip, d.app, d.dana, d.tarik, d.aks)));
   const categories = [
@@ -314,9 +340,48 @@ function GrafikPage({ goBack }: { goBack: () => void }) {
 
   return (
     <PageWrapper title="Grafik Transaksi" icon={BarChart3} goBack={goBack}>
-      <div className="flex gap-1.5 items-center mb-4">
-        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="flex-1 rounded-xl border border-gray-200 px-2.5 py-2 text-xs bg-white outline-none" />
-        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="flex-1 rounded-xl border border-gray-200 px-2.5 py-2 text-xs bg-white outline-none" />
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <button
+          onClick={() => setViewMode("range")}
+          className={`py-2 rounded-full text-xs font-bold transition ${viewMode === "range" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+        >
+          Per Tanggal
+        </button>
+        <button
+          onClick={() => setViewMode("bulan")}
+          className={`py-2 rounded-full text-xs font-bold transition ${viewMode === "bulan" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+        >
+          Per Bulan
+        </button>
+      </div>
+
+      {viewMode === "range" ? (
+        <div className="flex gap-1.5 items-center mb-3">
+          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="flex-1 rounded-xl border border-gray-200 px-2.5 py-2 text-xs bg-white outline-none" />
+          <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="flex-1 rounded-xl border border-gray-200 px-2.5 py-2 text-xs bg-white outline-none" />
+        </div>
+      ) : (
+        <div className="mb-3">
+          <input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-xs bg-white outline-none" />
+        </div>
+      )}
+
+      <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
+        <button
+          onClick={() => setFilterKasir("Semua")}
+          className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === "Semua" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+        >
+          Semua
+        </button>
+        {kasirList.map(k => (
+          <button
+            key={k.name}
+            onClick={() => setFilterKasir(k.name)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === k.name ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+          >
+            {k.name}
+          </button>
+        ))}
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -581,6 +646,7 @@ function IzinPage({ goBack }: { goBack: () => void }) {
   const [tanggal, setTanggal] = useState(getWibDate());
   const [alasan, setAlasan] = useState("");
   const [saving, setSaving] = useState(false);
+  const [filterKasir, setFilterKasir] = useState("Semua");
   const now = new Date();
   const [month, setMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
 
@@ -593,6 +659,7 @@ function IzinPage({ goBack }: { goBack: () => void }) {
   useEffect(() => { loadData(); }, [loadData]);
 
   const kasirList = users.filter(u => u.role !== "owner" && u.isActive);
+  const filteredIzin = filterKasir === "Semua" ? izinList : izinList.filter(iz => iz.nama === filterKasir);
 
   const handleSubmit = async () => {
     if (!nama || !alasan) { toast({ title: "Isi semua field", variant: "destructive" }); return; }
@@ -628,10 +695,28 @@ function IzinPage({ goBack }: { goBack: () => void }) {
         </button>
       </div>
 
-      {izinList.length === 0 ? (
+      <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
+        <button
+          onClick={() => setFilterKasir("Semua")}
+          className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === "Semua" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+        >
+          Semua
+        </button>
+        {kasirList.map(k => (
+          <button
+            key={k.name}
+            onClick={() => setFilterKasir(k.name)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === k.name ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+          >
+            {k.name}
+          </button>
+        ))}
+      </div>
+
+      {filteredIzin.length === 0 ? (
         <div className="text-center py-10 text-gray-400 text-sm">Tidak ada data izin</div>
       ) : (
-        izinList.map(iz => (
+        filteredIzin.map(iz => (
           <div key={iz.id} className="bg-white rounded-2xl p-4 mb-2.5 shadow-sm border border-gray-100">
             <div className="flex justify-between items-start mb-2">
               <div>
@@ -683,80 +768,316 @@ function IzinPage({ goBack }: { goBack: () => void }) {
 }
 
 function GajihPage({ goBack }: { goBack: () => void }) {
+  const { toast } = useToast();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [izinList, setIzinList] = useState<IzinRecord[]>([]);
   const now = new Date();
   const [month, setMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
-  const [gajiPerHari, setGajiPerHari] = useState(() => localStorage.getItem("alfaza_gaji_per_hari") || "50000");
+  const [selectedKasir, setSelectedKasir] = useState("");
+  const [mode, setMode] = useState<"harian" | "bulanan">("harian");
+  const [gajiPerHariDisplay, setGajiPerHariDisplay] = useState(() => formatThousands(localStorage.getItem("alfaza_gaji_per_hari") || "50000"));
+  const [gajiBulananDisplay, setGajiBulananDisplay] = useState(() => formatThousands(localStorage.getItem("alfaza_gaji_bulanan") || "0"));
+  const [bonusDisplay, setBonusDisplay] = useState("0");
+  const [editHariKerja, setEditHariKerja] = useState(false);
+  const [hariKerjaManual, setHariKerjaManual] = useState("");
+  const [catatan, setCatatan] = useState("");
+  const slipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     Promise.all([
       getUsers(),
       getAttendance({ month }),
-    ]).then(([u, a]) => {
+      getIzinList({ month }),
+    ]).then(([u, a, iz]) => {
       setUsers(u);
       setAttendance(a);
+      setIzinList(iz);
+      if (!selectedKasir && u.filter(x => x.role !== "owner" && x.isActive).length > 0) {
+        setSelectedKasir(u.filter(x => x.role !== "owner" && x.isActive)[0].name);
+      }
     }).catch(() => {});
   }, [month]);
 
   useEffect(() => {
-    localStorage.setItem("alfaza_gaji_per_hari", gajiPerHari);
-  }, [gajiPerHari]);
+    localStorage.setItem("alfaza_gaji_per_hari", parseThousands(gajiPerHariDisplay));
+  }, [gajiPerHariDisplay]);
+
+  useEffect(() => {
+    localStorage.setItem("alfaza_gaji_bulanan", parseThousands(gajiBulananDisplay));
+  }, [gajiBulananDisplay]);
 
   const kasirList = users.filter(u => u.role !== "owner" && u.isActive);
-  const gajiNum = parseInt(parseThousands(gajiPerHari)) || 50000;
+  const absenCount = attendance.filter(a => a.kasirName === selectedKasir).length;
+  const izinCount = izinList.filter(iz => iz.nama === selectedKasir && iz.status === "approved").length;
 
-  const gajiData = kasirList.map(k => {
-    const absenCount = attendance.filter(a => a.kasirName === k.name).length;
-    return {
-      name: k.name,
-      absen: absenCount,
-      total: absenCount * gajiNum,
-    };
-  });
+  const hariKerja = editHariKerja ? (parseInt(hariKerjaManual) || 0) : absenCount;
+  const gajiPerHari = parseInt(parseThousands(gajiPerHariDisplay)) || 0;
+  const gajiBulanan = parseInt(parseThousands(gajiBulananDisplay)) || 0;
+  const bonus = parseInt(parseThousands(bonusDisplay)) || 0;
+
+  const gajiPokok = mode === "harian" ? hariKerja * gajiPerHari : gajiBulanan;
+  const totalGaji = gajiPokok + bonus;
+
+  const [y, m2] = month.split("-").map(Number);
+  const monthLabel = format(new Date(y, m2 - 1), "MMMM yyyy", { locale: idLocale });
+
+  useEffect(() => {
+    setHariKerjaManual(String(absenCount));
+    setEditHariKerja(false);
+  }, [selectedKasir, month, absenCount]);
+
+  const handleShareText = async () => {
+    const lines = [
+      `Slip Gaji - ${monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}`,
+      `Nama: ${selectedKasir}`,
+      `Hari Kerja: ${hariKerja} hari`,
+      `Izin: ${izinCount} hari`,
+      `Gaji Pokok: ${formatRupiah(gajiPokok)}`,
+      `Bonus: ${formatRupiah(bonus)}`,
+      `Total Gaji: ${formatRupiah(totalGaji)}`,
+    ];
+    if (catatan) lines.push(`Catatan: ${catatan}`);
+    const text = lines.join("\n");
+    try {
+      if (navigator.share) {
+        await navigator.share({ text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        toast({ title: "Teks disalin ke clipboard" });
+      }
+    } catch { }
+  };
+
+  const handleShareImage = async () => {
+    if (!slipRef.current) return;
+    try {
+      const canvas = await html2canvas(slipRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `slip-gaji-${selectedKasir}-${month}.png`, { type: "image/png" });
+        if (navigator.share && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] });
+        } else {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = file.name;
+          link.click();
+          URL.revokeObjectURL(url);
+          toast({ title: "Gambar diunduh" });
+        }
+      }, "image/png");
+    } catch {
+      toast({ title: "Gagal membuat gambar", variant: "destructive" });
+    }
+  };
 
   return (
-    <PageWrapper title="Data Gaji Kasir" icon={DollarSign} goBack={goBack}>
-      <div className="flex gap-2 mb-3">
-        <input type="month" value={month} onChange={e => setMonth(e.target.value)} className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-xs bg-white outline-none" />
+    <div className="px-3 pt-3 pb-20 min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      <div className="flex items-center gap-2 mb-4">
+        <button onClick={goBack} className="text-gray-600 flex items-center gap-1 text-sm font-semibold">
+          <ArrowLeft className="w-4 h-4" /> Kembali
+        </button>
+        <span className="ml-2 text-base font-extrabold flex items-center gap-1.5">
+          <DollarSign className="w-5 h-5 text-green-600" /> Hitung Gaji Karyawan
+        </span>
       </div>
 
-      <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-gray-100">
-        <label className="text-[11px] font-semibold text-gray-500 block mb-1">Gaji Per Hari (Rp)</label>
-        <input
-          value={gajiPerHari}
-          onChange={e => setGajiPerHari(formatThousands(e.target.value))}
-          inputMode="numeric"
-          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none font-bold"
-        />
-      </div>
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+        <div className="mb-4">
+          <label className="text-xs font-semibold text-gray-500 block mb-1">Pilih Karyawan:</label>
+          <select
+            value={selectedKasir}
+            onChange={e => setSelectedKasir(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm font-bold outline-none bg-white"
+          >
+            {kasirList.map(k => <option key={k.name} value={k.name}>{k.name.toUpperCase()}</option>)}
+          </select>
+        </div>
 
-      {gajiData.length === 0 ? (
-        <div className="text-center py-10 text-gray-400 text-sm">Tidak ada data</div>
-      ) : (
-        gajiData.map(g => (
-          <div key={g.name} className="bg-white rounded-2xl p-4 mb-2.5 shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center">
-              <div>
-                <span className="font-bold text-sm">{g.name}</span>
-                <p className="text-[11px] text-gray-500 mt-0.5">{g.absen} hari kerja</p>
-              </div>
-              <div className="text-right">
-                <span className="font-extrabold text-base text-green-600">{formatRupiah(g.total)}</span>
-                <p className="text-[10px] text-gray-400">{g.absen} x {formatRupiah(gajiNum)}</p>
-              </div>
+        <div className="mb-4">
+          <label className="text-xs font-semibold text-gray-500 block mb-1">Periode Bulan:</label>
+          <input
+            type="month"
+            value={month}
+            onChange={e => setMonth(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm font-bold outline-none bg-white"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="text-xs font-semibold text-gray-500 block mb-2">Mode Penghitungan:</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setMode("harian")}
+              className={`py-2.5 rounded-full text-xs font-bold transition border-2 ${mode === "harian" ? "bg-blue-600 text-white border-blue-600 shadow" : "bg-white text-gray-500 border-gray-200"}`}
+            >
+              {mode === "harian" && <Check className="w-3.5 h-3.5 inline mr-1" />}Gajih / Hari
+            </button>
+            <button
+              onClick={() => setMode("bulanan")}
+              className={`py-2.5 rounded-full text-xs font-bold transition border-2 ${mode === "bulanan" ? "bg-blue-600 text-white border-blue-600 shadow" : "bg-white text-gray-500 border-gray-200"}`}
+            >
+              {mode === "bulanan" && <Check className="w-3.5 h-3.5 inline mr-1" />}Gajih Full 1 Bulan
+            </button>
+          </div>
+        </div>
+
+        {mode === "harian" ? (
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 block mb-1">Gaji / Hari:</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={gajiPerHariDisplay}
+                onChange={e => setGajiPerHariDisplay(formatThousands(e.target.value))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 block mb-1">Bonus:</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={bonusDisplay}
+                onChange={e => setBonusDisplay(formatThousands(e.target.value))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none"
+              />
             </div>
           </div>
-        ))
-      )}
+        ) : (
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 block mb-1">Gaji Full Bulan:</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={gajiBulananDisplay}
+                onChange={e => setGajiBulananDisplay(formatThousands(e.target.value))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 block mb-1">Bonus:</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={bonusDisplay}
+                onChange={e => setBonusDisplay(formatThousands(e.target.value))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none"
+              />
+            </div>
+          </div>
+        )}
 
-      <div className="bg-blue-50 rounded-2xl p-4 mt-3 border border-blue-200">
-        <div className="flex justify-between items-center">
-          <span className="font-bold text-sm text-blue-700">Total Gaji Bulan Ini</span>
-          <span className="font-extrabold text-lg text-blue-700">{formatRupiah(gajiData.reduce((s, g) => s + g.total, 0))}</span>
+        <div className="grid grid-cols-2 gap-3 mb-2">
+          <div>
+            <label className="text-xs font-semibold text-gray-500 flex items-center gap-1.5 mb-1">
+              Hari Kerja:
+              <input
+                type="checkbox"
+                checked={editHariKerja}
+                onChange={e => { setEditHariKerja(e.target.checked); if (e.target.checked) setHariKerjaManual(String(absenCount)); }}
+                className="w-3.5 h-3.5"
+              />
+              <span className="text-blue-600 text-[10px]">Edit</span>
+            </label>
+            {editHariKerja ? (
+              <input
+                type="number"
+                value={hariKerjaManual}
+                onChange={e => setHariKerjaManual(e.target.value)}
+                className="w-full border border-blue-300 rounded-xl px-3 py-2.5 text-sm font-bold outline-none bg-blue-50"
+              />
+            ) : (
+              <div className="w-full bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 text-sm font-bold text-blue-700">
+                {absenCount} hari
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 block mb-1">Izin (Hari):</label>
+            <div className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold text-gray-700">
+              {izinCount}
+            </div>
+          </div>
+        </div>
+
+        <p className="text-[11px] text-gray-400 italic mb-4">
+          *Hari kerja dari absen: <span className="font-semibold">{absenCount} hari</span>. Centang Edit untuk ubah manual.
+        </p>
+
+        <div className="mb-0">
+          <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1">
+            ✏️ CATATAN:
+          </label>
+          <textarea
+            value={catatan}
+            onChange={e => setCatatan(e.target.value)}
+            placeholder="Tambahkan catatan untuk karyawan..."
+            rows={3}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none resize-none"
+          />
         </div>
       </div>
-    </PageWrapper>
+
+      <div ref={slipRef} className="bg-gradient-to-br from-blue-700 to-blue-500 rounded-2xl p-5 text-white shadow-lg mb-4">
+        <h2 className="text-center font-extrabold text-lg mb-0.5">Slip Gaji</h2>
+        <p className="text-center text-blue-200 text-sm mb-4">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</p>
+
+        <div className="space-y-2.5">
+          <div className="flex justify-between text-sm">
+            <span className="text-blue-100">Nama:</span>
+            <span className="font-bold">{selectedKasir.toUpperCase()}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-blue-100">Hari Kerja:</span>
+            <span className="font-bold">{hariKerja} hari</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-blue-100">Izin:</span>
+            <span className="font-bold">{izinCount} hari</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-blue-100">Gaji Pokok:</span>
+            <span className="font-bold">{formatRupiah(gajiPokok)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-blue-100">Bonus:</span>
+            <span className="font-bold">{formatRupiah(bonus)}</span>
+          </div>
+          {catatan && (
+            <div className="flex justify-between text-sm">
+              <span className="text-blue-100">Catatan:</span>
+              <span className="font-bold text-right max-w-[60%]">{catatan}</span>
+            </div>
+          )}
+          <div className="border-t border-blue-400 pt-2 mt-2">
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-blue-100">Total Gaji</span>
+              <span className="font-extrabold text-xl">{formatRupiah(totalGaji)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={handleShareText}
+          className="bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow active:scale-95 transition"
+        >
+          🍰 Bagikan Teks
+        </button>
+        <button
+          onClick={handleShareImage}
+          className="bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow active:scale-95 transition"
+        >
+          📸 Bagikan Gambar
+        </button>
+      </div>
+    </div>
   );
 }
 
