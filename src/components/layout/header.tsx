@@ -58,7 +58,7 @@ export function Header() {
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white/40">
-              <img src={`${import.meta.env.BASE_URL}alfaza-logo.png`} alt="Alfaza" className="w-full h-full object-cover" />
+              <img src={settings?.profilePhotoUrl || `${import.meta.env.BASE_URL}alfaza-logo.png`} alt="Alfaza" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-lg font-extrabold tracking-wide leading-tight">

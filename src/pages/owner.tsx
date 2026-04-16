@@ -1312,12 +1312,16 @@ function SettingPage({ goBack }: { goBack: () => void }) {
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <label className="text-[10px] text-gray-500 block mb-1">Jam</label>
-              <input type="number" min={0} max={23} value={autoResetHour} onChange={e => setAutoResetHour(parseInt(e.target.value) || 0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none text-center font-bold" />
+              <select value={autoResetHour} onChange={e => setAutoResetHour(parseInt(e.target.value))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none text-center font-bold bg-white appearance-none">
+                {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+              </select>
             </div>
             <span className="font-bold text-lg mt-4">:</span>
             <div className="flex-1">
               <label className="text-[10px] text-gray-500 block mb-1">Menit</label>
-              <input type="number" min={0} max={59} value={autoResetMinute} onChange={e => setAutoResetMinute(parseInt(e.target.value) || 0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none text-center font-bold" />
+              <select value={autoResetMinute} onChange={e => setAutoResetMinute(parseInt(e.target.value))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none text-center font-bold bg-white appearance-none">
+                {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+              </select>
             </div>
           </div>
           <p className="text-[10px] text-gray-400 mt-2">Saldo semua kasir akan direset otomatis pada jam ini (WIB)</p>

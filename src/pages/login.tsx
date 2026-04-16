@@ -70,16 +70,19 @@ function FirebaseAuthScreen() {
     }
   };
 
+  const [authSettings, setAuthSettings] = useState<{ profilePhotoUrl?: string; shopName?: string } | null>(null);
+  useEffect(() => { getSettings().then(s => setAuthSettings(s)).catch(() => {}); }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-700 via-blue-600 to-sky-500 flex items-center justify-center p-4">
       <div className="bg-white p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-2xl">
         <div className="flex justify-center mb-4">
           <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg">
-            <img src={logoUrl} alt="Alfaza" className="w-full h-full object-cover" />
+            <img src={authSettings?.profilePhotoUrl || logoUrl} alt="Alfaza" className="w-full h-full object-cover" />
           </div>
         </div>
 
-        <h2 className="text-2xl font-extrabold text-blue-700 text-center mb-0.5">ALFAZA CELL</h2>
+        <h2 className="text-2xl font-extrabold text-blue-700 text-center mb-0.5">{authSettings?.shopName || "ALFAZA CELL"}</h2>
         <p className="text-center text-gray-500 text-sm mb-1">Sistem Kasir Pro</p>
         <p className="text-center text-blue-500 text-xs font-semibold mb-6">
           {isRegister ? "Daftar Akun Baru" : "Login Firebase"}
@@ -178,6 +181,8 @@ function FirebaseAuthScreen() {
 function KasirSelectionScreen() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [pinEnabled, setPinEnabled] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState("");
+  const [shopNameSetting, setShopNameSetting] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState("");
@@ -208,6 +213,8 @@ function KasirSelectionScreen() {
           clearTimeout(timeout);
           setUsers(usersData.filter(u => u.isActive));
           setPinEnabled(settingsData.pinEnabled ?? false);
+          setProfilePhoto(settingsData.profilePhotoUrl || "");
+          setShopNameSetting(settingsData.shopName || "");
           setLoading(false);
         }
       } catch (err: any) {
@@ -272,11 +279,11 @@ function KasirSelectionScreen() {
       <div className="bg-white p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-2xl">
         <div className="flex justify-center mb-4">
           <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg">
-            <img src={logoUrl} alt="Alfaza" className="w-full h-full object-cover" />
+            <img src={profilePhoto || logoUrl} alt="Alfaza" className="w-full h-full object-cover" />
           </div>
         </div>
 
-        <h2 className="text-2xl font-extrabold text-blue-700 text-center mb-0.5">ALFAZA CELL</h2>
+        <h2 className="text-2xl font-extrabold text-blue-700 text-center mb-0.5">{shopNameSetting || "ALFAZA CELL"}</h2>
         <p className="text-center text-gray-500 text-sm mb-1">Sistem Kasir Pro</p>
         {firebaseUser && (
           <p className="text-center text-[10px] text-green-600 mb-4 font-semibold">
