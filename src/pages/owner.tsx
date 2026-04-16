@@ -6,6 +6,7 @@ import {
   getSettings, updateSettings,
   getTransactions, getSaldoHistory, getBalance, resetBalance,
   getAttendance, getIzinList, createIzin, updateIzin,
+  getHutangList, getKontakList,
   resetAllData, getDailyNotes,
   type UserRecord, type SettingsRecord, type TransactionRecord, type AttendanceRecord, type IzinRecord, type SaldoHistoryRecord, type CategoryLabels,
 } from "@/lib/firestore";
@@ -1137,6 +1138,55 @@ function BackupPage({ goBack }: { goBack: () => void }) {
     }
   };
 
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const handleDownloadExcel = async () => {
+    setExportingExcel(true);
+    try {
+      const XLSX = await import("xlsx");
+      const [trx, saldo, hutang, kontak, attendance, izin] = await Promise.all([
+        getTransactions({}),
+        getSaldoHistory({}),
+        getHutangList(),
+        getKontakList(),
+        getAttendance({}),
+        getIzinList(),
+      ]);
+
+      const wb = XLSX.utils.book_new();
+
+      const trxData: any[][] = [["#", "Tanggal", "Jam", "Kasir", "Shift", "Kategori", "Nominal", "Admin", "Keterangan", "Pembayaran"]];
+      trx.forEach((t, i) => trxData.push([i + 1, t.tanggal || "", t.transTime || "", t.kasirName || "", t.shift || "", t.category || "", t.nominal || 0, t.admin || 0, t.keterangan || "", t.paymentMethod || "tunai"]));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trxData), "Transaksi");
+
+      const saldoData: any[][] = [["#", "Tanggal", "Jam", "Kasir", "Jenis", "Nominal", "Keterangan"]];
+      saldo.forEach((s: any, i) => saldoData.push([i + 1, s.tanggal || "", s.jam || "", s.kasirName || "", s.jenis || "", s.nominal || 0, s.keterangan || ""]));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(saldoData), "Saldo History");
+
+      const hutangData: any[][] = [["#", "Tanggal", "Nama", "Nominal", "Keterangan", "Lunas", "Tgl Lunas", "Dibuat Oleh"]];
+      hutang.forEach((h, i) => hutangData.push([i + 1, h.tanggal || "", h.nama || "", h.nominal || 0, h.keterangan || "", h.lunas ? "Ya" : "Tidak", h.tglLunas || "", h.createdBy || ""]));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hutangData), "Kasbon");
+
+      const kontakData: any[][] = [["#", "Nama", "Nomor", "Keterangan", "Dibuat Oleh"]];
+      kontak.forEach((k, i) => kontakData.push([i + 1, k.nama || "", k.nomor || "", k.keterangan || "", k.createdBy || ""]));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kontakData), "Kontak");
+
+      const absenData: any[][] = [["#", "Tanggal", "Kasir", "Jam Masuk", "Jam Keluar", "Status"]];
+      attendance.forEach((a: any, i) => absenData.push([i + 1, a.tanggal || "", a.kasirName || "", a.jamMasuk || "", a.jamKeluar || "", a.status || ""]));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(absenData), "Absensi");
+
+      const izinData: any[][] = [["#", "Tanggal", "Kasir", "Jenis", "Keterangan", "Status"]];
+      izin.forEach((iz: any, i) => izinData.push([i + 1, iz.tanggal || "", iz.kasirName || "", iz.jenis || "", iz.keterangan || "", iz.status || ""]));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(izinData), "Izin");
+
+      XLSX.writeFile(wb, `backup-alfazalink-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast({ title: "Excel berhasil diunduh" });
+    } catch {
+      toast({ title: "Gagal export Excel", variant: "destructive" });
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   return (
     <PageWrapper title="Backup & Reset" icon={Database} goBack={goBack}>
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
@@ -1147,11 +1197,15 @@ function BackupPage({ goBack }: { goBack: () => void }) {
         <p className="text-[11px] text-amber-600">Data tersimpan di Firebase Cloud. Reset hanya menghapus data transaksi, bukan data kasir.</p>
       </div>
 
-      <div className="mb-5">
-        <button onClick={handleDownloadBackup} className="w-full bg-blue-600 text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition">
-          <Download className="w-4 h-4" /> Download Backup Data (JSON)
+      <div className="mb-5 space-y-2">
+        <button onClick={handleDownloadExcel} disabled={exportingExcel} className="w-full bg-emerald-600 text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition disabled:opacity-60">
+          {exportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {exportingExcel ? "Memproses..." : "Backup SEMUA Data (Excel)"}
         </button>
-        <p className="text-[10px] text-gray-500 text-center mt-1.5">Unduh data pengaturan & kasir sebagai file backup</p>
+        <p className="text-[10px] text-gray-500 text-center mt-0.5">Transaksi, saldo, kasbon, kontak, absen, izin — multi sheet</p>
+        <button onClick={handleDownloadBackup} className="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow active:scale-95 transition">
+          <Download className="w-4 h-4" /> Backup Pengaturan & Kasir (JSON)
+        </button>
       </div>
 
       <h3 className="font-bold text-sm text-gray-700 mb-3">Reset Saldo Per Kasir</h3>
@@ -1164,10 +1218,14 @@ function BackupPage({ goBack }: { goBack: () => void }) {
         </div>
       ))}
 
-      <div className="mt-6">
-        <button onClick={handleResetAll} disabled={resetting} className="w-full bg-red-600 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-red-500/30 active:scale-95 transition disabled:opacity-50">
+      <div className="bg-red-50 rounded-2xl p-4 border-2 border-red-200 mt-6">
+        <h3 className="font-bold text-sm text-red-700 mb-2 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" /> Zona Bahaya
+        </h3>
+        <p className="text-[11px] text-red-500 mb-3">Reset semua data transaksi, saldo, kasbon, kontak, absen, dan izin. Tindakan ini tidak bisa dibatalkan.</p>
+        <button onClick={handleResetAll} disabled={resetting} className="w-full bg-red-600 text-white py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-red-500/30 active:scale-95 transition disabled:opacity-50">
           {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-          RESET SEMUA DATA
+          RESET SELURUH DATA
         </button>
       </div>
     </PageWrapper>
@@ -1384,15 +1442,8 @@ function SettingPage({ goBack }: { goBack: () => void }) {
           {saving ? "Menyimpan..." : "Simpan Pengaturan"}
         </button>
 
-        <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
-          <h3 className="font-bold text-sm text-red-700 mb-2 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" /> Zona Bahaya
-          </h3>
-          <p className="text-[11px] text-red-500 mb-3">Reset semua data transaksi, saldo, kasbon, kontak, absen, dan izin. Tindakan ini tidak bisa dibatalkan.</p>
-          <button onClick={handleResetAll} disabled={resetting} className="w-full bg-red-600 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition disabled:opacity-50">
-            {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            RESET SELURUH DATA
-          </button>
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
+          <p className="text-[11px] text-blue-600">Reset Data & Backup sekarang ada di menu <strong>Backup</strong>.</p>
         </div>
       </div>
     </div>

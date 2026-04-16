@@ -288,6 +288,7 @@ export default function Beranda() {
         open={isSaldoModalOpen}
         onOpenChange={setIsSaldoModalOpen}
         kasirName={user?.name || ""}
+        isOwner={user?.role === "owner"}
       />
     </div>
   );
