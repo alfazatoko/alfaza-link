@@ -184,45 +184,140 @@ export default function Laporan() {
   const buildPdf = async () => {
     const { default: jsPDF } = await import("jspdf");
     const pdf = new jsPDF("p", "mm", "a4");
-    const margin = 15;
-    let y = margin;
-    pdf.setFontSize(16); pdf.setFont("helvetica", "bold");
-    pdf.text("ALFAZA CELL - Laporan Harian", margin, y); y += 8;
-    pdf.setFontSize(10); pdf.setFont("helvetica", "normal");
-    pdf.text(`Kasir: ${user?.name || "-"}  |  Shift: ${shift || "-"}  |  Tanggal: ${date}`, margin, y); y += 10;
-    pdf.setFontSize(11); pdf.setFont("helvetica", "bold");
-    pdf.text("Rincian Kategori", margin, y); y += 6;
+    const pw = 210;
+    const ml = 12;
+    const mr = 12;
+    const cw = pw - ml - mr;
+    let y = 10;
+
+    const checkPage = (need: number) => { if (y + need > 280) { pdf.addPage(); y = 12; } };
+
+    const sectionHeader = (text: string, bgR: number, bgG: number, bgB: number, h = 9) => {
+      checkPage(h + 2);
+      pdf.setFillColor(bgR, bgG, bgB);
+      pdf.roundedRect(ml, y, cw, h, 2, 2, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(10); pdf.setFont("helvetica", "bold");
+      pdf.text(text, ml + 4, y + h / 2 + 1);
+      y += h;
+    };
+
+    const sectionHeaderRight = (left: string, right: string, bgR: number, bgG: number, bgB: number, h = 10) => {
+      checkPage(h + 2);
+      pdf.setFillColor(bgR, bgG, bgB);
+      pdf.roundedRect(ml, y, cw, h, 2, 2, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(10); pdf.setFont("helvetica", "bold");
+      pdf.text(left, ml + 4, y + h / 2 + 1);
+      pdf.setFontSize(12);
+      pdf.text(right, ml + cw - 4, y + h / 2 + 1, { align: "right" });
+      y += h;
+    };
+
+    const row = (left: string, right: string, opts?: { leftColor?: number[]; rightColor?: number[]; bold?: boolean }) => {
+      checkPage(7);
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", opts?.bold ? "bold" : "normal");
+      const lc = opts?.leftColor || [55, 55, 55];
+      pdf.setTextColor(lc[0], lc[1], lc[2]);
+      pdf.text(left, ml + 4, y + 4.5);
+      const rc = opts?.rightColor || [55, 55, 55];
+      pdf.setTextColor(rc[0], rc[1], rc[2]);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(right, ml + cw - 4, y + 4.5, { align: "right" });
+      pdf.setDrawColor(230, 230, 230);
+      pdf.line(ml + 2, y + 6.5, ml + cw - 2, y + 6.5);
+      y += 7;
+    };
+
+    pdf.setFillColor(55, 95, 190);
+    pdf.roundedRect(ml, y, cw, 16, 3, 3, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(15); pdf.setFont("helvetica", "bold");
+    pdf.text("ALFAZA CELL", pw / 2, y + 7, { align: "center" });
     pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
-    categoryItems.forEach(c => { pdf.text(`${c.label} (${c.count}x)`, margin, y); pdf.text(formatRupiah(c.total), 120, y); y += 5; });
+    pdf.text("Laporan Harian", pw / 2, y + 12.5, { align: "center" });
+    y += 19;
+
+    pdf.setFillColor(240, 240, 245);
+    pdf.roundedRect(ml, y, cw, 8, 2, 2, "F");
+    pdf.setTextColor(80, 80, 100);
+    pdf.setFontSize(8); pdf.setFont("helvetica", "normal");
+    const infoKasir = isOwner && kasirFilter !== "Semua" ? kasirFilter : (user?.name || "-");
+    pdf.text(`Kasir: ${infoKasir}  |  Shift: ${shift || "-"}  |  Tanggal: ${viewMode === "day" ? date : month}`, pw / 2, y + 5, { align: "center" });
+    y += 11;
+
+    if (categoryItems.length > 0) {
+      sectionHeader("Rincian Kategori", 46, 160, 67);
+      categoryItems.forEach(c => {
+        row(`${c.label} (${c.count}x)`, formatRupiah(c.total), { leftColor: [30, 30, 200], rightColor: [30, 30, 200], bold: true });
+      });
+      y += 2;
+    }
+
+    sectionHeader("TOTAL PENJUALAN", 16, 150, 100);
+    row("Total Penjualan", formatRupiah(totalPenjualan), { leftColor: [16, 130, 90], rightColor: [16, 130, 90] });
+    if (tarikTx.length > 0) row(`Tarik Tunai (${tarikTx.length}x)`, `-${formatRupiah(totalTarik)}`, { leftColor: [220, 50, 50], rightColor: [220, 50, 50] });
+    row("Sisa Cash Penjualan", formatRupiah(sisaCashPenjualan), { leftColor: [16, 130, 90], rightColor: [16, 130, 90] });
+    row("Admin", formatRupiah(totalAdmin), { leftColor: [180, 130, 20], rightColor: [180, 130, 20] });
+    if (aksTx.length > 0) row(`Aksesoris (${aksTx.length}x)`, formatRupiah(totalAks), { leftColor: [200, 50, 100], rightColor: [200, 50, 100] });
+    row("Non Tunai", formatRupiah(totalNonTunai), { leftColor: [100, 50, 200], rightColor: [100, 50, 200] });
+    y += 2;
+
+    sectionHeaderRight("SISA CASH TOTAL", formatRupiah(sisaCashTotal), 230, 160, 20, 12);
     y += 3;
-    pdf.setFontSize(11); pdf.setFont("helvetica", "bold");
-    pdf.text("Total Penjualan", margin, y); pdf.text(formatRupiah(totalPenjualan), 120, y); y += 6;
-    pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
-    if (tarikTx.length > 0) { pdf.text(`Tarik Tunai (${tarikTx.length}x)`, margin, y); pdf.text(`-${formatRupiah(totalTarik)}`, 120, y); y += 5; }
-    pdf.text("Sisa Cash Penjualan", margin, y); pdf.text(formatRupiah(sisaCashPenjualan), 120, y); y += 5;
-    pdf.text("Admin", margin, y); pdf.text(formatRupiah(totalAdmin), 120, y); y += 5;
-    if (aksTx.length > 0) { pdf.text(`Aksesoris (${aksTx.length}x)`, margin, y); pdf.text(formatRupiah(totalAks), 120, y); y += 5; }
-    pdf.text("Non Tunai", margin, y); pdf.text(formatRupiah(totalNonTunai), 120, y); y += 8;
-    pdf.setFontSize(11); pdf.setFont("helvetica", "bold");
-    pdf.text("TOTAL UANG CASH", margin, y); pdf.text(formatRupiah(sisaCashTotal), 120, y); y += 8;
-    pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
-    pdf.text(`Sisa Cash: ${formatRupiah(sisaCashPenjualan)} + Admin: ${formatRupiah(totalAdmin)} + Aks: ${formatRupiah(totalAks)}`, margin, y); y += 8;
-    pdf.setFontSize(11); pdf.setFont("helvetica", "bold");
-    pdf.text("Jurnal Penyesuaian", margin, y); y += 6;
-    pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
-    pdf.text("Total Tambah/Isi Saldo Bank", margin, y); pdf.text(formatRupiah(totalIsiSaldoBank), 120, y); y += 5;
-    pdf.text("Sisa Saldo Bank (Catatan)", margin, y); pdf.text(formatRupiah(sisaSaldoBank), 120, y); y += 5;
-    pdf.text("Total Penjualan", margin, y); pdf.text(formatRupiah(totalPenjualan), 120, y); y += 5;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Total", margin, y); pdf.text(formatRupiah(sisaSaldoBank + totalPenjualan), 120, y); y += 5;
-    pdf.text("Selisih", margin, y); pdf.text(formatRupiah(totalIsiSaldoBank - (sisaSaldoBank + totalPenjualan)), 120, y); y += 8;
-    pdf.setFontSize(11);
-    pdf.text("Saldo & Selisih", margin, y); y += 6;
-    pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
-    pdf.text("Sisa Saldo Bank (Catatan)", margin, y); pdf.text(formatRupiah(sisaSaldoBank), 120, y); y += 5;
-    pdf.text("Saldo Real App", margin, y); pdf.text(formatRupiah(saldoRealApp), 120, y); y += 5;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Selisih", margin, y); pdf.text(formatRupiah(selisih), 120, y);
+
+    sectionHeader("Jurnal Penyesuaian", 130, 60, 200);
+    row("Total Tambah/Isi Saldo Bank", formatRupiah(totalIsiSaldoBank), { bold: true });
+    y += 2;
+
+    sectionHeader("Saldo & Selisih", 46, 140, 67);
+    row("Sisa Saldo Bank (Catatan)", formatRupiah(sisaSaldoBank), { leftColor: [30, 30, 200], rightColor: [30, 30, 200] });
+    row("Saldo Real App", formatRupiah(saldoRealApp), { leftColor: [200, 30, 30], rightColor: [200, 30, 30] });
+    row("Selisih", formatRupiah(selisih), { leftColor: selisih >= 0 ? [16, 130, 90] : [220, 50, 50], rightColor: selisih >= 0 ? [16, 130, 90] : [220, 50, 50], bold: true });
+    y += 4;
+
+    if (transactions.length > 0) {
+      sectionHeader("Detail Transaksi", 70, 70, 80);
+
+      const colW = [10, 35, 42, 35, 64];
+      const colX = [ml, ml + colW[0], ml + colW[0] + colW[1], ml + colW[0] + colW[1] + colW[2], ml + colW[0] + colW[1] + colW[2] + colW[3]];
+      const headers = ["#", "Kategori", "Nominal", "Admin", "Keterangan"];
+      checkPage(14);
+
+      pdf.setFillColor(55, 55, 65);
+      pdf.rect(ml, y, cw, 7, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(7.5); pdf.setFont("helvetica", "bold");
+      headers.forEach((h, i) => pdf.text(h, colX[i] + 2, y + 4.8));
+      y += 7;
+
+      pdf.setFontSize(7.5); pdf.setFont("helvetica", "normal");
+      transactions.forEach((tx, idx) => {
+        checkPage(7);
+        const bgFill = idx % 2 === 0;
+        if (bgFill) {
+          pdf.setFillColor(248, 248, 252);
+          pdf.rect(ml, y, cw, 6.5, "F");
+        }
+        pdf.setTextColor(60, 60, 60);
+        pdf.text(String(idx + 1), colX[0] + 2, y + 4.3);
+        pdf.text(tx.category || "-", colX[1] + 2, y + 4.3);
+        pdf.text(formatRupiah(tx.nominal || 0), colX[2] + 2, y + 4.3);
+        pdf.text(formatRupiah(tx.admin || 0), colX[3] + 2, y + 4.3);
+        const ket = (tx.keterangan || "-").substring(0, 30);
+        pdf.text(ket, colX[4] + 2, y + 4.3);
+        y += 6.5;
+      });
+    }
+
+    y += 6;
+    checkPage(8);
+    pdf.setTextColor(160, 160, 170);
+    pdf.setFontSize(7); pdf.setFont("helvetica", "normal");
+    const nowStr = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+    pdf.text(`Dicetak: ${nowStr} | Alfaza Link POS`, pw / 2, y, { align: "center" });
+
     return pdf;
   };
 
