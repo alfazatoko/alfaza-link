@@ -88,23 +88,25 @@ export default function Owner() {
           {menuItems.map(item => {
             const Icon = item.icon;
             return (
-              <button key={item.id} onClick={() => setPage(item.id)} className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 flex flex-col items-center gap-2 active:scale-95 transition">
+              <button key={item.id} onClick={() => setPage(item.id)} className="bg-card rounded-2xl p-3 shadow-sm border border-border flex flex-col items-center gap-2 active:scale-95 transition">
                 <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-sm`}>
                   <Icon className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xs font-bold text-gray-700">{item.label}</span>
-                <span className="text-[9px] text-gray-400">{item.desc}</span>
+                <span className="text-xs font-bold text-foreground">{item.label}</span>
+                <span className="text-[9px] text-muted-foreground">{item.desc}</span>
               </button>
             );
           })}
         </div>
+
         <div className="mt-4">
-          <button onClick={handleDownloadZip} disabled={zipping} className="w-full bg-gradient-to-r from-gray-800 to-gray-700 text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition disabled:opacity-60">
+          <button onClick={handleDownloadZip} disabled={zipping} className="w-full bg-slate-800 dark:bg-slate-700 text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition disabled:opacity-60">
             {zipping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             {zipping ? "Membuat ZIP..." : "Download Source Code (ZIP)"}
           </button>
-          <p className="text-[10px] text-gray-400 text-center mt-1.5">Unduh semua file kode terbaru untuk diedit di aplikasi lain</p>
+          <p className="text-[10px] text-muted-foreground text-center mt-1.5">Unduh semua file kode terbaru untuk diedit di aplikasi lain</p>
         </div>
+
       </div>
     );
   }
@@ -215,36 +217,36 @@ function KasirPage({ goBack }: { goBack: () => void }) {
       </button>
 
       {kasirList.length === 0 ? (
-        <div className="text-center py-10 text-gray-400">
-          <Users className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+        <div className="text-center py-10 text-muted-foreground">
+          <Users className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
           <p className="text-sm">Belum ada kasir</p>
         </div>
       ) : (
         kasirList.map(u => (
-          <div key={u.id} className={`bg-white rounded-2xl p-4 mb-2.5 shadow-sm border ${u.isActive ? 'border-gray-100' : 'border-red-200 bg-red-50/50'}`}>
+          <div key={u.id} className={`bg-card rounded-2xl p-4 mb-2.5 shadow-sm border ${u.isActive ? 'border-border' : 'border-destructive/20 bg-destructive/5'}`}>
             <div className="flex justify-between items-center">
               <div>
-                <span className="font-bold text-sm">{u.name}</span>
+                <span className="font-bold text-sm text-foreground">{u.name}</span>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${u.isActive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${u.isActive ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}>
                     {u.isActive ? "Aktif" : "Nonaktif"}
                   </span>
-                  <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                     PIN: {showPins[u.id] ? u.pin : "••••"}
-                    <button onClick={() => setShowPins(prev => ({ ...prev, [u.id]: !prev[u.id] }))} className="text-gray-400 ml-1">
+                    <button onClick={() => setShowPins(prev => ({ ...prev, [u.id]: !prev[u.id] }))} className="text-muted-foreground ml-1">
                       {showPins[u.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                     </button>
                   </span>
                 </div>
               </div>
               <div className="flex gap-1.5">
-                <button onClick={() => toggleActive(u)} className={`text-[10px] px-2.5 py-1.5 rounded-lg font-bold ${u.isActive ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                <button onClick={() => toggleActive(u)} className={`text-[10px] px-2.5 py-1.5 rounded-lg font-bold ${u.isActive ? 'bg-red-100 text-red-600 dark:bg-red-900/30' : 'bg-green-100 text-green-600 dark:bg-green-900/30'}`}>
                   {u.isActive ? "Nonaktifkan" : "Aktifkan"}
                 </button>
-                <button onClick={() => { setEditUser(u); setName(u.name); setPin(u.pin); setRole(u.role); setShowForm(true); }} className="bg-blue-100 text-blue-600 px-2 py-1.5 rounded-lg">
+                <button onClick={() => { setEditUser(u); setName(u.name); setPin(u.pin); setRole(u.role); setShowForm(true); }} className="bg-primary/10 text-primary px-2 py-1.5 rounded-lg">
                   <Edit className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={() => handleDelete(u.id)} className="bg-red-100 text-red-600 px-2 py-1.5 rounded-lg">
+                <button onClick={() => handleDelete(u.id)} className="bg-destructive/10 text-destructive px-2 py-1.5 rounded-lg">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -253,23 +255,25 @@ function KasirPage({ goBack }: { goBack: () => void }) {
         ))
       )}
 
+
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={resetForm}>
-          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-card rounded-2xl p-5 w-full max-w-sm shadow-xl border border-border" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between mb-3">
-              <h3 className="font-bold text-base">{editUser ? "Edit" : "Tambah"} Kasir</h3>
-              <button onClick={resetForm} className="text-xl text-gray-400">&times;</button>
+              <h3 className="font-bold text-base text-foreground">{editUser ? "Edit" : "Tambah"} Kasir</h3>
+              <button onClick={resetForm} className="text-xl text-muted-foreground hover:text-foreground">&times;</button>
             </div>
             <div className="space-y-3 mb-4">
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="Nama Kasir" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none" />
-              <input value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} maxLength={4} inputMode="numeric" placeholder="PIN (4 digit)" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none" />
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Nama Kasir" className="w-full border border-border bg-muted/20 rounded-xl px-3 py-2.5 text-sm outline-none text-foreground" />
+              <input value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} maxLength={4} inputMode="numeric" placeholder="PIN (4 digit)" className="w-full border border-border bg-muted/20 rounded-xl px-3 py-2.5 text-sm outline-none text-foreground" />
             </div>
-            <button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-3 rounded-full text-sm disabled:opacity-60">
+            <button onClick={handleSave} disabled={saving} className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-full text-sm disabled:opacity-60">
               {saving ? "Menyimpan..." : "Simpan"}
             </button>
           </div>
         </div>
       )}
+
     </PageWrapper>
   );
 }

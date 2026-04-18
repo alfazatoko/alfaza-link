@@ -39,7 +39,7 @@ export function BottomNav() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around px-1 py-1.5 pb-5 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border flex justify-around px-1 py-1.5 pb-5 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-none z-50 transition-colors duration-300">
       {navItems.map((item, idx) => {
         const isActive = item.href !== "logout" && location === item.href;
         const isLogout = (item as any).isLogout;
@@ -60,18 +60,18 @@ export function BottomNav() {
                 <div
                   className={cn(
                     "flex flex-col items-center justify-center py-1 gap-0.5 rounded-2xl transition-all",
-                    isActive ? "text-blue-600" : "text-gray-900"
+                    isActive ? "text-primary" : "text-foreground opacity-70"
                   )}
                 >
                   <div
                     className={cn(
                       "p-1 rounded-xl transition-all",
-                      isActive ? "bg-blue-50 text-blue-600" : ""
+                      isActive ? "bg-primary/10 text-primary" : ""
                     )}
                   >
                     <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
                   </div>
-                  <span className={cn("text-[10px] font-medium", isActive && "font-bold text-blue-600")}>
+                  <span className={cn("text-[10px] font-medium", isActive && "font-bold text-primary")}>
                     {item.label}
                   </span>
                 </div>
@@ -81,5 +81,6 @@ export function BottomNav() {
         );
       })}
     </div>
+
   );
 }

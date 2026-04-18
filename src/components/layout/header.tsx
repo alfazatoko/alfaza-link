@@ -9,7 +9,8 @@ import { useDisplayMode } from "@/hooks/use-display-mode";
 export function Header() {
   const { user, shift, loginTime, absenTime } = useAuth();
   const [clock, setClock] = useState("");
-  const { mode, setMode } = useDisplayMode();
+  const { mode, setMode, theme, toggleTheme } = useDisplayMode();
+
   const [settings, setSettings] = useState<SettingsRecord | null>(null);
 
   useEffect(() => {
@@ -99,21 +100,34 @@ export function Header() {
             </div>
           </div>
 
-          <div className="flex items-center gap-0.5 bg-white/10 rounded-full p-0.5">
-            {displayModes.map(dm => {
-              const Icon = dm.icon;
-              return (
-                <button
-                  key={dm.id}
-                  onClick={() => setMode(dm.id)}
-                  className={`p-1.5 rounded-full transition-all ${mode === dm.id ? 'bg-white/25' : 'opacity-50 hover:opacity-80'}`}
-                  title={dm.id.toUpperCase()}
-                >
-                  <Icon className="w-3 h-3" />
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 bg-white/10 rounded-full p-0.5">
+              <button
+                onClick={toggleTheme}
+                className="p-1.5 rounded-full transition-all bg-white/10 hover:bg-white/20"
+                title={theme === "light" ? "Mode Gelap" : "Mode Terang"}
+              >
+                {theme === "light" ? <Moon className="w-3 h-3" /> : <Sun className="w-3 h-3" />}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-0.5 bg-white/10 rounded-full p-0.5">
+              {displayModes.map(dm => {
+                const Icon = dm.icon;
+                return (
+                  <button
+                    key={dm.id}
+                    onClick={() => setMode(dm.id)}
+                    className={`p-1.5 rounded-full transition-all ${mode === dm.id ? 'bg-white/25' : 'opacity-50 hover:opacity-80'}`}
+                    title={dm.id.toUpperCase()}
+                  >
+                    <Icon className="w-3 h-3" />
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
         </div>
       </div>
     </div>

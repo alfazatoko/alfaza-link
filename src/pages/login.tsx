@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { getUsers, getSettings, loginUser, type UserRecord } from "@/lib/firestore";
-import { ChevronDown, Loader2, Lock, SunMedium, SunMoon, Eye, EyeOff, Mail, KeyRound, LogOut, Store } from "lucide-react";
+import { User, Clock, CalendarDays, Sun, Moon, Fingerprint, Monitor, Tablet, Smartphone, ChevronDown, Loader2, Lock, SunMedium, SunMoon, Eye, EyeOff, Mail, KeyRound, LogOut, Store } from "lucide-react";
+import { useDisplayMode } from "@/hooks/use-display-mode";
 
 const logoUrl = `${import.meta.env.BASE_URL}alfaza-logo.png`;
+
 
 const SHIFT_OPTIONS = [
   { value: "PAGI", label: "Pagi", icon: SunMedium },
@@ -73,78 +75,87 @@ function FirebaseAuthScreen() {
   const [authSettings, setAuthSettings] = useState<{ profilePhotoUrl?: string; shopName?: string } | null>(null);
   useEffect(() => { getSettings().then(s => setAuthSettings(s)).catch(() => {}); }, []);
 
+  const { theme, toggleTheme } = useDisplayMode();
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-700 via-blue-600 to-sky-500 flex items-center justify-center p-4">
-      <div className="bg-white p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-2xl">
+    <div className="min-h-screen bg-gradient-to-b from-blue-700 via-blue-600 to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 relative transition-colors duration-500">
+      <button
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm z-50"
+      >
+        {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+      </button>
+
+      <div className="bg-card p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-2xl border border-border/50">
         <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg border-2 border-primary/20">
             <img src={authSettings?.profilePhotoUrl || logoUrl} alt="Alfaza" className="w-full h-full object-cover" />
           </div>
         </div>
 
-        <h2 className="text-2xl font-extrabold text-blue-700 text-center mb-0.5">{authSettings?.shopName || "ALFAZA CELL"}</h2>
-        <p className="text-center text-gray-500 text-sm mb-1">Sistem Kasir Pro</p>
-        <p className="text-center text-blue-500 text-xs font-semibold mb-6">
+        <h2 className="text-2xl font-extrabold text-primary text-center mb-0.5">{authSettings?.shopName || "ALFAZA CELL"}</h2>
+        <p className="text-center text-muted-foreground text-sm mb-1">Sistem Kasir Pro</p>
+        <p className="text-center text-blue-500 dark:text-blue-400 text-xs font-semibold mb-6">
           {isRegister ? "Daftar Akun Baru" : "Login Firebase"}
         </p>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-bold px-4 py-2.5 rounded-xl mb-4 text-center">
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold px-4 py-2.5 rounded-xl mb-4 text-center">
             {error}
           </div>
         )}
 
         <div className="space-y-3 mb-5">
           {isRegister && (
-            <div className="flex items-center gap-3 border-2 border-gray-200 rounded-2xl px-4 h-14 bg-gray-50 focus-within:border-blue-500">
-              <Store className="w-5 h-5 text-gray-400" />
+            <div className="flex items-center gap-3 border-2 border-border rounded-2xl px-4 h-14 bg-muted/30 focus-within:border-primary transition-all">
+              <Store className="w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Kode Toko"
                 value={shopCode}
                 onChange={e => setShopCode(e.target.value.toUpperCase())}
-                className="flex-1 bg-transparent outline-none text-sm font-semibold text-gray-800 tracking-widest placeholder:text-gray-400 placeholder:font-normal placeholder:tracking-normal"
+                className="flex-1 bg-transparent outline-none text-sm font-semibold text-foreground tracking-widest placeholder:text-muted-foreground placeholder:font-normal placeholder:tracking-normal"
               />
             </div>
           )}
 
-          <div className="flex items-center gap-3 border-2 border-gray-200 rounded-2xl px-4 h-14 bg-gray-50 focus-within:border-blue-500">
-            <Mail className="w-5 h-5 text-gray-400" />
+          <div className="flex items-center gap-3 border-2 border-border rounded-2xl px-4 h-14 bg-muted/30 focus-within:border-primary transition-all">
+            <Mail className="w-5 h-5 text-muted-foreground" />
             <input
               type="email"
               placeholder="Email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !isRegister && handleSubmit()}
-              className="flex-1 bg-transparent outline-none text-sm font-semibold text-gray-800 placeholder:text-gray-400 placeholder:font-normal"
+              className="flex-1 bg-transparent outline-none text-sm font-semibold text-foreground placeholder:text-muted-foreground placeholder:font-normal"
             />
           </div>
 
-          <div className="flex items-center gap-3 border-2 border-gray-200 rounded-2xl px-4 h-14 bg-gray-50 focus-within:border-blue-500">
-            <KeyRound className="w-5 h-5 text-gray-400" />
+          <div className="flex items-center gap-3 border-2 border-border rounded-2xl px-4 h-14 bg-muted/30 focus-within:border-primary transition-all">
+            <KeyRound className="w-5 h-5 text-muted-foreground" />
             <input
               type={showPass ? "text" : "password"}
               placeholder="Password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !isRegister && handleSubmit()}
-              className="flex-1 bg-transparent outline-none text-sm font-semibold text-gray-800 placeholder:text-gray-400 placeholder:font-normal"
+              className="flex-1 bg-transparent outline-none text-sm font-semibold text-foreground placeholder:text-muted-foreground placeholder:font-normal"
             />
-            <button type="button" onClick={() => setShowPass(!showPass)} className="text-gray-400">
+            <button type="button" onClick={() => setShowPass(!showPass)} className="text-muted-foreground">
               {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
 
           {isRegister && (
-            <div className="flex items-center gap-3 border-2 border-gray-200 rounded-2xl px-4 h-14 bg-gray-50 focus-within:border-blue-500">
-              <KeyRound className="w-5 h-5 text-gray-400" />
+            <div className="flex items-center gap-3 border-2 border-border rounded-2xl px-4 h-14 bg-muted/30 focus-within:border-primary transition-all">
+              <KeyRound className="w-5 h-5 text-muted-foreground" />
               <input
                 type={showPass ? "text" : "password"}
                 placeholder="Konfirmasi Password"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}
-                className="flex-1 bg-transparent outline-none text-sm font-semibold text-gray-800 placeholder:text-gray-400 placeholder:font-normal"
+                className="flex-1 bg-transparent outline-none text-sm font-semibold text-foreground placeholder:text-muted-foreground placeholder:font-normal"
               />
             </div>
           )}
@@ -154,7 +165,7 @@ function FirebaseAuthScreen() {
           type="button"
           onClick={handleSubmit}
           disabled={loading}
-          className="w-full h-14 rounded-3xl font-extrabold text-lg bg-blue-600 text-white shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-50 mb-4"
+          className="w-full h-14 rounded-3xl font-extrabold text-lg bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-50 mb-4"
         >
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
           {isRegister ? "DAFTAR" : "LOGIN"}
@@ -163,19 +174,20 @@ function FirebaseAuthScreen() {
         <button
           type="button"
           onClick={() => { setIsRegister(!isRegister); setError(""); setShopCode(""); setConfirmPassword(""); }}
-          className="w-full text-center text-sm text-blue-600 font-semibold"
+          className="w-full text-center text-sm text-primary font-semibold"
         >
           {isRegister ? "Sudah punya akun? Login" : "Belum punya akun? Daftar"}
         </button>
 
-        <div className="mt-4 bg-blue-50 rounded-xl p-3 border border-blue-200">
-          <p className="text-[10px] text-blue-600 text-center">
+        <div className="mt-4 bg-primary/5 rounded-xl p-3 border border-primary/20">
+          <p className="text-[10px] text-primary text-center">
             Data disimpan di Firebase Cloud. Aman dan bisa diakses dari mana saja.
           </p>
         </div>
       </div>
     </div>
   );
+
 }
 
 function KasirSelectionScreen() {
@@ -274,52 +286,61 @@ function KasirSelectionScreen() {
   const selectedUser = users.find((u) => u.name === selected);
   const isOwnerSelected = selectedUser?.role === "owner";
 
+  const { theme, toggleTheme } = useDisplayMode();
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-700 via-blue-600 to-sky-500 flex items-center justify-center p-4">
-      <div className="bg-white p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-2xl">
+    <div className="min-h-screen bg-gradient-to-b from-blue-700 via-blue-600 to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 relative transition-colors duration-500">
+      <button
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm z-50"
+      >
+        {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+      </button>
+
+      <div className="bg-card p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-2xl border border-border/50">
         <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg border-2 border-primary/20">
             <img src={profilePhoto || logoUrl} alt="Alfaza" className="w-full h-full object-cover" />
           </div>
         </div>
 
-        <h2 className="text-2xl font-extrabold text-blue-700 text-center mb-0.5">{shopNameSetting || "ALFAZA CELL"}</h2>
-        <p className="text-center text-gray-500 text-sm mb-1">Sistem Kasir Pro</p>
+        <h2 className="text-2xl font-extrabold text-primary text-center mb-0.5">{shopNameSetting || "ALFAZA CELL"}</h2>
+        <p className="text-center text-muted-foreground text-sm mb-1">Sistem Kasir Pro</p>
         {firebaseUser && (
-          <p className="text-center text-[10px] text-green-600 mb-4 font-semibold">
+          <p className="text-center text-[10px] text-green-600 dark:text-green-400 mb-4 font-semibold">
             🔒 {firebaseUser.email}
           </p>
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-bold px-4 py-2.5 rounded-xl mb-4 text-center">
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold px-4 py-2.5 rounded-xl mb-4 text-center">
             {error}
           </div>
         )}
 
         {loading ? (
           <div className="flex flex-col items-center gap-3 py-8">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-            <span className="text-sm text-gray-400">Memuat data...</span>
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            <span className="text-sm text-muted-foreground">Memuat data...</span>
           </div>
         ) : (
           <>
             <button
               type="button"
               onClick={() => setDropdownOpen((v) => !v)}
-              className="w-full h-16 rounded-3xl border-2 border-blue-500 bg-white px-5 flex items-center justify-between text-left mb-5 shadow-sm"
+              className="w-full h-16 rounded-3xl border-2 border-primary/50 bg-card px-5 flex items-center justify-between text-left mb-5 shadow-sm"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <span className="text-lg font-extrabold text-gray-900 truncate">
+                <span className="text-lg font-extrabold text-foreground truncate">
                   {selected || "PILIH KASIR"}
                 </span>
                 {isOwnerSelected && <span className="text-lg">👑</span>}
               </div>
-              <ChevronDown className="w-6 h-6 text-gray-400" />
+              <ChevronDown className="w-6 h-6 text-muted-foreground" />
             </button>
 
             {dropdownOpen && (
-              <div className="mb-5 rounded-3xl border-2 border-gray-200 bg-white shadow-lg overflow-hidden">
+              <div className="mb-5 rounded-3xl border-2 border-border bg-card shadow-lg overflow-hidden">
                 {activeUsers.map((u) => (
                   <button
                     key={u.id}
@@ -429,21 +450,24 @@ function KasirSelectionScreen() {
 export default function Login() {
   const { firebaseUser, firebaseLoading } = useAuth();
 
+  const { theme, toggleTheme } = useDisplayMode();
+
   if (firebaseLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-700 via-blue-600 to-sky-500 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-[2rem] w-full max-w-sm shadow-2xl flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg">
+      <div className="min-h-screen bg-gradient-to-b from-blue-700 via-blue-600 to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 transition-colors duration-500">
+        <div className="bg-card p-8 rounded-[2rem] w-full max-w-sm shadow-2xl flex flex-col items-center gap-4 border border-border/50">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg border-2 border-primary/20">
             <img src={logoUrl} alt="Alfaza" className="w-full h-full object-cover" />
           </div>
-          <h2 className="text-xl font-extrabold text-blue-700">ALFAZA CELL</h2>
-          <p className="text-gray-500 text-sm">Sistem Kasir Pro</p>
-          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-          <p className="text-sm text-gray-400">Memuat data...</p>
+          <h2 className="text-xl font-extrabold text-primary">ALFAZA CELL</h2>
+          <p className="text-muted-foreground text-sm">Sistem Kasir Pro</p>
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          <p className="text-sm text-muted-foreground">Memuat data...</p>
         </div>
       </div>
     );
   }
+
 
   if (!firebaseUser) {
     return <FirebaseAuthScreen />;

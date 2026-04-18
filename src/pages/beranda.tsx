@@ -162,25 +162,26 @@ export default function Beranda() {
       </div>
 
       <div className="flex gap-2 mb-3">
-        <div className="flex-1 bg-white border border-gray-200 rounded-xl py-2 px-2 text-center shadow-sm">
-          <span className="text-[8px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-0.5">
+        <div className="flex-1 bg-card border border-border rounded-xl py-2 px-2 text-center shadow-sm">
+          <span className="text-[8px] font-bold text-muted-foreground block uppercase flex items-center justify-center gap-0.5">
             <ArrowDownToLine className="w-2.5 h-2.5" /> Tarik Tunai
           </span>
-          <span className="text-xs font-extrabold text-gray-800 block">{formatRupiah(balance?.tarik || 0)}</span>
+          <span className="text-xs font-extrabold text-foreground block">{formatRupiah(balance?.tarik || 0)}</span>
         </div>
-        <div className="flex-1 bg-white border border-gray-200 rounded-xl py-2 px-2 text-center shadow-sm">
-          <span className="text-[8px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-0.5">
+        <div className="flex-1 bg-card border border-border rounded-xl py-2 px-2 text-center shadow-sm">
+          <span className="text-[8px] font-bold text-muted-foreground block uppercase flex items-center justify-center gap-0.5">
             <Gem className="w-2.5 h-2.5" /> Aksesoris
           </span>
-          <span className="text-xs font-extrabold text-gray-800 block">{formatRupiah(balance?.aks || 0)}</span>
+          <span className="text-xs font-extrabold text-foreground block">{formatRupiah(balance?.aks || 0)}</span>
         </div>
-        <div className="flex-1 bg-white border border-gray-200 rounded-xl py-2 px-2 text-center shadow-sm">
-          <span className="text-[8px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-0.5">
+        <div className="flex-1 bg-card border border-border rounded-xl py-2 px-2 text-center shadow-sm">
+          <span className="text-[8px] font-bold text-muted-foreground block uppercase flex items-center justify-center gap-0.5">
             <Lock className="w-2.5 h-2.5" /> Admin
           </span>
-          <span className="text-xs font-extrabold text-gray-800 block">{formatRupiah(balance?.adminTotal || 0)}</span>
+          <span className="text-xs font-extrabold text-foreground block">{formatRupiah(balance?.adminTotal || 0)}</span>
         </div>
       </div>
+
 
       <div className="flex gap-2 mb-3">
         <button onClick={() => setLocation("/catatan")} className="flex-1 bg-emerald-500 text-white py-2 rounded-full text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm active:scale-95 transition">
@@ -209,10 +210,11 @@ export default function Beranda() {
                 onClick={() => setCategory(cat.id)}
                 className="flex flex-col items-center gap-1 transition-all"
               >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm transition-all ${isActive ? cat.activeColor + ' shadow-lg scale-110' : cat.inactiveColor}`}>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm transition-all ${isActive ? cat.activeColor + ' shadow-lg scale-110' : 'bg-card text-muted-foreground border border-border'}`}>
                   <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 1.5} />
                 </div>
-                <span className={`text-[10px] font-bold ${isActive ? 'text-blue-700' : 'text-gray-800'}`}>{cat.label}</span>
+                <span className={`text-[10px] font-bold ${isActive ? 'text-primary' : 'text-foreground opacity-80'}`}>{cat.label}</span>
+
               </button>
             );
           })}
@@ -220,7 +222,7 @@ export default function Beranda() {
       )}
 
       {user?.role === "owner" && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+        <div className="bg-card rounded-2xl p-4 shadow-sm border border-border text-center">
           <button
             onClick={() => setLocation("/owner")}
             className="w-full h-12 rounded-2xl font-bold text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 active:scale-[0.98] transition"
@@ -231,11 +233,12 @@ export default function Beranda() {
         </div>
       )}
 
+
       {user?.role !== "owner" && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+        <div className="bg-card rounded-2xl p-4 shadow-sm border border-border">
           <div className="space-y-3 mb-4">
-            <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 h-12 bg-gray-50/50">
-              <span className="text-blue-600 font-bold text-sm">Rp</span>
+            <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-12 bg-muted/30">
+              <span className="text-primary font-bold text-sm">Rp</span>
               <input
                 ref={nominalRef}
                 type="text"
@@ -244,10 +247,10 @@ export default function Beranda() {
                 value={nominalDisplay}
                 onChange={(e) => setNominalDisplay(formatThousands(e.target.value))}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); adminRef.current?.focus(); } }}
-                className="flex-1 bg-transparent outline-none text-base font-bold text-gray-800 placeholder:text-gray-400 placeholder:font-normal"
+                className="flex-1 bg-transparent outline-none text-base font-bold text-foreground placeholder:text-muted-foreground placeholder:font-normal"
               />
             </div>
-            <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 h-11 bg-gray-50/50">
+            <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-11 bg-muted/30">
               <span className="text-amber-500 font-bold text-sm">%</span>
               <input
                 ref={adminRef}
@@ -257,10 +260,10 @@ export default function Beranda() {
                 value={adminDisplay}
                 onChange={(e) => setAdminDisplay(formatThousands(e.target.value))}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ketRef.current?.focus(); } }}
-                className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder:text-gray-400"
+                className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
               />
             </div>
-            <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 h-11 bg-gray-50/50">
+            <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-11 bg-muted/30">
               <span className="text-blue-400 text-sm">📝</span>
               <input
                 ref={ketRef}
@@ -268,10 +271,11 @@ export default function Beranda() {
                 value={keterangan}
                 onChange={(e) => setKeterangan(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleProses(); } }}
-                className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder:text-gray-400"
+                className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
               />
             </div>
           </div>
+
 
           <button
             onClick={handleProses}

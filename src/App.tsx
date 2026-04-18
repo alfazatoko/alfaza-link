@@ -50,7 +50,8 @@ function Router() {
   useAutoScheduler(!!user);
 
   return (
-    <div className={`pb-20 ${maxW} mx-auto min-h-[100dvh] bg-slate-50/50 shadow-[0_0_40px_rgba(0,0,0,0.05)]`}>
+    <div className={`pb-20 ${maxW} mx-auto min-h-[100dvh] bg-background shadow-[0_0_40px_rgba(0,0,0,0.05)] dark:shadow-none transition-colors duration-300`}>
+
       <Switch>
         <Route path="/" component={Login} />
         <Route path="/beranda" component={() => <ProtectedRoute component={Beranda} />} />
