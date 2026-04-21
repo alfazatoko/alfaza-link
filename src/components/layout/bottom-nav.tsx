@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Clock, CreditCard, BarChart3, Settings, LogOut, History, ArrowLeft } from "lucide-react";
+import { Home, Clock, CreditCard, BarChart3, Settings, LogOut, History, ArrowLeft, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 
@@ -14,9 +14,8 @@ export function BottomNav() {
   const kasirNav = [
     { icon: Home, label: "Beranda", href: "/beranda" },
     { icon: Clock, label: "Riwayat", href: "/riwayat" },
-    { icon: CreditCard, label: "Non Tunai", href: "/non-tunai" },
+    { icon: PlusCircle, label: "Isi Saldo", href: "isi-saldo", isModal: true },
     { icon: BarChart3, label: "Laporan", href: "/laporan" },
-    { icon: Settings, label: "Owner", href: "/owner", ownerOnly: true },
     { icon: LogOut, label: "Keluar", href: "logout", isLogout: true },
   ];
 
@@ -51,9 +50,19 @@ export function BottomNav() {
                 className="w-full flex flex-col items-center justify-center py-1 gap-0.5"
               >
                 <div className="p-1 rounded-xl">
-                  <item.icon className="w-5 h-5 text-red-500" strokeWidth={2} />
+                  <item.icon className="w-5 h-5 text-red-500" strokeWidth={2.5} />
                 </div>
                 <span className="text-[10px] font-bold text-red-500">{item.label}</span>
+              </button>
+            ) : (item as any).isModal ? (
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent("open-isi-saldo"))}
+                className="w-full flex flex-col items-center justify-center py-1 gap-0.5"
+              >
+                <div className="p-1 rounded-xl text-foreground opacity-70">
+                  <item.icon className="w-5 h-5" strokeWidth={2} />
+                </div>
+                <span className="text-[10px] font-medium text-foreground opacity-70">{item.label}</span>
               </button>
             ) : (
               <Link href={item.href} className="block">

@@ -36,6 +36,7 @@ export default function Beranda() {
   const [saving, setSaving] = useState(false);
   const [photoUrl, setPhotoUrl] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isPenyesuaianModalOpen, setIsPenyesuaianModalOpen] = useState(false);
 
   const nominalRef = useRef<HTMLInputElement>(null);
   const adminRef = useRef<HTMLInputElement>(null);
@@ -54,8 +55,15 @@ export default function Beranda() {
   useEffect(() => {
     loadBalance();
     getSettings().then(setShopSettings).catch(() => {});
+    
+    const openIsiSaldo = () => setIsSaldoModalOpen(true);
+    window.addEventListener("open-isi-saldo", openIsiSaldo);
+
     const interval = setInterval(loadBalance, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("open-isi-saldo", openIsiSaldo);
+    };
   }, [loadBalance]);
 
   const [mutiaraIndex] = useState(() => Math.floor(Math.random() * 100));
@@ -200,37 +208,46 @@ export default function Beranda() {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-3">
-        <div className="flex-1 bg-card border border-border rounded-xl py-2 px-2 text-center shadow-sm">
-          <span className="text-[8px] font-bold text-muted-foreground block uppercase flex items-center justify-center gap-0.5">
-            <ArrowDownToLine className="w-2.5 h-2.5" /> Tarik Tunai
+      <div className="flex gap-2.5 mb-3">
+        <div className="flex-1 bg-white border border-gray-100 rounded-2xl py-3 px-2 text-center shadow-sm">
+          <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
+            <ArrowDownToLine className="w-3 h-3 text-emerald-600" /> Tarik Tunai
           </span>
-          <span className="text-xs font-extrabold text-foreground block">{formatRupiah(balance?.tarik || 0)}</span>
+          <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.tarik || 0)}</span>
         </div>
-        <div className="flex-1 bg-card border border-border rounded-xl py-2 px-2 text-center shadow-sm">
-          <span className="text-[8px] font-bold text-muted-foreground block uppercase flex items-center justify-center gap-0.5">
-            <Gem className="w-2.5 h-2.5" /> Aksesoris
+        <div className="flex-1 bg-white border border-gray-100 rounded-2xl py-3 px-2 text-center shadow-sm">
+          <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
+            <Gem className="w-3 h-3 text-rose-500" /> Aksesoris
           </span>
-          <span className="text-xs font-extrabold text-foreground block">{formatRupiah(balance?.aks || 0)}</span>
+          <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.aks || 0)}</span>
         </div>
-        <div className="flex-1 bg-card border border-border rounded-xl py-2 px-2 text-center shadow-sm">
-          <span className="text-[8px] font-bold text-muted-foreground block uppercase flex items-center justify-center gap-0.5">
-            <Lock className="w-2.5 h-2.5" /> Admin
+        <div className="flex-1 bg-white border border-gray-100 rounded-2xl py-3 px-2 text-center shadow-sm">
+          <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
+            <Lock className="w-3 h-3 text-amber-500" /> Admin
           </span>
-          <span className="text-xs font-extrabold text-foreground block">{formatRupiah(balance?.adminTotal || 0)}</span>
+          <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.adminTotal || 0)}</span>
         </div>
       </div>
 
 
-      <div className="flex gap-2 mb-3">
-        <button onClick={() => setLocation("/catatan")} className="flex-1 bg-emerald-500 text-white py-2 rounded-full text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm active:scale-95 transition">
-          <ClipboardList className="w-3.5 h-3.5" /> KASBON
+      <div className="flex gap-2 mb-4">
+        <button 
+          onClick={() => setIsPenyesuaianModalOpen(true)} 
+          className="flex-1 bg-[#00b894] text-white py-3.5 rounded-3xl text-sm font-bold shadow-lg shadow-emerald-500/20 active:scale-95 transition"
+        >
+          Penyesuaian
         </button>
-        <button onClick={() => setIsSaldoModalOpen(true)} className="flex-1 bg-primary text-white py-2 rounded-full text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm active:scale-95 transition">
-          <Plus className="w-3.5 h-3.5" /> +Saldo
+        <button 
+          onClick={() => setLocation("/non-tunai")} 
+          className="flex-1 bg-[#0984e3] text-white py-3.5 rounded-3xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition"
+        >
+          Nontunai
         </button>
-        <button onClick={() => setLocation("/catatan?tab=kontak")} className="flex-1 bg-teal-500 text-white py-2 rounded-full text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm active:scale-95 transition">
-          <BookUser className="w-3.5 h-3.5" /> KONTAK
+        <button 
+          onClick={() => setLocation("/catatan")} 
+          className="flex-1 bg-[#00cec9] text-white py-3.5 rounded-3xl text-sm font-bold shadow-lg shadow-teal-500/20 active:scale-95 transition"
+        >
+          Catatan
         </button>
       </div>
 
@@ -359,6 +376,15 @@ export default function Beranda() {
         onOpenChange={setIsSaldoModalOpen}
         kasirName={user?.name || ""}
         isOwner={user?.role === "owner"}
+        mode="isi-saldo"
+      />
+
+      <AddSaldoModal
+        open={isPenyesuaianModalOpen}
+        onOpenChange={setIsPenyesuaianModalOpen}
+        kasirName={user?.name || ""}
+        isOwner={user?.role === "owner"}
+        mode="penyesuaian"
       />
     </div>
   );

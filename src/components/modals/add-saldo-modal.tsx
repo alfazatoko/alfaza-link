@@ -18,10 +18,11 @@ interface AddSaldoModalProps {
   onOpenChange: (open: boolean) => void;
   kasirName: string;
   isOwner?: boolean;
+  mode?: "all" | "isi-saldo" | "penyesuaian";
 }
 
 export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner }: AddSaldoModalProps) {
-  const [jenis, setJenis] = useState("Bank");
+  const [jenis, setJenis] = useState(mode === "penyesuaian" ? "Real App" : "Bank");
   const [nominalDisplay, setNominalDisplay] = useState("");
   const [keterangan, setKeterangan] = useState("");
   const [saving, setSaving] = useState(false);
@@ -29,6 +30,18 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner }: AddSal
   const [targetKasir, setTargetKasir] = useState<string>("");
   const nominalRef = useRef<HTMLInputElement>(null);
   const ketRef = useRef<HTMLInputElement>(null);
+
+  const filteredTabs = JENIS_TABS.filter(tab => {
+    if (mode === "isi-saldo") return tab.id === "Bank" || tab.id === "Cash";
+    if (mode === "penyesuaian") return tab.id === "Real App" || tab.id === "Sisa Saldo";
+    return true;
+  });
+
+  useEffect(() => {
+    if (open) {
+      setJenis(mode === "penyesuaian" ? "Real App" : "Bank");
+    }
+  }, [open, mode]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -118,7 +131,9 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner }: AddSal
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-3xl max-w-sm mx-auto p-0 overflow-hidden">
         <DialogHeader className="bg-primary text-white p-4 pb-3">
-          <DialogTitle className="text-lg font-extrabold">+ Tambah Saldo</DialogTitle>
+          <DialogTitle className="text-lg font-extrabold">
+            {mode === "isi-saldo" ? "Isi Saldo" : mode === "penyesuaian" ? "Penyesuaian Saldo" : "+ Tambah Saldo"}
+          </DialogTitle>
           <p className="text-white/70 text-[11px]">Kasir: {isOwner ? (effectiveKasir || "Pilih kasir") : kasirName}</p>
         </DialogHeader>
 
@@ -136,8 +151,8 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner }: AddSal
               </select>
             </div>
           )}
-          <div className="grid grid-cols-4 gap-2">
-            {JENIS_TABS.map(tab => {
+          <div className={`grid ${filteredTabs.length <= 2 ? 'grid-cols-2' : 'grid-cols-4'} gap-2`}>
+            {filteredTabs.map(tab => {
               const Icon = tab.icon;
               const isActive = jenis === tab.id;
               return (
