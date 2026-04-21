@@ -1,5 +1,12 @@
-const CACHE_NAME = "alfaza-link-v12";
-const PRECACHE_URLS = ["/", "/index.html"];
+const CACHE_NAME = "alfaza-link-v14";
+const PRECACHE_URLS = [
+  "/",
+  "/index.html",
+  "/manifest.json",
+  "/favicon.svg",
+  "/icon-192.png",
+  "/icon-512.png"
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -21,15 +28,36 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  if (event.request.url.includes("/api/")) return;
+  
+  // Skip cross-origin requests like Firebase or Google Fonts for dynamic caching
+  // to avoid issues with non-CORS responses.
+  const url = new URL(event.request.url);
+  const isSameOrigin = url.origin === self.location.origin;
 
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      return fetch(event.request).then((response) => {
+        // Only cache valid same-origin responses
+        if (!response || response.status !== 200 || response.type !== 'basic' || !isSameOrigin) {
+          return response;
+        }
+
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+
         return response;
-      })
-      .catch(() => caches.match(event.request))
+      }).catch(() => {
+        // Fallback for offline if index.html is missing
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
+      });
+    })
   );
 });

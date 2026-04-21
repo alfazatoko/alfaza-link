@@ -1299,7 +1299,12 @@ function BackupPage({ goBack }: { goBack: () => void }) {
 
 function SettingPage({ goBack }: { goBack: () => void }) {
   const { toast } = useToast();
-  const { primaryColor, setPrimaryColor } = useDisplayMode();
+  const { 
+    theme, 
+    primaryColor, setPrimaryColor, 
+    primaryColorDark, setPrimaryColorDark, 
+    currentPrimaryColor 
+  } = useDisplayMode();
   const [settings, setSettings] = useState<SettingsRecord | null>(null);
   const [shopName, setShopName] = useState("");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState("");
@@ -1319,6 +1324,28 @@ function SettingPage({ goBack }: { goBack: () => void }) {
     TARIK: { name: "TARIK", visible: true },
   };
   const [catLabels, setCatLabels] = useState<CategoryLabels>(defaultLabels);
+
+  // PWA Install State
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (!installPrompt) {
+      toast({ title: "Gunakan menu browser untuk instalasi", variant: "default" });
+      return;
+    }
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') setInstallPrompt(null);
+  };
 
   useEffect(() => {
     getSettings().then(s => {
@@ -1396,14 +1423,58 @@ function SettingPage({ goBack }: { goBack: () => void }) {
   const catKeys: (keyof CategoryLabels)[] = ["BANK", "FLIP", "APP", "DANA", "AKS", "TARIK"];
 
   return (
-    <div className="px-3 pt-3 pb-20 min-h-screen bg-gray-50">
+    <div className="px-3 pt-3 pb-20 min-h-screen bg-gray-50 dark:bg-slate-950">
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={goBack} className="text-gray-600"><ArrowLeft className="w-5 h-5" /></button>
-        <Settings className="w-5 h-5 text-gray-600" />
-        <h1 className="font-extrabold text-base">Pengaturan</h1>
+        <button onClick={goBack} className="text-gray-600 dark:text-gray-400"><ArrowLeft className="w-5 h-5" /></button>
+        <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+        <h1 className="font-extrabold text-base dark:text-white">Pengaturan</h1>
       </div>
 
       <div className="space-y-4">
+        {/* PWA Install Button */}
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-500 rounded-2xl p-4 shadow-lg text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-xl">
+                <Download className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm">Instal Aplikasi (PWA)</h3>
+                <p className="text-[10px] opacity-80">Akses lebih cepat & ikon di layar utama</p>
+              </div>
+            </div>
+            <button 
+              onClick={handleInstallPWA}
+              className="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition"
+            >
+              {installPrompt ? "INSTAL SEKARANG" : "CEK STATUS"}
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-slate-800">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                <Palette className="w-4 h-4 text-pink-500" /> TEMA {theme === "dark" ? "GELAP" : "TERANG"}
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">Warna utama untuk mode saat ini</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-8 h-8 rounded-full border shadow-inner" 
+                style={{ backgroundColor: currentPrimaryColor }}
+              />
+              <input 
+                type="color" 
+                value={theme === "dark" ? primaryColorDark : primaryColor} 
+                onChange={(e) => theme === "dark" ? setPrimaryColorDark(e.target.value) : setPrimaryColor(e.target.value)}
+                className="w-10 h-10 border-0 p-0 bg-transparent cursor-pointer"
+              />
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
             <Users className="w-4 h-4 text-blue-500" /> Profil Toko

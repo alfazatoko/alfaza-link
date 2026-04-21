@@ -3,10 +3,11 @@
   "short_name": "Alfaza Link",
   "description": "Sistem Kasir Pro - Alfaza Cell",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
-  "background_color": "#f0f4ff",
-  "theme_color": "#2b67f6",
-  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.png",

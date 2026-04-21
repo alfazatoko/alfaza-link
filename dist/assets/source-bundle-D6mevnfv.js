@@ -182,7 +182,7 @@ import { useDisplayMode } from "@/hooks/use-display-mode";\r
 export function Header() {\r
   const { user, shift, loginTime, absenTime } = useAuth();\r
   const [clock, setClock] = useState("");\r
-  const { mode, setMode, theme, toggleTheme, primaryColor } = useDisplayMode();\r
+  const { mode, setMode, theme, toggleTheme, currentPrimaryColor } = useDisplayMode();\r
 \r
   const [settings, setSettings] = useState<SettingsRecord | null>(null);\r
 \r
@@ -226,8 +226,8 @@ export function Header() {\r
   return (\r
     <div \r
       style={{ \r
-        background: \`linear-gradient(135deg, \${primaryColor}ee 0%, \${primaryColor} 100%)\`,\r
-        boxShadow: \`0 10px 25px -5px \${primaryColor}40\`\r
+        background: \`linear-gradient(135deg, \${currentPrimaryColor}ee 0%, \${currentPrimaryColor} 100%)\`,\r
+        boxShadow: \`0 10px 25px -5px \${currentPrimaryColor}40\`\r
       }}\r
       className="rounded-3xl p-4 mb-4 text-white relative overflow-hidden transition-all duration-500"\r
     >\r
@@ -2090,7 +2090,7 @@ const CollapsibleTrigger = CollapsiblePrimitive.CollapsibleTrigger\r
 const CollapsibleContent = CollapsiblePrimitive.CollapsibleContent\r
 \r
 export { Collapsible, CollapsibleTrigger, CollapsibleContent }\r
-`,R=`"use client"\r
+`,k=`"use client"\r
 \r
 import * as React from "react"\r
 import { type DialogProps } from "@radix-ui/react-dialog"\r
@@ -2243,7 +2243,7 @@ export {\r
   CommandShortcut,\r
   CommandSeparator,\r
 }\r
-`,k=`import * as React from "react"\r
+`,R=`import * as React from "react"\r
 import * as ContextMenuPrimitive from "@radix-ui/react-context-menu"\r
 import { Check, ChevronRight, Circle } from "lucide-react"\r
 \r
@@ -3935,7 +3935,7 @@ const Label = React.forwardRef<\r
 Label.displayName = LabelPrimitive.Root.displayName\r
 \r
 export { Label }\r
-`,j=`import * as React from "react"\r
+`,z=`import * as React from "react"\r
 import * as MenubarPrimitive from "@radix-ui/react-menubar"\r
 import { Check, ChevronRight, Circle } from "lucide-react"\r
 \r
@@ -4189,7 +4189,7 @@ export {\r
   MenubarSub,\r
   MenubarShortcut,\r
 }\r
-`,z=`import * as React from "react"\r
+`,j=`import * as React from "react"\r
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"\r
 import { cva } from "class-variance-authority"\r
 import { ChevronDown } from "lucide-react"\r
@@ -6371,6 +6371,9 @@ interface DisplayModeContextType {
   toggleTheme: () => void;
   primaryColor: string;
   setPrimaryColor: (color: string) => void;
+  primaryColorDark: string;
+  setPrimaryColorDark: (color: string) => void;
+  currentPrimaryColor: string;
 }
 
 const DisplayModeContext = createContext<DisplayModeContextType>({
@@ -6380,6 +6383,9 @@ const DisplayModeContext = createContext<DisplayModeContextType>({
   toggleTheme: () => {},
   primaryColor: "#3b82f6",
   setPrimaryColor: () => {},
+  primaryColorDark: "#3b82f6",
+  setPrimaryColorDark: () => {},
+  currentPrimaryColor: "#3b82f6",
 });
 
 export function DisplayModeProvider({ children }: { children: React.ReactNode }) {
@@ -6395,6 +6401,10 @@ export function DisplayModeProvider({ children }: { children: React.ReactNode })
     return localStorage.getItem("alfaza_primary_color") || "#3b82f6";
   });
 
+  const [primaryColorDark, setPrimaryColorDark] = useState(() => {
+    return localStorage.getItem("alfaza_primary_color_dark") || "#60a5fa";
+  });
+
   useEffect(() => {
     localStorage.setItem("alfaza_display_mode", mode);
   }, [mode]);
@@ -6408,23 +6418,27 @@ export function DisplayModeProvider({ children }: { children: React.ReactNode })
     }
   }, [theme]);
 
+  const currentPrimaryColor = theme === "dark" ? primaryColorDark : primaryColor;
+
   useEffect(() => {
     localStorage.setItem("alfaza_primary_color", primaryColor);
-    // Apply primary color to CSS variable
-    // We need to convert hex to HSL if we want to follow the existing tailwind pattern exactly,
-    // but we can also just set the variable directly if we change index.css to use it.
-    document.documentElement.style.setProperty("--primary-hex", primaryColor);
+    localStorage.setItem("alfaza_primary_color_dark", primaryColorDark);
     
-    // For tailwind HSL support, we'll just use a simple hex to hsl conversion if needed, 
-    // but setting it as a direct color is easier for "warna sesuka hati".
-  }, [primaryColor]);
+    document.documentElement.style.setProperty("--primary-hex", currentPrimaryColor);
+  }, [primaryColor, primaryColorDark, theme, currentPrimaryColor]);
 
   const toggleTheme = () => {
     setTheme(prev => prev === "light" ? "dark" : "light");
   };
 
   return (
-    <DisplayModeContext.Provider value={{ mode, setMode, theme, toggleTheme, primaryColor, setPrimaryColor }}>
+    <DisplayModeContext.Provider value={{ 
+      mode, setMode, 
+      theme, toggleTheme, 
+      primaryColor, setPrimaryColor,
+      primaryColorDark, setPrimaryColorDark,
+      currentPrimaryColor
+    }}>
       {children}
     </DisplayModeContext.Provider>
   );
@@ -9270,7 +9284,7 @@ export default function Login() {\r
 \r
   return <KasirSelectionScreen />;\r
 }\r
-`,Rr=`import { useState, useRef, useCallback, useEffect } from "react";\r
+`,kr=`import { useState, useRef, useCallback, useEffect } from "react";\r
 import { useAuth } from "@/lib/auth";\r
 import { Header } from "@/components/layout/header";\r
 import { getBalance, createTransaction, type BalanceRecord } from "@/lib/firestore";\r
@@ -9410,7 +9424,7 @@ export default function NonTunai() {\r
     </div>\r
   );\r
 }\r
-`,kr=`import { AlertCircle } from "lucide-react";\r
+`,Rr=`import { AlertCircle } from "lucide-react";\r
 import { Link } from "wouter";\r
 \r
 export default function NotFound() {\r
@@ -10728,7 +10742,12 @@ function BackupPage({ goBack }: { goBack: () => void }) {\r
 \r
 function SettingPage({ goBack }: { goBack: () => void }) {\r
   const { toast } = useToast();\r
-  const { primaryColor, setPrimaryColor } = useDisplayMode();\r
+  const { \r
+    theme, \r
+    primaryColor, setPrimaryColor, \r
+    primaryColorDark, setPrimaryColorDark, \r
+    currentPrimaryColor \r
+  } = useDisplayMode();\r
   const [settings, setSettings] = useState<SettingsRecord | null>(null);\r
   const [shopName, setShopName] = useState("");\r
   const [profilePhotoUrl, setProfilePhotoUrl] = useState("");\r
@@ -10748,6 +10767,28 @@ function SettingPage({ goBack }: { goBack: () => void }) {\r
     TARIK: { name: "TARIK", visible: true },\r
   };\r
   const [catLabels, setCatLabels] = useState<CategoryLabels>(defaultLabels);\r
+\r
+  // PWA Install State\r
+  const [installPrompt, setInstallPrompt] = useState<any>(null);\r
+\r
+  useEffect(() => {\r
+    const handler = (e: any) => {\r
+      e.preventDefault();\r
+      setInstallPrompt(e);\r
+    };\r
+    window.addEventListener("beforeinstallprompt", handler);\r
+    return () => window.removeEventListener("beforeinstallprompt", handler);\r
+  }, []);\r
+\r
+  const handleInstallPWA = async () => {\r
+    if (!installPrompt) {\r
+      toast({ title: "Gunakan menu browser untuk instalasi", variant: "default" });\r
+      return;\r
+    }\r
+    installPrompt.prompt();\r
+    const { outcome } = await installPrompt.userChoice;\r
+    if (outcome === 'accepted') setInstallPrompt(null);\r
+  };\r
 \r
   useEffect(() => {\r
     getSettings().then(s => {\r
@@ -10825,14 +10866,58 @@ function SettingPage({ goBack }: { goBack: () => void }) {\r
   const catKeys: (keyof CategoryLabels)[] = ["BANK", "FLIP", "APP", "DANA", "AKS", "TARIK"];\r
 \r
   return (\r
-    <div className="px-3 pt-3 pb-20 min-h-screen bg-gray-50">\r
+    <div className="px-3 pt-3 pb-20 min-h-screen bg-gray-50 dark:bg-slate-950">\r
       <div className="flex items-center gap-2 mb-4">\r
-        <button onClick={goBack} className="text-gray-600"><ArrowLeft className="w-5 h-5" /></button>\r
-        <Settings className="w-5 h-5 text-gray-600" />\r
-        <h1 className="font-extrabold text-base">Pengaturan</h1>\r
+        <button onClick={goBack} className="text-gray-600 dark:text-gray-400"><ArrowLeft className="w-5 h-5" /></button>\r
+        <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />\r
+        <h1 className="font-extrabold text-base dark:text-white">Pengaturan</h1>\r
       </div>\r
 \r
       <div className="space-y-4">\r
+        {/* PWA Install Button */}\r
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-500 rounded-2xl p-4 shadow-lg text-white">\r
+          <div className="flex items-center justify-between">\r
+            <div className="flex items-center gap-3">\r
+              <div className="bg-white/20 p-2 rounded-xl">\r
+                <Download className="w-5 h-5" />\r
+              </div>\r
+              <div>\r
+                <h3 className="font-bold text-sm">Instal Aplikasi (PWA)</h3>\r
+                <p className="text-[10px] opacity-80">Akses lebih cepat & ikon di layar utama</p>\r
+              </div>\r
+            </div>\r
+            <button \r
+              onClick={handleInstallPWA}\r
+              className="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition"\r
+            >\r
+              {installPrompt ? "INSTAL SEKARANG" : "CEK STATUS"}\r
+            </button>\r
+          </div>\r
+        </div>\r
+\r
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-slate-800">\r
+          <div className="flex items-center justify-between">\r
+            <div>\r
+              <h3 className="font-bold text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2">\r
+                <Palette className="w-4 h-4 text-pink-500" /> TEMA {theme === "dark" ? "GELAP" : "TERANG"}\r
+              </h3>\r
+              <p className="text-[10px] text-gray-400 mt-0.5">Warna utama untuk mode saat ini</p>\r
+            </div>\r
+            <div className="flex items-center gap-3">\r
+              <div \r
+                className="w-8 h-8 rounded-full border shadow-inner" \r
+                style={{ backgroundColor: currentPrimaryColor }}\r
+              />\r
+              <input \r
+                type="color" \r
+                value={theme === "dark" ? primaryColorDark : primaryColor} \r
+                onChange={(e) => theme === "dark" ? setPrimaryColorDark(e.target.value) : setPrimaryColor(e.target.value)}\r
+                className="w-10 h-10 border-0 p-0 bg-transparent cursor-pointer"\r
+              />\r
+            </div>\r
+          </div>\r
+        </div>\r
+\r
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">\r
           <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">\r
             <Users className="w-4 h-4 text-blue-500" /> Profil Toko\r
@@ -11457,10 +11542,11 @@ export default function Riwayat() {\r
   "short_name": "Alfaza Link",\r
   "description": "Sistem Kasir Pro - Alfaza Cell",\r
   "start_url": "/",\r
+  "id": "/",\r
   "display": "standalone",\r
-  "background_color": "#f0f4ff",\r
-  "theme_color": "#2b67f6",\r
-  "orientation": "any",\r
+  "background_color": "#ffffff",\r
+  "theme_color": "#3b82f6",\r
+  "orientation": "portrait",\r
   "icons": [\r
     {\r
       "src": "icon-192.png",\r
@@ -11488,41 +11574,69 @@ export default function Riwayat() {\r
     }\r
   ]\r
 }\r
-`,Tr=`const CACHE_NAME = "alfaza-link-v12";\r
-const PRECACHE_URLS = ["/", "/index.html"];\r
-\r
-self.addEventListener("install", (event) => {\r
-  event.waitUntil(\r
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))\r
-  );\r
-  self.skipWaiting();\r
-});\r
-\r
-self.addEventListener("activate", (event) => {\r
-  event.waitUntil(\r
-    caches.keys().then((keys) =>\r
-      Promise.all(\r
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))\r
-      )\r
-    )\r
-  );\r
-  self.clients.claim();\r
-});\r
-\r
-self.addEventListener("fetch", (event) => {\r
-  if (event.request.method !== "GET") return;\r
-  if (event.request.url.includes("/api/")) return;\r
-\r
-  event.respondWith(\r
-    fetch(event.request)\r
-      .then((response) => {\r
-        const clone = response.clone();\r
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));\r
-        return response;\r
-      })\r
-      .catch(() => caches.match(event.request))\r
-  );\r
-});\r
+`,Tr=`const CACHE_NAME = "alfaza-link-v14";
+const PRECACHE_URLS = [
+  "/",
+  "/index.html",
+  "/manifest.json",
+  "/favicon.svg",
+  "/icon-192.png",
+  "/icon-512.png"
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      )
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  
+  // Skip cross-origin requests like Firebase or Google Fonts for dynamic caching
+  // to avoid issues with non-CORS responses.
+  const url = new URL(event.request.url);
+  const isSameOrigin = url.origin === self.location.origin;
+
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      return fetch(event.request).then((response) => {
+        // Only cache valid same-origin responses
+        if (!response || response.status !== 200 || response.type !== 'basic' || !isSameOrigin) {
+          return response;
+        }
+
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+
+        return response;
+      }).catch(() => {
+        // Fallback for offline if index.html is missing
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
+      });
+    })
+  );
+});
 `,Dr=`{\r
     "$schema": "https://ui.shadcn.com/schema.json",\r
     "style": "new-york",\r
@@ -11761,7 +11875,7 @@ export default defineConfig({\r
   },\r
   "private": true\r
 }\r
-`,jr=`import * as functions from "firebase-functions";\r
+`,zr=`import * as functions from "firebase-functions";\r
 import * as admin from "firebase-admin";\r
 \r
 admin.initializeApp();\r
@@ -11868,7 +11982,7 @@ export const autoResetBalances = functions.pubsub\r
 \r
     return null;\r
   });\r
-`,zr=`{\r
+`,jr=`{\r
   "compilerOptions": {\r
     "module": "commonjs",\r
     "noImplicitReturns": true,\r
@@ -11883,4 +11997,4 @@ export const autoResetBalances = functions.pubsub\r
     "src"\r
   ]\r
 }\r
-`,Kr=Object.assign({"/src/App.tsx":a,"/src/components/layout/bottom-nav.tsx":o,"/src/components/layout/header.tsx":s,"/src/components/modals/add-saldo-modal.tsx":i,"/src/components/ui/accordion.tsx":l,"/src/components/ui/alert-dialog.tsx":d,"/src/components/ui/alert.tsx":c,"/src/components/ui/aspect-ratio.tsx":m,"/src/components/ui/avatar.tsx":p,"/src/components/ui/badge.tsx":u,"/src/components/ui/breadcrumb.tsx":f,"/src/components/ui/button-group.tsx":g,"/src/components/ui/button.tsx":b,"/src/components/ui/calendar.tsx":x,"/src/components/ui/card.tsx":h,"/src/components/ui/carousel.tsx":v,"/src/components/ui/chart.tsx":y,"/src/components/ui/checkbox.tsx":N,"/src/components/ui/collapsible.tsx":w,"/src/components/ui/command.tsx":R,"/src/components/ui/context-menu.tsx":k,"/src/components/ui/dialog.tsx":S,"/src/components/ui/drawer.tsx":C,"/src/components/ui/dropdown-menu.tsx":P,"/src/components/ui/empty.tsx":T,"/src/components/ui/field.tsx":D,"/src/components/ui/form.tsx":A,"/src/components/ui/hover-card.tsx":M,"/src/components/ui/input-group.tsx":L,"/src/components/ui/input-otp.tsx":_,"/src/components/ui/input.tsx":I,"/src/components/ui/item.tsx":E,"/src/components/ui/kbd.tsx":B,"/src/components/ui/label.tsx":H,"/src/components/ui/menubar.tsx":j,"/src/components/ui/navigation-menu.tsx":z,"/src/components/ui/pagination.tsx":K,"/src/components/ui/popover.tsx":O,"/src/components/ui/progress.tsx":F,"/src/components/ui/radio-group.tsx":U,"/src/components/ui/resizable.tsx":G,"/src/components/ui/scroll-area.tsx":W,"/src/components/ui/select.tsx":$,"/src/components/ui/separator.tsx":V,"/src/components/ui/sheet.tsx":X,"/src/components/ui/sidebar.tsx":q,"/src/components/ui/skeleton.tsx":J,"/src/components/ui/slider.tsx":Q,"/src/components/ui/sonner.tsx":Y,"/src/components/ui/spinner.tsx":Z,"/src/components/ui/switch.tsx":rr,"/src/components/ui/table.tsx":er,"/src/components/ui/tabs.tsx":nr,"/src/components/ui/textarea.tsx":tr,"/src/components/ui/toast.tsx":ar,"/src/components/ui/toaster.tsx":or,"/src/components/ui/toggle-group.tsx":sr,"/src/components/ui/toggle.tsx":ir,"/src/components/ui/tooltip.tsx":lr,"/src/hooks/use-auto-scheduler.ts":dr,"/src/hooks/use-display-mode.tsx":cr,"/src/hooks/use-mobile.tsx":mr,"/src/hooks/use-toast.ts":pr,"/src/index.css":ur,"/src/lib/auth.tsx":fr,"/src/lib/firebase.ts":gr,"/src/lib/firestore.ts":br,"/src/lib/utils.ts":xr,"/src/main.tsx":hr,"/src/pages/beranda.tsx":vr,"/src/pages/catatan.tsx":yr,"/src/pages/laporan.tsx":Nr,"/src/pages/login.tsx":wr,"/src/pages/non-tunai.tsx":Rr,"/src/pages/not-found.tsx":kr,"/src/pages/owner.tsx":Sr,"/src/pages/riwayat.tsx":Cr}),Or=Object.assign({"/public/manifest.json":Pr,"/public/sw.js":Tr}),Fr=Object.assign({"/components.json":Dr,"/firebase.json":Ar,"/firestore.indexes.json":Mr,"/firestore.rules":Lr,"/index.html":_r,"/package.json":Ir,"/tsconfig.json":Er,"/vite.config.ts":Br}),Ur=Object.assign({"/functions/package.json":Hr,"/functions/src/index.ts":jr,"/functions/tsconfig.json":zr});function Gr(){const e={...Kr,...Or,...Fr,...Ur},r={};for(const[n,t]of Object.entries(e))r[n.replace(/^\//,"")]=t;return r}export{Gr as getSourceFiles};
+`,Kr=Object.assign({"/src/App.tsx":a,"/src/components/layout/bottom-nav.tsx":o,"/src/components/layout/header.tsx":s,"/src/components/modals/add-saldo-modal.tsx":i,"/src/components/ui/accordion.tsx":l,"/src/components/ui/alert-dialog.tsx":d,"/src/components/ui/alert.tsx":c,"/src/components/ui/aspect-ratio.tsx":m,"/src/components/ui/avatar.tsx":p,"/src/components/ui/badge.tsx":u,"/src/components/ui/breadcrumb.tsx":f,"/src/components/ui/button-group.tsx":g,"/src/components/ui/button.tsx":b,"/src/components/ui/calendar.tsx":x,"/src/components/ui/card.tsx":h,"/src/components/ui/carousel.tsx":v,"/src/components/ui/chart.tsx":y,"/src/components/ui/checkbox.tsx":N,"/src/components/ui/collapsible.tsx":w,"/src/components/ui/command.tsx":k,"/src/components/ui/context-menu.tsx":R,"/src/components/ui/dialog.tsx":S,"/src/components/ui/drawer.tsx":C,"/src/components/ui/dropdown-menu.tsx":P,"/src/components/ui/empty.tsx":T,"/src/components/ui/field.tsx":D,"/src/components/ui/form.tsx":A,"/src/components/ui/hover-card.tsx":M,"/src/components/ui/input-group.tsx":L,"/src/components/ui/input-otp.tsx":_,"/src/components/ui/input.tsx":I,"/src/components/ui/item.tsx":E,"/src/components/ui/kbd.tsx":B,"/src/components/ui/label.tsx":H,"/src/components/ui/menubar.tsx":z,"/src/components/ui/navigation-menu.tsx":j,"/src/components/ui/pagination.tsx":K,"/src/components/ui/popover.tsx":O,"/src/components/ui/progress.tsx":F,"/src/components/ui/radio-group.tsx":U,"/src/components/ui/resizable.tsx":G,"/src/components/ui/scroll-area.tsx":W,"/src/components/ui/select.tsx":$,"/src/components/ui/separator.tsx":V,"/src/components/ui/sheet.tsx":X,"/src/components/ui/sidebar.tsx":q,"/src/components/ui/skeleton.tsx":J,"/src/components/ui/slider.tsx":Q,"/src/components/ui/sonner.tsx":Y,"/src/components/ui/spinner.tsx":Z,"/src/components/ui/switch.tsx":rr,"/src/components/ui/table.tsx":er,"/src/components/ui/tabs.tsx":nr,"/src/components/ui/textarea.tsx":tr,"/src/components/ui/toast.tsx":ar,"/src/components/ui/toaster.tsx":or,"/src/components/ui/toggle-group.tsx":sr,"/src/components/ui/toggle.tsx":ir,"/src/components/ui/tooltip.tsx":lr,"/src/hooks/use-auto-scheduler.ts":dr,"/src/hooks/use-display-mode.tsx":cr,"/src/hooks/use-mobile.tsx":mr,"/src/hooks/use-toast.ts":pr,"/src/index.css":ur,"/src/lib/auth.tsx":fr,"/src/lib/firebase.ts":gr,"/src/lib/firestore.ts":br,"/src/lib/utils.ts":xr,"/src/main.tsx":hr,"/src/pages/beranda.tsx":vr,"/src/pages/catatan.tsx":yr,"/src/pages/laporan.tsx":Nr,"/src/pages/login.tsx":wr,"/src/pages/non-tunai.tsx":kr,"/src/pages/not-found.tsx":Rr,"/src/pages/owner.tsx":Sr,"/src/pages/riwayat.tsx":Cr}),Or=Object.assign({"/public/manifest.json":Pr,"/public/sw.js":Tr}),Fr=Object.assign({"/components.json":Dr,"/firebase.json":Ar,"/firestore.indexes.json":Mr,"/firestore.rules":Lr,"/index.html":_r,"/package.json":Ir,"/tsconfig.json":Er,"/vite.config.ts":Br}),Ur=Object.assign({"/functions/package.json":Hr,"/functions/src/index.ts":zr,"/functions/tsconfig.json":jr});function Gr(){const e={...Kr,...Or,...Fr,...Ur},r={};for(const[n,t]of Object.entries(e))r[n.replace(/^\//,"")]=t;return r}export{Gr as getSourceFiles};

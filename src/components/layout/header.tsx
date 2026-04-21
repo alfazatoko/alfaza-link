@@ -9,7 +9,7 @@ import { useDisplayMode } from "@/hooks/use-display-mode";
 export function Header() {
   const { user, shift, loginTime, absenTime } = useAuth();
   const [clock, setClock] = useState("");
-  const { mode, setMode, theme, toggleTheme, primaryColor } = useDisplayMode();
+  const { mode, setMode, theme, toggleTheme, currentPrimaryColor } = useDisplayMode();
 
   const [settings, setSettings] = useState<SettingsRecord | null>(null);
 
@@ -53,8 +53,8 @@ export function Header() {
   return (
     <div 
       style={{ 
-        background: `linear-gradient(135deg, ${primaryColor}ee 0%, ${primaryColor} 100%)`,
-        boxShadow: `0 10px 25px -5px ${primaryColor}40`
+        background: `linear-gradient(135deg, ${currentPrimaryColor}ee 0%, ${currentPrimaryColor} 100%)`,
+        boxShadow: `0 10px 25px -5px ${currentPrimaryColor}40`
       }}
       className="rounded-3xl p-4 mb-4 text-white relative overflow-hidden transition-all duration-500"
     >

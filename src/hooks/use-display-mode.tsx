@@ -10,6 +10,9 @@ interface DisplayModeContextType {
   toggleTheme: () => void;
   primaryColor: string;
   setPrimaryColor: (color: string) => void;
+  primaryColorDark: string;
+  setPrimaryColorDark: (color: string) => void;
+  currentPrimaryColor: string;
 }
 
 const DisplayModeContext = createContext<DisplayModeContextType>({
@@ -19,6 +22,9 @@ const DisplayModeContext = createContext<DisplayModeContextType>({
   toggleTheme: () => {},
   primaryColor: "#3b82f6",
   setPrimaryColor: () => {},
+  primaryColorDark: "#3b82f6",
+  setPrimaryColorDark: () => {},
+  currentPrimaryColor: "#3b82f6",
 });
 
 export function DisplayModeProvider({ children }: { children: React.ReactNode }) {
@@ -34,6 +40,10 @@ export function DisplayModeProvider({ children }: { children: React.ReactNode })
     return localStorage.getItem("alfaza_primary_color") || "#3b82f6";
   });
 
+  const [primaryColorDark, setPrimaryColorDark] = useState(() => {
+    return localStorage.getItem("alfaza_primary_color_dark") || "#60a5fa";
+  });
+
   useEffect(() => {
     localStorage.setItem("alfaza_display_mode", mode);
   }, [mode]);
@@ -47,23 +57,27 @@ export function DisplayModeProvider({ children }: { children: React.ReactNode })
     }
   }, [theme]);
 
+  const currentPrimaryColor = theme === "dark" ? primaryColorDark : primaryColor;
+
   useEffect(() => {
     localStorage.setItem("alfaza_primary_color", primaryColor);
-    // Apply primary color to CSS variable
-    // We need to convert hex to HSL if we want to follow the existing tailwind pattern exactly,
-    // but we can also just set the variable directly if we change index.css to use it.
-    document.documentElement.style.setProperty("--primary-hex", primaryColor);
+    localStorage.setItem("alfaza_primary_color_dark", primaryColorDark);
     
-    // For tailwind HSL support, we'll just use a simple hex to hsl conversion if needed, 
-    // but setting it as a direct color is easier for "warna sesuka hati".
-  }, [primaryColor]);
+    document.documentElement.style.setProperty("--primary-hex", currentPrimaryColor);
+  }, [primaryColor, primaryColorDark, theme, currentPrimaryColor]);
 
   const toggleTheme = () => {
     setTheme(prev => prev === "light" ? "dark" : "light");
   };
 
   return (
-    <DisplayModeContext.Provider value={{ mode, setMode, theme, toggleTheme, primaryColor, setPrimaryColor }}>
+    <DisplayModeContext.Provider value={{ 
+      mode, setMode, 
+      theme, toggleTheme, 
+      primaryColor, setPrimaryColor,
+      primaryColorDark, setPrimaryColorDark,
+      currentPrimaryColor
+    }}>
       {children}
     </DisplayModeContext.Provider>
   );
