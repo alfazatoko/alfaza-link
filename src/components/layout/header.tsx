@@ -9,7 +9,7 @@ import { useDisplayMode } from "@/hooks/use-display-mode";
 export function Header() {
   const { user, shift, loginTime, absenTime } = useAuth();
   const [clock, setClock] = useState("");
-  const { mode, setMode, theme, toggleTheme } = useDisplayMode();
+  const { mode, setMode, theme, toggleTheme, primaryColor } = useDisplayMode();
 
   const [settings, setSettings] = useState<SettingsRecord | null>(null);
 
@@ -45,13 +45,19 @@ export function Header() {
   const shiftLabel = getGreeting();
 
   const displayModes = [
-    { id: "hp" as const, icon: Smartphone },
-    { id: "tablet" as const, icon: Tablet },
-    { id: "pc" as const, icon: Monitor },
+    { id: "hp" as const, icon: Smartphone, label: "HP" },
+    { id: "tablet" as const, icon: Tablet, label: "Tab" },
+    { id: "pc" as const, icon: Monitor, label: "PC" },
   ];
 
   return (
-    <div className="bg-gradient-to-br from-blue-800 via-blue-600 to-blue-500 rounded-3xl p-4 mb-4 text-white relative overflow-hidden shadow-lg">
+    <div 
+      style={{ 
+        background: `linear-gradient(135deg, ${primaryColor}ee 0%, ${primaryColor} 100%)`,
+        boxShadow: `0 10px 25px -5px ${primaryColor}40`
+      }}
+      className="rounded-3xl p-4 mb-4 text-white relative overflow-hidden transition-all duration-500"
+    >
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full" />
       <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-white/5 rounded-full" />
 
@@ -65,7 +71,7 @@ export function Header() {
               <h1 className="text-lg font-extrabold tracking-wide leading-tight">
                 {settings?.shopName || "ALFAZA LINK"}
               </h1>
-              <p className="text-[10px] font-medium text-blue-200 -mt-0.5">Sistem Kasir Pro</p>
+              <p className="text-[10px] font-medium text-white/70 -mt-0.5">Sistem Kasir Pro</p>
             </div>
           </div>
           <div className="text-right">
@@ -78,18 +84,18 @@ export function Header() {
             <User className="w-3.5 h-3.5" />
             <span className="font-bold text-sm">{user.name}</span>
           </div>
-          <div className="flex items-center gap-1 text-blue-200 text-[10px]">
+          <div className="flex items-center gap-1 text-white/70 text-[10px]">
             <Clock className="w-3 h-3" />
             <span>Login: {loginTime || "--:--"}</span>
           </div>
-          <div className="ml-auto bg-emerald-500/90 px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+          <div className="ml-auto bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
             <Fingerprint className="w-3 h-3" />
             Absen: {absenTime || "--:--"}
           </div>
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 text-[11px] text-blue-100">
+          <div className="flex items-center gap-3 text-[11px] text-white/80">
             <div className="flex items-center gap-1">
               <CalendarDays className="w-3.5 h-3.5" />
               <span>{dayName}, {dateStr}</span>
@@ -101,27 +107,31 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-1">
-            <div className="flex items-center gap-0.5 bg-white/10 rounded-full p-0.5">
+            <div className="flex items-center gap-0.5 bg-black/10 rounded-full p-0.5">
               <button
                 onClick={toggleTheme}
-                className="p-1.5 rounded-full transition-all bg-white/10 hover:bg-white/20"
+                className="p-1.5 rounded-full transition-all hover:bg-white/10"
                 title={theme === "light" ? "Mode Gelap" : "Mode Terang"}
               >
                 {theme === "light" ? <Moon className="w-3 h-3" /> : <Sun className="w-3 h-3" />}
               </button>
             </div>
 
-            <div className="flex items-center gap-0.5 bg-white/10 rounded-full p-0.5">
+            <div className="flex items-center gap-0.5 bg-black/10 rounded-full p-0.5">
               {displayModes.map(dm => {
                 const Icon = dm.icon;
                 return (
                   <button
                     key={dm.id}
-                    onClick={() => setMode(dm.id)}
-                    className={`p-1.5 rounded-full transition-all ${mode === dm.id ? 'bg-white/25' : 'opacity-50 hover:opacity-80'}`}
+                    onClick={() => {
+                      console.log("Setting mode to:", dm.id);
+                      setMode(dm.id);
+                    }}
+                    className={`p-1.5 rounded-full transition-all flex items-center gap-1 ${mode === dm.id ? 'bg-white text-primary shadow-sm' : 'opacity-60 hover:opacity-100 text-white'}`}
                     title={dm.id.toUpperCase()}
                   >
                     <Icon className="w-3 h-3" />
+                    {mode === dm.id && <span className="text-[8px] font-bold">{dm.label}</span>}
                   </button>
                 );
               })}

@@ -36,7 +36,10 @@ export interface SettingsRecord {
   runningText: string;
   pinEnabled: boolean;
   categoryLabels: CategoryLabels;
+  lastLockDate?: string;
+  lastResetDate?: string;
 }
+
 
 export interface TransactionRecord {
   id: string;
@@ -168,7 +171,10 @@ export async function getSettings(): Promise<SettingsRecord> {
         AKS: { name: "AKS", visible: true },
         TARIK: { name: "TARIK", visible: true },
       },
+      lastLockDate: "",
+      lastResetDate: "",
     };
+
     await setDoc(ref, defaults);
     return defaults;
   }

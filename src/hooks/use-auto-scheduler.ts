@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { getSettings, getUsers, lockReport, resetBalance } from "@/lib/firestore";
+import { getSettings, getUsers, lockReport, resetBalance, updateSettings } from "@/lib/firestore";
+
 import { getWibDate } from "@/lib/utils";
 
 function getWibNow(): { hour: number; minute: number } {
@@ -11,21 +12,26 @@ function getWibNow(): { hour: number; minute: number } {
 }
 
 export function useAutoScheduler(isLoggedIn: boolean) {
-  const lastLockCheck = useRef("");
-  const lastResetCheck = useRef("");
+  const isRunning = useRef(false);
 
   useEffect(() => {
     if (!isLoggedIn) return;
 
     const checkSchedules = async () => {
+      if (isRunning.current) return;
+      isRunning.current = true;
+
       try {
         const settings = await getSettings();
         const { hour, minute } = getWibNow();
         const today = getWibDate();
-        const timeKey = `${today}_${hour}:${minute}`;
 
-        if (hour === settings.autoLockHour && minute === settings.autoLockMinute && lastLockCheck.current !== timeKey) {
-          lastLockCheck.current = timeKey;
+        const currentTotalMinutes = hour * 60 + minute;
+
+        // --- AUTO LOCK ---
+        const lockTotalMinutes = settings.autoLockHour * 60 + settings.autoLockMinute;
+        if (currentTotalMinutes >= lockTotalMinutes && settings.lastLockDate !== today) {
+          // Perform Lock
           const users = await getUsers();
           const kasirList = users.filter(u => u.role !== "owner" && u.isActive);
           for (const k of kasirList) {
@@ -33,10 +39,14 @@ export function useAutoScheduler(isLoggedIn: boolean) {
               await lockReport(k.name, today);
             } catch {}
           }
+          // Mark as done for today
+          await updateSettings({ lastLockDate: today });
         }
 
-        if (hour === settings.autoResetHour && minute === settings.autoResetMinute && lastResetCheck.current !== timeKey) {
-          lastResetCheck.current = timeKey;
+        // --- AUTO RESET ---
+        const resetTotalMinutes = settings.autoResetHour * 60 + settings.autoResetMinute;
+        if (currentTotalMinutes >= resetTotalMinutes && settings.lastResetDate !== today) {
+          // Perform Reset
           const users = await getUsers();
           const kasirList = users.filter(u => u.role !== "owner" && u.isActive);
           for (const k of kasirList) {
@@ -44,12 +54,19 @@ export function useAutoScheduler(isLoggedIn: boolean) {
               await resetBalance(k.name);
             } catch {}
           }
+          // Mark as done for today
+          await updateSettings({ lastResetDate: today });
         }
-      } catch {}
+      } catch (err) {
+        console.error("Scheduler Error:", err);
+      } finally {
+        isRunning.current = false;
+      }
     };
 
     checkSchedules();
-    const interval = setInterval(checkSchedules, 30000);
+    const interval = setInterval(checkSchedules, 60000); // Check every minute
     return () => clearInterval(interval);
   }, [isLoggedIn]);
 }
+

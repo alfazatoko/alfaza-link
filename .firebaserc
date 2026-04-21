@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "alfazalink-ecb76"
-  }
+  },
+  "targets": {
+    "alfazalink-ecb76": {
+      "hosting": {
+        "app-kasir": [
+          "alfaza-kasir"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

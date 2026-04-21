@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Building2, Wallet, Smartphone, Landmark, User } from "lucide-react";
 
 const JENIS_TABS = [
-  { id: "Bank", label: "Bank", icon: Building2, color: "bg-blue-600" },
+  { id: "Bank", label: "Bank", icon: Building2, color: "bg-primary" },
   { id: "Cash", label: "Cash", icon: Wallet, color: "bg-emerald-600" },
   { id: "Real App", label: "Real App", icon: Smartphone, color: "bg-purple-600" },
   { id: "Sisa Saldo", label: "Sisa Saldo", icon: Landmark, color: "bg-amber-600" },
@@ -117,9 +117,9 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner }: AddSal
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-3xl max-w-sm mx-auto p-0 overflow-hidden">
-        <DialogHeader className="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-4 pb-3">
+        <DialogHeader className="bg-primary text-white p-4 pb-3">
           <DialogTitle className="text-lg font-extrabold">+ Tambah Saldo</DialogTitle>
-          <p className="text-blue-200 text-[11px]">Kasir: {isOwner ? (effectiveKasir || "Pilih kasir") : kasirName}</p>
+          <p className="text-white/70 text-[11px]">Kasir: {isOwner ? (effectiveKasir || "Pilih kasir") : kasirName}</p>
         </DialogHeader>
 
         <div className="p-4 space-y-4">
@@ -164,7 +164,7 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner }: AddSal
           )}
 
           <div className="flex items-center gap-2 border-2 border-gray-200 rounded-xl px-3 h-14 bg-gray-50/50">
-            <span className="text-blue-600 font-bold text-sm">Rp</span>
+            <span className="text-primary font-bold text-sm">Rp</span>
             <input
               ref={nominalRef}
               type="text"
@@ -194,7 +194,7 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner }: AddSal
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="w-full h-12 rounded-2xl font-bold text-sm bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-500/30 active:scale-[0.98] transition disabled:opacity-50"
+            className="w-full h-12 rounded-2xl font-bold text-sm bg-primary text-white shadow-lg shadow-primary/30 active:scale-[0.98] transition disabled:opacity-50"
           >
             {getButtonText()}
           </button>

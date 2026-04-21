@@ -78,7 +78,7 @@ function FirebaseAuthScreen() {
   const { theme, toggleTheme } = useDisplayMode();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-700 via-blue-600 to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 relative transition-colors duration-500">
+    <div className="min-h-screen bg-gradient-to-b from-blue-700 via-primary to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 relative transition-colors duration-500">
       <button
         onClick={toggleTheme}
         className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm z-50"
@@ -289,7 +289,7 @@ function KasirSelectionScreen() {
   const { theme, toggleTheme } = useDisplayMode();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-700 via-blue-600 to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 relative transition-colors duration-500">
+    <div className="min-h-screen bg-gradient-to-b from-blue-700 via-primary to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 relative transition-colors duration-500">
       <button
         onClick={toggleTheme}
         className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm z-50"
@@ -427,7 +427,7 @@ function KasirSelectionScreen() {
               type="button"
               onClick={() => selected && void doLogin(selected)}
               disabled={loggingIn || !selected || (selectedUser?.role !== "owner" && !selectedShift)}
-              className="w-full h-14 rounded-3xl font-extrabold text-lg bg-blue-600 text-white shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-50 mb-3"
+              className="w-full h-14 rounded-3xl font-extrabold text-lg bg-primary text-white shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-50 mb-3"
             >
               {loggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
               MASUK
@@ -454,7 +454,7 @@ export default function Login() {
 
   if (firebaseLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-700 via-blue-600 to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 transition-colors duration-500">
+      <div className="min-h-screen bg-gradient-to-b from-blue-700 via-primary to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 transition-colors duration-500">
         <div className="bg-card p-8 rounded-[2rem] w-full max-w-sm shadow-2xl flex flex-col items-center gap-4 border border-border/50">
           <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg border-2 border-primary/20">
             <img src={logoUrl} alt="Alfaza" className="w-full h-full object-cover" />

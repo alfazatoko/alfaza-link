@@ -19,7 +19,7 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-popover-border: hsl(var(--popover-border));
 
-  --color-primary: hsl(var(--primary));
+  --color-primary: var(--primary-hex);
   --color-primary-foreground: hsl(var(--primary-foreground));
   --color-primary-border: var(--primary-border);
 
@@ -116,6 +116,7 @@
   --app-font-serif: Georgia, serif;
   --app-font-mono: Menlo, monospace;
   --radius: 1rem;
+  --primary-hex: #3b82f6;
 }
 
 .dark {

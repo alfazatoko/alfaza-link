@@ -15,7 +15,7 @@ const DEFAULT_QUOTES = [
 ];
 
 const CATEGORIES = [
-  { id: "BANK", label: "Bank", icon: Landmark, activeColor: "bg-blue-600 text-white shadow-blue-600/40", inactiveColor: "bg-white text-gray-400 border border-gray-100" },
+  { id: "BANK", label: "Bank", icon: Landmark, activeColor: "bg-primary text-white shadow-primary/40", inactiveColor: "bg-white text-gray-400 border border-gray-100" },
   { id: "FLIP", label: "Flip", icon: RefreshCw, activeColor: "bg-orange-500 text-white shadow-orange-500/40", inactiveColor: "bg-white text-gray-400 border border-gray-100" },
   { id: "APP PULSA", label: "App", icon: Send, activeColor: "bg-purple-600 text-white shadow-purple-600/40", inactiveColor: "bg-white text-gray-400 border border-gray-100" },
   { id: "DANA", label: "Dana", icon: Wallet, activeColor: "bg-sky-500 text-white shadow-sky-500/40", inactiveColor: "bg-white text-gray-400 border border-gray-100" },
@@ -145,7 +145,7 @@ export default function Beranda() {
       )}
 
       <div className="grid grid-cols-2 gap-2.5 mb-3">
-        <div className="bg-gradient-to-br from-blue-900 to-blue-600 rounded-2xl p-3 text-white shadow-md relative overflow-hidden">
+        <div className="bg-gradient-to-br from-blue-900 to-primary rounded-2xl p-3 text-white shadow-md relative overflow-hidden">
           <div className="absolute -right-3 -top-3 w-12 h-12 bg-white/10 rounded-full" />
           <p className="text-[10px] font-semibold opacity-90 mb-0.5 flex items-center gap-1">
             <Landmark className="w-3 h-3" /> SALDO BANK
@@ -187,7 +187,7 @@ export default function Beranda() {
         <button onClick={() => setLocation("/catatan")} className="flex-1 bg-emerald-500 text-white py-2 rounded-full text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm active:scale-95 transition">
           <ClipboardList className="w-3.5 h-3.5" /> KASBON
         </button>
-        <button onClick={() => setIsSaldoModalOpen(true)} className="flex-1 bg-blue-600 text-white py-2 rounded-full text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm active:scale-95 transition">
+        <button onClick={() => setIsSaldoModalOpen(true)} className="flex-1 bg-primary text-white py-2 rounded-full text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm active:scale-95 transition">
           <Plus className="w-3.5 h-3.5" /> +Saldo
         </button>
         <button onClick={() => setLocation("/catatan?tab=kontak")} className="flex-1 bg-teal-500 text-white py-2 rounded-full text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm active:scale-95 transition">

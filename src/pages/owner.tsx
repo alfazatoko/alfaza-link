@@ -12,8 +12,9 @@ import {
 } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useDisplayMode } from "@/hooks/use-display-mode";
 import {
-  Users, BarChart3, TrendingUp, FileText, DollarSign, Fingerprint,
+  Users, BarChart3, TrendingUp, FileText, DollarSign, Fingerprint, Palette,
   Database, Settings, ArrowLeft, Plus, Trash2, Edit, Eye, EyeOff,
   Shield, Check, X, CalendarDays, Download, RefreshCw,
   BookOpen, AlertTriangle, Star, Activity, Loader2, Lock,
@@ -31,7 +32,7 @@ export default function Owner() {
   const [page, setPage] = useState<OwnerPage>("main");
 
   const menuItems = [
-    { id: "kasir" as const, icon: Users, label: "Kasir", desc: "Kelola data kasir", color: "from-blue-600 to-blue-500" },
+    { id: "kasir" as const, icon: Users, label: "Kasir", desc: "Kelola data kasir", color: "from-primary to-blue-500" },
     { id: "ringkasan" as const, icon: FileText, label: "Ringkasan", desc: "Ringkasan harian", color: "from-indigo-600 to-indigo-500" },
     { id: "grafik" as const, icon: BarChart3, label: "Grafik", desc: "Grafik transaksi", color: "from-emerald-600 to-emerald-500" },
     { id: "performa" as const, icon: TrendingUp, label: "Performa", desc: "Performa kasir", color: "from-purple-600 to-purple-500" },
@@ -112,7 +113,7 @@ export default function Owner() {
   }
 
   const BackButton = () => (
-    <button onClick={() => setPage("main")} className="flex items-center gap-1 text-blue-600 font-bold text-sm mb-3">
+    <button onClick={() => setPage("main")} className="flex items-center gap-1 text-primary font-bold text-sm mb-3">
       <ArrowLeft className="w-4 h-4" /> Kembali
     </button>
   );
@@ -135,10 +136,10 @@ function PageWrapper({ title, icon: Icon, goBack, children }: { title: string; i
   return (
     <div className="px-3 pt-3 pb-20">
       <Header />
-      <button onClick={goBack} className="flex items-center gap-1 text-blue-600 font-bold text-sm mb-3">
+      <button onClick={goBack} className="flex items-center gap-1 text-primary font-bold text-sm mb-3">
         <ArrowLeft className="w-4 h-4" /> Kembali
       </button>
-      <div className="bg-gradient-to-r from-blue-900 to-blue-600 rounded-2xl p-4 mb-4 text-white flex items-center gap-3">
+      <div className="bg-gradient-to-r from-blue-900 to-primary rounded-2xl p-4 mb-4 text-white flex items-center gap-3">
         <Icon className="w-6 h-6" />
         <h2 className="font-extrabold text-base">{title}</h2>
       </div>
@@ -212,7 +213,7 @@ function KasirPage({ goBack }: { goBack: () => void }) {
 
   return (
     <PageWrapper title="Manajemen Kasir" icon={Users} goBack={goBack}>
-      <button onClick={() => setShowForm(true)} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-sm mb-4 flex items-center justify-center gap-2 shadow active:scale-95 transition">
+      <button onClick={() => setShowForm(true)} className="w-full bg-primary text-white py-3 rounded-xl font-bold text-sm mb-4 flex items-center justify-center gap-2 shadow active:scale-95 transition">
         <Plus className="w-4 h-4" /> Tambah Kasir
       </button>
 
@@ -348,13 +349,13 @@ function GrafikPage({ goBack }: { goBack: () => void }) {
       <div className="grid grid-cols-2 gap-2 mb-3">
         <button
           onClick={() => setViewMode("range")}
-          className={`py-2 rounded-full text-xs font-bold transition ${viewMode === "range" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+          className={`py-2 rounded-full text-xs font-bold transition ${viewMode === "range" ? "bg-primary text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
         >
           Per Tanggal
         </button>
         <button
           onClick={() => setViewMode("bulan")}
-          className={`py-2 rounded-full text-xs font-bold transition ${viewMode === "bulan" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+          className={`py-2 rounded-full text-xs font-bold transition ${viewMode === "bulan" ? "bg-primary text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
         >
           Per Bulan
         </button>
@@ -374,7 +375,7 @@ function GrafikPage({ goBack }: { goBack: () => void }) {
       <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
         <button
           onClick={() => setFilterKasir("Semua")}
-          className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === "Semua" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+          className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === "Semua" ? "bg-primary text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
         >
           Semua
         </button>
@@ -382,7 +383,7 @@ function GrafikPage({ goBack }: { goBack: () => void }) {
           <button
             key={k.name}
             onClick={() => setFilterKasir(k.name)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === k.name ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === k.name ? "bg-primary text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
           >
             {k.name}
           </button>
@@ -476,7 +477,7 @@ function PerformaPage({ goBack }: { goBack: () => void }) {
         <h1 className="font-extrabold text-base">Performa Karyawan</h1>
       </div>
 
-      <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-2xl p-4 mb-4 text-white">
+      <div className="bg-gradient-to-r from-primary to-blue-400 rounded-2xl p-4 mb-4 text-white">
         <h2 className="font-bold text-base">Bulan {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</h2>
         <p className="text-xs opacity-80">Rekap performa kasir bulan ini</p>
       </div>
@@ -528,6 +529,7 @@ function AbsenPage({ goBack }: { goBack: () => void }) {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"ringkasan" | "lengkap">("ringkasan");
+  const [filterKasir, setFilterKasir] = useState("Semua");
   const now = new Date();
   const [monthDate, setMonthDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
 
@@ -550,6 +552,11 @@ function AbsenPage({ goBack }: { goBack: () => void }) {
   const prevMonth = () => setMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   const nextMonth = () => setMonthDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
 
+  const filteredAttendance = useMemo(() => {
+    if (filterKasir === "Semua") return attendance;
+    return attendance.filter(a => a.kasirName === filterKasir);
+  }, [attendance, filterKasir]);
+
   const summaryData = kasirList.map(k => {
     const kasirAbsen = attendance.filter(a => a.kasirName === k.name);
     const hadir = kasirAbsen.length;
@@ -558,7 +565,26 @@ function AbsenPage({ goBack }: { goBack: () => void }) {
     return { name: k.name, hadir, pagi, siang };
   });
 
+  const attendanceByDate = useMemo(() => {
+    const groups: Record<string, AttendanceRecord[]> = {};
+    filteredAttendance.forEach(a => {
+      if (!groups[a.tanggal]) groups[a.tanggal] = [];
+      groups[a.tanggal].push(a);
+    });
+    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [filteredAttendance]);
+
   const cardColors = ["from-blue-500 to-blue-400", "from-pink-500 to-rose-400", "from-purple-500 to-purple-400", "from-teal-500 to-teal-400", "from-amber-500 to-amber-400"];
+  const softColors = [
+    "bg-blue-50 border-blue-100",
+    "bg-emerald-50 border-emerald-100",
+    "bg-purple-50 border-purple-100",
+    "bg-amber-50 border-amber-100",
+    "bg-pink-50 border-pink-100",
+    "bg-indigo-50 border-indigo-100",
+    "bg-rose-50 border-rose-100",
+    "bg-teal-50 border-teal-100"
+  ];
 
   return (
     <div className="px-3 pt-3 pb-20 min-h-screen bg-gray-50">
@@ -568,7 +594,7 @@ function AbsenPage({ goBack }: { goBack: () => void }) {
         <h1 className="font-extrabold text-base">Data Absensi</h1>
       </div>
 
-      <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-2xl p-4 mb-4 text-white">
+      <div className="bg-gradient-to-r from-primary to-blue-400 rounded-2xl p-4 mb-4 text-white">
         <div className="flex items-center gap-2">
           <CalendarDays className="w-5 h-5" />
           <div>
@@ -588,11 +614,29 @@ function AbsenPage({ goBack }: { goBack: () => void }) {
         </button>
       </div>
 
+      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+        <button
+          onClick={() => setFilterKasir("Semua")}
+          className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold transition ${filterKasir === "Semua" ? "bg-primary text-white shadow-md" : "bg-white text-gray-500 border border-gray-200"}`}
+        >
+          Semua Kasir
+        </button>
+        {kasirList.map(k => (
+          <button
+            key={k.name}
+            onClick={() => setFilterKasir(k.name)}
+            className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold transition ${filterKasir === k.name ? "bg-primary text-white shadow-md" : "bg-white text-gray-500 border border-gray-200"}`}
+          >
+            {k.name}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 gap-2 mb-4">
-        <button onClick={() => setViewMode("ringkasan")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "ringkasan" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}>
+        <button onClick={() => setViewMode("ringkasan")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "ringkasan" ? "bg-primary text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}>
           Ringkasan
         </button>
-        <button onClick={() => setViewMode("lengkap")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "lengkap" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}>
+        <button onClick={() => setViewMode("lengkap")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "lengkap" ? "bg-primary text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}>
           Lengkap
         </button>
       </div>
@@ -620,21 +664,38 @@ function AbsenPage({ goBack }: { goBack: () => void }) {
           ))
         )
       ) : (
-        attendance.length === 0 ? (
+        attendanceByDate.length === 0 ? (
           <div className="text-center py-10 text-gray-400 text-sm">Tidak ada data absensi</div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="grid grid-cols-4 px-3 py-2 bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-500">
-              <span>Tanggal</span><span>Kasir</span><span>Shift</span><span>Masuk</span>
-            </div>
-            {attendance.map(a => (
-              <div key={a.id} className="grid grid-cols-4 px-3 py-2 border-b border-gray-100 text-[11px]">
-                <span>{a.tanggal.slice(5)}</span>
-                <span className="font-semibold">{a.kasirName}</span>
-                <span className={a.shift === "PAGI" ? "text-amber-600" : "text-indigo-600"}>{a.shift}</span>
-                <span className="text-blue-600 font-semibold">{a.jamMasuk}</span>
-              </div>
-            ))}
+          <div className="space-y-4">
+            {attendanceByDate.map(([date, records], index) => {
+              const colorClass = softColors[index % softColors.length];
+              return (
+                <div key={date} className={`rounded-2xl border ${colorClass} overflow-hidden shadow-sm`}>
+                  <div className="px-4 py-2 border-b border-inherit flex justify-between items-center bg-white/40">
+                    <span className="font-extrabold text-xs text-gray-700">{format(new Date(date), "EEEE, dd MMMM", { locale: idLocale })}</span>
+                    <span className="text-[10px] font-bold text-gray-400">{records.length} Kasir</span>
+                  </div>
+                  <div className="divide-y divide-inherit">
+                    {records.map(a => (
+                      <div key={a.id} className="grid grid-cols-3 px-4 py-3 items-center">
+                        <div>
+                          <p className="text-[11px] font-extrabold text-gray-800 uppercase">{a.kasirName}</p>
+                        </div>
+                        <div className="text-center">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${a.shift === "PAGI" ? "bg-amber-100 text-amber-600" : "bg-indigo-100 text-indigo-600"}`}>
+                            {a.shift}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[11px] font-extrabold text-primary">{a.jamMasuk}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )
       )}
@@ -695,7 +756,7 @@ function IzinPage({ goBack }: { goBack: () => void }) {
     <PageWrapper title="Manajemen Izin" icon={CalendarDays} goBack={goBack}>
       <div className="flex gap-2 mb-3">
         <input type="month" value={month} onChange={e => setMonth(e.target.value)} className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-xs bg-white outline-none" />
-        <button onClick={() => setShowForm(true)} className="bg-blue-600 text-white rounded-xl px-4 py-2 text-xs font-bold flex items-center gap-1 shadow">
+        <button onClick={() => setShowForm(true)} className="bg-primary text-white rounded-xl px-4 py-2 text-xs font-bold flex items-center gap-1 shadow">
           <Plus className="w-3.5 h-3.5" /> Ajukan
         </button>
       </div>
@@ -703,7 +764,7 @@ function IzinPage({ goBack }: { goBack: () => void }) {
       <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
         <button
           onClick={() => setFilterKasir("Semua")}
-          className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === "Semua" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+          className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === "Semua" ? "bg-primary text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
         >
           Semua
         </button>
@@ -711,7 +772,7 @@ function IzinPage({ goBack }: { goBack: () => void }) {
           <button
             key={k.name}
             onClick={() => setFilterKasir(k.name)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === k.name ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${filterKasir === k.name ? "bg-primary text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
           >
             {k.name}
           </button>
@@ -762,7 +823,7 @@ function IzinPage({ goBack }: { goBack: () => void }) {
               <input type="date" value={tanggal} onChange={e => setTanggal(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none" />
               <textarea value={alasan} onChange={e => setAlasan(e.target.value)} placeholder="Alasan izin" rows={3} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none resize-none" />
             </div>
-            <button onClick={handleSubmit} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-3 rounded-full text-sm disabled:opacity-60">
+            <button onClick={handleSubmit} disabled={saving} className="w-full bg-gradient-to-r from-primary to-blue-500 text-white font-bold py-3 rounded-full text-sm disabled:opacity-60">
               {saving ? "Menyimpan..." : "Ajukan Izin"}
             </button>
           </div>
@@ -916,13 +977,13 @@ function GajihPage({ goBack }: { goBack: () => void }) {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setMode("harian")}
-              className={`py-2.5 rounded-full text-xs font-bold transition border-2 ${mode === "harian" ? "bg-blue-600 text-white border-blue-600 shadow" : "bg-white text-gray-500 border-gray-200"}`}
+              className={`py-2.5 rounded-full text-xs font-bold transition border-2 ${mode === "harian" ? "bg-primary text-white border-primary shadow" : "bg-white text-gray-500 border-gray-200"}`}
             >
               {mode === "harian" && <Check className="w-3.5 h-3.5 inline mr-1" />}Gajih / Hari
             </button>
             <button
               onClick={() => setMode("bulanan")}
-              className={`py-2.5 rounded-full text-xs font-bold transition border-2 ${mode === "bulanan" ? "bg-blue-600 text-white border-blue-600 shadow" : "bg-white text-gray-500 border-gray-200"}`}
+              className={`py-2.5 rounded-full text-xs font-bold transition border-2 ${mode === "bulanan" ? "bg-primary text-white border-primary shadow" : "bg-white text-gray-500 border-gray-200"}`}
             >
               {mode === "bulanan" && <Check className="w-3.5 h-3.5 inline mr-1" />}Gajih Full 1 Bulan
             </button>
@@ -987,7 +1048,7 @@ function GajihPage({ goBack }: { goBack: () => void }) {
                 onChange={e => { setEditHariKerja(e.target.checked); if (e.target.checked) setHariKerjaManual(String(absenCount)); }}
                 className="w-3.5 h-3.5"
               />
-              <span className="text-blue-600 text-[10px]">Edit</span>
+              <span className="text-primary text-[10px]">Edit</span>
             </label>
             {editHariKerja ? (
               <input
@@ -1071,7 +1132,7 @@ function GajihPage({ goBack }: { goBack: () => void }) {
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={handleShareText}
-          className="bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow active:scale-95 transition"
+          className="bg-gradient-to-r from-primary to-blue-500 text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow active:scale-95 transition"
         >
           🍰 Bagikan Teks
         </button>
@@ -1207,7 +1268,7 @@ function BackupPage({ goBack }: { goBack: () => void }) {
           {exportingExcel ? "Memproses..." : "Backup SEMUA Data (Excel)"}
         </button>
         <p className="text-[10px] text-gray-500 text-center mt-0.5">Transaksi, saldo, kasbon, kontak, absen, izin — multi sheet</p>
-        <button onClick={handleDownloadBackup} className="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow active:scale-95 transition">
+        <button onClick={handleDownloadBackup} className="w-full bg-primary text-white py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow active:scale-95 transition">
           <Download className="w-4 h-4" /> Backup Pengaturan & Kasir (JSON)
         </button>
       </div>
@@ -1238,6 +1299,7 @@ function BackupPage({ goBack }: { goBack: () => void }) {
 
 function SettingPage({ goBack }: { goBack: () => void }) {
   const { toast } = useToast();
+  const { primaryColor, setPrimaryColor } = useDisplayMode();
   const [settings, setSettings] = useState<SettingsRecord | null>(null);
   const [shopName, setShopName] = useState("");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState("");
@@ -1355,7 +1417,7 @@ function SettingPage({ goBack }: { goBack: () => void }) {
                   <span className="text-white text-2xl font-bold">{shopName.charAt(0)}</span>
                 )}
               </div>
-              <label className="absolute -bottom-1 -right-1 w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer shadow">
+              <label className="absolute -bottom-1 -right-1 w-7 h-7 bg-primary rounded-full flex items-center justify-center cursor-pointer shadow">
                 <Edit className="w-3.5 h-3.5 text-white" />
                 <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
               </label>
@@ -1393,11 +1455,34 @@ function SettingPage({ goBack }: { goBack: () => void }) {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-bold text-sm text-gray-700 flex items-center gap-2">
+                <Palette className="w-4 h-4 text-pink-500" /> TEMA APLIKASI
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">Pilih warna tema utama aplikasi</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-8 h-8 rounded-full border shadow-inner" 
+                style={{ backgroundColor: primaryColor }}
+              />
+              <input 
+                type="color" 
+                value={primaryColor} 
+                onChange={(e) => setPrimaryColor(e.target.value)}
+                className="w-10 h-10 border-0 p-0 bg-transparent cursor-pointer"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-sm text-gray-700 flex items-center gap-2">
                 <Lock className="w-4 h-4 text-indigo-500" /> PIN Login
               </h3>
               <p className="text-[10px] text-gray-400 mt-0.5">Aktifkan PIN untuk kasir saat login</p>
             </div>
-            <button onClick={() => setPinEnabled(!pinEnabled)} className={`w-12 h-6 rounded-full flex items-center transition-all ${pinEnabled ? 'bg-blue-600 justify-end' : 'bg-gray-300 justify-start'}`}>
+            <button onClick={() => setPinEnabled(!pinEnabled)} className={`w-12 h-6 rounded-full flex items-center transition-all ${pinEnabled ? 'bg-primary justify-end' : 'bg-gray-300 justify-start'}`}>
               <div className="w-5 h-5 bg-white rounded-full mx-0.5 shadow" />
             </button>
           </div>
@@ -1441,13 +1526,13 @@ function SettingPage({ goBack }: { goBack: () => void }) {
           </div>
         </div>
 
-        <button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30">
+        <button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-primary to-blue-500 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
           {saving ? "Menyimpan..." : "Simpan Pengaturan"}
         </button>
 
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
-          <p className="text-[11px] text-blue-600">Reset Data & Backup sekarang ada di menu <strong>Backup</strong>.</p>
+          <p className="text-[11px] text-primary">Reset Data & Backup sekarang ada di menu <strong>Backup</strong>.</p>
         </div>
       </div>
     </div>
@@ -1544,7 +1629,7 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
   };
 
   return (
-    <div className="px-3 pt-3 pb-20 min-h-screen bg-gradient-to-b from-blue-600 via-blue-500 to-blue-400">
+    <div className="px-3 pt-3 pb-20 min-h-screen bg-gradient-to-b from-primary via-blue-500 to-blue-400">
       <div className="flex items-center gap-2 mb-3">
         <button onClick={goBack} className="text-white"><ArrowLeft className="w-5 h-5" /></button>
         <div>
@@ -1554,10 +1639,10 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
       </div>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <button onClick={() => setViewMode("day")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "day" ? "bg-white text-blue-600 shadow" : "bg-white/20 text-white border border-white/30"}`}>
+        <button onClick={() => setViewMode("day")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "day" ? "bg-white text-primary shadow" : "bg-white/20 text-white border border-white/30"}`}>
           Per Hari
         </button>
-        <button onClick={() => setViewMode("month")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "month" ? "bg-white text-blue-600 shadow" : "bg-white/20 text-white border border-white/30"}`}>
+        <button onClick={() => setViewMode("month")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "month" ? "bg-white text-primary shadow" : "bg-white/20 text-white border border-white/30"}`}>
           Per Bulan
         </button>
       </div>
@@ -1575,7 +1660,7 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
           <button
             key={name}
             onClick={() => setSelectedKasir(name)}
-            className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition flex-shrink-0 ${selectedKasir === name ? "bg-white text-blue-600 shadow" : "bg-white/20 text-white border border-white/30"}`}
+            className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition flex-shrink-0 ${selectedKasir === name ? "bg-white text-primary shadow" : "bg-white/20 text-white border border-white/30"}`}
           >
             {name}
           </button>
