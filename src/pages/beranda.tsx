@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/header";
 import { AddSaldoModal } from "@/components/modals/add-saldo-modal";
 import { getBalance, createTransaction, getSettings, type BalanceRecord, type SettingsRecord } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
-import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Plus, Lock, Save, ClipboardList, BookUser, Settings } from "lucide-react";
+import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Plus, Lock, Save, ClipboardList, BookUser, Settings, Camera, ImageIcon, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_QUOTES = [
@@ -34,6 +34,8 @@ export default function Beranda() {
   const [balance, setBalance] = useState<BalanceRecord | null>(null);
   const [shopSettings, setShopSettings] = useState<SettingsRecord | null>(null);
   const [saving, setSaving] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const nominalRef = useRef<HTMLInputElement>(null);
   const adminRef = useRef<HTMLInputElement>(null);
@@ -64,6 +66,41 @@ export default function Beranda() {
     const allQuotes = customQuotes.length > 0 ? customQuotes : DEFAULT_QUOTES;
     return allQuotes[mutiaraIndex % allQuotes.length];
   };
+  
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsCapturing(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        
+        const maxDim = 1024;
+        let w = img.width;
+        let h = img.height;
+        
+        if (w > h) {
+          if (w > maxDim) { h = (h * maxDim) / w; w = maxDim; }
+        } else {
+          if (h > maxDim) { w = (w * maxDim) / h; h = maxDim; }
+        }
+        
+        canvas.width = w;
+        canvas.height = h;
+        ctx?.drawImage(img, 0, 0, w, h);
+        
+        const compressed = canvas.toDataURL("image/jpeg", 0.7);
+        setPhotoUrl(compressed);
+        setIsCapturing(false);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleProses = useCallback(async () => {
     if (!user) return;
@@ -89,11 +126,13 @@ export default function Beranda() {
         admin: a,
         nominalTunai: n,
         adminTunai: a,
+        photoUrl: photoUrl || undefined,
       });
       toast({ title: "Transaksi berhasil disimpan" });
       setNominalDisplay("");
       setAdminDisplay("");
       setKeterangan("");
+      setPhotoUrl("");
       nominalRef.current?.focus();
       await loadBalance();
     } catch (err: any) {
@@ -273,6 +312,33 @@ export default function Beranda() {
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleProses(); } }}
                 className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
               />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <label className="flex-1 flex items-center justify-center gap-2 bg-blue-50 border-2 border-blue-100 rounded-xl py-2.5 cursor-pointer hover:bg-blue-100 transition active:scale-95">
+                  {isCapturing ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  ) : (
+                    <Camera className="w-4 h-4 text-blue-600" />
+                  )}
+                  <span className="text-[10px] font-bold text-blue-700">Kamera Live</span>
+                  <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} className="hidden" />
+                </label>
+                <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 border-2 border-gray-100 rounded-xl py-2.5 cursor-pointer hover:bg-gray-100 transition active:scale-95">
+                  <ImageIcon className="w-4 h-4 text-gray-400" />
+                  <span className="text-[10px] font-bold text-gray-500">Galeri</span>
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                </label>
+              </div>
+              {photoUrl && (
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-border bg-muted/20">
+                  <img src={photoUrl} alt="Preview" className="w-full h-full object-contain" />
+                  <button onClick={() => setPhotoUrl("")} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-lg active:scale-90 transition">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

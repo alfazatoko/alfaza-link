@@ -62,9 +62,9 @@ export default function Catatan() {
     setSaving(true);
     try {
       if (editItem && "nominal" in editItem) {
-        await updateHutang(editItem.id, { nama, nominal: n, keterangan });
+        await updateHutang(editItem.id, { nama, nominal: n, keterangan, photoUrl });
       } else {
-        await createHutang({ nama, nominal: n, keterangan, tanggal: getWibDate(), lunas: false, createdBy: user?.name });
+        await createHutang({ nama, nominal: n, keterangan, tanggal: getWibDate(), lunas: false, createdBy: user?.name, photoUrl });
       }
       toast({ title: editItem ? "Kasbon diperbarui" : "Kasbon ditambahkan" });
       resetForm();
@@ -159,6 +159,7 @@ export default function Catatan() {
     setNama(h.nama);
     setNominalDisplay(formatThousands(String(h.nominal)));
     setKeterangan(h.keterangan || "");
+    setPhotoUrl(h.photoUrl || "");
     setShowForm(true);
   };
 
@@ -230,11 +231,21 @@ export default function Catatan() {
             filteredHutang.map(h => (
               <div key={h.id} className={`bg-white rounded-2xl p-3.5 mb-2 shadow-sm border ${h.lunas ? 'border-green-200 bg-green-50/50' : 'border-gray-100'}`}>
                 <div className="flex justify-between items-start mb-1">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <span className="font-bold text-sm text-gray-800">{h.nama}</span>
                     {h.keterangan && <p className="text-[11px] text-gray-500 mt-0.5">{h.keterangan}</p>}
                   </div>
-                  <span className={`font-extrabold text-sm ${h.lunas ? 'text-green-600 line-through' : 'text-red-600'}`}>{formatRupiah(h.nominal)}</span>
+                  <div className="flex flex-col items-end">
+                    <span className={`font-extrabold text-sm ${h.lunas ? 'text-green-600 line-through' : 'text-red-600'}`}>{formatRupiah(h.nominal)}</span>
+                    {h.photoUrl && (
+                      <div 
+                        className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 mt-1 cursor-pointer"
+                        onClick={() => setPreviewImage(h.photoUrl!)}
+                      >
+                        <img src={h.photoUrl} alt="Struk" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex flex-col">
@@ -318,27 +329,32 @@ export default function Catatan() {
                 <input value={nomor} onChange={e => setNomor(e.target.value)} inputMode="tel" placeholder="Nomor HP" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none" />
               )}
               <input value={keterangan} onChange={e => setKeterangan(e.target.value)} placeholder="Keterangan" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none" />
-              {tab === "kontak" && (
-                <div className="flex items-center gap-3">
-                  <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl py-3 cursor-pointer hover:bg-gray-100 transition">
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <label className="flex-1 flex items-center justify-center gap-2 bg-blue-50 border-2 border-blue-100 rounded-xl py-3 cursor-pointer hover:bg-blue-100 transition group">
                     {isCapturing ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
                     ) : (
-                      <Camera className="w-5 h-5 text-gray-400" />
+                      <Camera className="w-5 h-5 text-blue-600" />
                     )}
-                    <span className="text-xs font-bold text-gray-500">{photoUrl ? "Ganti Foto" : "Ambil Foto"}</span>
+                    <span className="text-xs font-bold text-blue-700">Kamera Live</span>
                     <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} className="hidden" />
                   </label>
-                  {photoUrl && (
-                    <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-gray-200">
-                      <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
-                      <button onClick={() => setPhotoUrl("")} className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg p-0.5">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
+                  <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 border-2 border-gray-100 rounded-xl py-3 cursor-pointer hover:bg-gray-100 transition">
+                    <ImageIcon className="w-5 h-5 text-gray-400" />
+                    <span className="text-xs font-bold text-gray-500">Galeri</span>
+                    <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                  </label>
                 </div>
-              )}
+                {photoUrl && (
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                    <img src={photoUrl} alt="Preview" className="w-full h-full object-contain" />
+                    <button onClick={() => setPhotoUrl("")} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg active:scale-90 transition">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             <button onClick={tab === "kasbon" ? handleSaveKasbon : handleSaveKontak} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-3 rounded-full text-sm disabled:opacity-60">
               {saving ? "Menyimpan..." : "Simpan"}

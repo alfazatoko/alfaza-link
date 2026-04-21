@@ -56,6 +56,7 @@ export interface TransactionRecord {
   nominalNonTunai?: number;
   adminNonTunai?: number;
   createdAt: any;
+  photoUrl?: string;
 }
 
 export interface SaldoHistoryRecord {
@@ -90,6 +91,7 @@ export interface HutangRecord {
   lunas: boolean;
   tglLunas?: string;
   createdBy?: string;
+  photoUrl?: string;
 }
 
 export interface KontakRecord {

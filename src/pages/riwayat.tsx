@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
 import { getTransactions, getSaldoHistory, getUsers, updateTransaction, deleteTransaction, type TransactionRecord, type SaldoHistoryRecord, type UserRecord } from "@/lib/firestore";
-import { Receipt, AlertCircle } from "lucide-react";
+import { Receipt, AlertCircle, ImageIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORY_FILTERS = ["Semua", "Bank", "Flip", "App", "Dana", "Tarik", "Aks"];
@@ -30,6 +30,7 @@ export default function Riwayat() {
   const [editAdmin, setEditAdmin] = useState("");
   const [editKeterangan, setEditKeterangan] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [saldoHistory, setSaldoHistory] = useState<SaldoHistoryRecord[]>([]);
@@ -196,6 +197,17 @@ export default function Riwayat() {
                     <div className="text-xs text-gray-500 mb-1">Pembayaran: <strong className={nt ? 'text-purple-600' : 'text-green-600'}>{nt ? "NON TUNAI" : "TUNAI"}</strong></div>
                     {ketText && <div className="text-xs text-gray-500 mb-1">Keterangan: <strong className="text-gray-700">{ketText}</strong></div>}
                     {tx.kasirName && <div className="text-xs text-gray-500 mb-2">Kasir: <strong>{tx.kasirName}</strong></div>}
+                    {tx.photoUrl && (
+                      <div className="mb-3">
+                        <p className="text-[10px] font-bold text-gray-400 mb-1 uppercase">Foto Struk:</p>
+                        <div 
+                          className="w-24 h-24 rounded-xl border border-gray-200 bg-white overflow-hidden cursor-pointer shadow-sm active:scale-95 transition"
+                          onClick={() => setPreviewImage(tx.photoUrl!)}
+                        >
+                          <img src={tx.photoUrl} alt="Struk" className="w-full h-full object-cover" />
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-2.5">
                       <button onClick={e => { e.stopPropagation(); openEdit(tx); }} className="bg-blue-50 border border-blue-200 rounded-[10px] px-4 py-1.5 text-[13px] font-bold text-blue-600 flex items-center gap-1">✏️ Edit</button>
                       <button onClick={e => { e.stopPropagation(); handleDelete(tx.id); }} className="bg-red-50 border border-red-200 rounded-[10px] px-4 py-1.5 text-[13px] font-bold text-red-600 flex items-center gap-1">🗑️ Hapus</button>
@@ -268,6 +280,15 @@ export default function Riwayat() {
               {editSaving ? "Menyimpan..." : "Simpan Perubahan"}
             </button>
           </div>
+        </div>
+      )}
+
+      {previewImage && (
+        <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
+          <button className="absolute top-6 right-6 text-white bg-white/20 p-2 rounded-full backdrop-blur-md">
+            <X className="w-6 h-6" />
+          </button>
+          <img src={previewImage} alt="Large preview" className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl" />
         </div>
       )}
     </div>
