@@ -1299,12 +1299,7 @@ function BackupPage({ goBack }: { goBack: () => void }) {
 
 function SettingPage({ goBack }: { goBack: () => void }) {
   const { toast } = useToast();
-  const { 
-    theme, 
-    primaryColor, setPrimaryColor, 
-    primaryColorDark, setPrimaryColorDark, 
-    currentPrimaryColor 
-  } = useDisplayMode();
+  const { theme } = useDisplayMode();
   const [settings, setSettings] = useState<SettingsRecord | null>(null);
   const [shopName, setShopName] = useState("");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState("");
@@ -1452,28 +1447,6 @@ function SettingPage({ goBack }: { goBack: () => void }) {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-slate-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2">
-                <Palette className="w-4 h-4 text-pink-500" /> TEMA {theme === "dark" ? "GELAP" : "TERANG"}
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Warna utama untuk mode saat ini</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-8 h-8 rounded-full border shadow-inner" 
-                style={{ backgroundColor: currentPrimaryColor }}
-              />
-              <input 
-                type="color" 
-                value={theme === "dark" ? primaryColorDark : primaryColor} 
-                onChange={(e) => theme === "dark" ? setPrimaryColorDark(e.target.value) : setPrimaryColor(e.target.value)}
-                className="w-10 h-10 border-0 p-0 bg-transparent cursor-pointer"
-              />
-            </div>
-          </div>
-        </div>
 
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
@@ -1522,28 +1495,6 @@ function SettingPage({ goBack }: { goBack: () => void }) {
           <p className="text-[10px] text-gray-400 mt-2">Saldo semua kasir akan direset otomatis pada jam ini (WIB)</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-sm text-gray-700 flex items-center gap-2">
-                <Palette className="w-4 h-4 text-pink-500" /> TEMA APLIKASI
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Pilih warna tema utama aplikasi</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-8 h-8 rounded-full border shadow-inner" 
-                style={{ backgroundColor: primaryColor }}
-              />
-              <input 
-                type="color" 
-                value={primaryColor} 
-                onChange={(e) => setPrimaryColor(e.target.value)}
-                className="w-10 h-10 border-0 p-0 bg-transparent cursor-pointer"
-              />
-            </div>
-          </div>
-        </div>
 
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">

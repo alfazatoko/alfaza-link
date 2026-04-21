@@ -4,7 +4,7 @@ import { Header } from "@/components/layout/header";
 import { getHutangList, createHutang, updateHutang, deleteHutang, getKontakList, createKontak, updateKontak, deleteKontak, type HutangRecord, type KontakRecord } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Receipt, BookUser, Plus, Trash2, Edit, Check, Search, Ban, Phone, Copy } from "lucide-react";
+import { Receipt, BookUser, Plus, Trash2, Edit, Check, Search, Ban, Phone, Copy, Camera, ImageIcon, X, Loader2 } from "lucide-react";
 
 export default function Catatan() {
   const { user } = useAuth();
@@ -28,6 +28,9 @@ export default function Catatan() {
   const [nomor, setNomor] = useState("");
   const [saving, setSaving] = useState(false);
   const [showLunas, setShowLunas] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -47,6 +50,7 @@ export default function Catatan() {
     setNominalDisplay("");
     setKeterangan("");
     setNomor("");
+    setPhotoUrl("");
     setEditItem(null);
     setShowForm(false);
   };
@@ -75,9 +79,9 @@ export default function Catatan() {
     setSaving(true);
     try {
       if (editItem && "nomor" in editItem) {
-        await updateKontak(editItem.id, { nama, nomor, keterangan });
+        await updateKontak(editItem.id, { nama, nomor, keterangan, photoUrl });
       } else {
-        await createKontak({ nama, nomor, keterangan, createdBy: user?.name });
+        await createKontak({ nama, nomor, keterangan, photoUrl, createdBy: user?.name });
       }
       toast({ title: editItem ? "Kontak diperbarui" : "Kontak ditambahkan" });
       resetForm();
@@ -85,6 +89,43 @@ export default function Catatan() {
     } catch {
       toast({ title: "Gagal menyimpan", variant: "destructive" });
     } finally { setSaving(false); }
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsCapturing(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        
+        // Target max dimension 1024px to keep size reasonable but detailed
+        const maxDim = 1024;
+        let w = img.width;
+        let h = img.height;
+        
+        if (w > h) {
+          if (w > maxDim) { h = (h * maxDim) / w; w = maxDim; }
+        } else {
+          if (h > maxDim) { w = (w * maxDim) / h; h = maxDim; }
+        }
+        
+        canvas.width = w;
+        canvas.height = h;
+        ctx?.drawImage(img, 0, 0, w, h);
+        
+        // JPEG quality 0.7 usually results in < 300KB for 1024px images
+        const compressed = canvas.toDataURL("image/jpeg", 0.7);
+        setPhotoUrl(compressed);
+        setIsCapturing(false);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleDeleteKasbon = async (id: string) => {
@@ -126,6 +167,7 @@ export default function Catatan() {
     setNama(k.nama);
     setNomor(k.nomor || "");
     setKeterangan(k.keterangan || "");
+    setPhotoUrl(k.photoUrl || "");
     setShowForm(true);
   };
 
@@ -224,18 +266,30 @@ export default function Catatan() {
             filteredKontak.map(k => (
               <div key={k.id} className="bg-white rounded-2xl p-3.5 mb-2 shadow-sm border border-gray-100">
                 <div className="flex justify-between items-start">
-                  <div className="flex-1 min-w-0">
-                    <span className="font-bold text-sm text-gray-800">{k.nama}</span>
-                    {k.nomor && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-base font-bold text-blue-600 flex items-center gap-1"><Phone className="w-4 h-4" /> {k.nomor}</p>
-                        <button onClick={() => { navigator.clipboard.writeText(k.nomor || ""); toast({ title: "Nomor disalin" }); }} className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-0.5 active:scale-95 transition">
-                          <Copy className="w-3 h-3" /> Copy
-                        </button>
-                      </div>
-                    )}
-                    {k.keterangan && <p className="text-[11px] text-gray-500 mt-0.5">{k.keterangan}</p>}
-                    {k.createdBy && <p className="text-[10px] text-blue-400 mt-0.5">Dibuat oleh: {k.createdBy}</p>}
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div 
+                      className="w-14 h-14 rounded-xl bg-gray-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-50 cursor-pointer"
+                      onClick={() => k.photoUrl && setPreviewImage(k.photoUrl)}
+                    >
+                      {k.photoUrl ? (
+                        <img src={k.photoUrl} alt={k.nama} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-gray-300" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-bold text-sm text-gray-800">{k.nama}</span>
+                      {k.nomor && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-base font-bold text-blue-600 flex items-center gap-1"><Phone className="w-4 h-4" /> {k.nomor}</p>
+                          <button onClick={() => { navigator.clipboard.writeText(k.nomor || ""); toast({ title: "Nomor disalin" }); }} className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-0.5 active:scale-95 transition">
+                            <Copy className="w-3 h-3" /> Copy
+                          </button>
+                        </div>
+                      )}
+                      {k.keterangan && <p className="text-[11px] text-gray-500 mt-0.5">{k.keterangan}</p>}
+                      {k.createdBy && <p className="text-[10px] text-blue-400 mt-0.5">Dibuat oleh: {k.createdBy}</p>}
+                    </div>
                   </div>
                   <div className="flex gap-1.5 flex-shrink-0 ml-2">
                     <button onClick={() => openEditKontak(k)} className="text-[10px] px-2 py-1 rounded-lg font-bold bg-blue-100 text-blue-600"><Edit className="w-3 h-3 inline" /></button>
@@ -264,11 +318,40 @@ export default function Catatan() {
                 <input value={nomor} onChange={e => setNomor(e.target.value)} inputMode="tel" placeholder="Nomor HP" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none" />
               )}
               <input value={keterangan} onChange={e => setKeterangan(e.target.value)} placeholder="Keterangan" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none" />
+              {tab === "kontak" && (
+                <div className="flex items-center gap-3">
+                  <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl py-3 cursor-pointer hover:bg-gray-100 transition">
+                    {isCapturing ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    ) : (
+                      <Camera className="w-5 h-5 text-gray-400" />
+                    )}
+                    <span className="text-xs font-bold text-gray-500">{photoUrl ? "Ganti Foto" : "Ambil Foto"}</span>
+                    <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} className="hidden" />
+                  </label>
+                  {photoUrl && (
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-gray-200">
+                      <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <button onClick={() => setPhotoUrl("")} className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg p-0.5">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <button onClick={tab === "kasbon" ? handleSaveKasbon : handleSaveKontak} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-3 rounded-full text-sm disabled:opacity-60">
               {saving ? "Menyimpan..." : "Simpan"}
             </button>
           </div>
+        </div>
+      )}
+      {previewImage && (
+        <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
+          <button className="absolute top-6 right-6 text-white bg-white/20 p-2 rounded-full backdrop-blur-md">
+            <X className="w-6 h-6" />
+          </button>
+          <img src={previewImage} alt="Large preview" className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl" />
         </div>
       )}
     </div>

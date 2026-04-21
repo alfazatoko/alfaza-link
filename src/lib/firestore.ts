@@ -98,6 +98,7 @@ export interface KontakRecord {
   nomor?: string;
   keterangan?: string;
   createdBy?: string;
+  photoUrl?: string;
 }
 
 export interface AttendanceRecord {
