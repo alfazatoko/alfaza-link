@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { getUsers, getSettings, loginUser, type UserRecord } from "@/lib/firestore";
-import { User, Clock, CalendarDays, Sun, Moon, Fingerprint, Monitor, Tablet, Smartphone, ChevronDown, Loader2, Lock, SunMedium, SunMoon, Eye, EyeOff, Mail, KeyRound, LogOut, Store } from "lucide-react";
+import { User, Clock, CalendarDays, Sun, Moon, Fingerprint, Monitor, Tablet, Smartphone, ChevronDown, Loader2, Lock, SunMedium, SunMoon, Eye, EyeOff, Mail, KeyRound, LogOut, Store, Cloud, Leaf, Sunset } from "lucide-react";
 import { useDisplayMode } from "@/hooks/use-display-mode";
 
 const logoUrl = `${import.meta.env.BASE_URL}alfaza-logo.png`;
-
 
 const SHIFT_OPTIONS = [
   { value: "PAGI", label: "Pagi", icon: SunMedium },
@@ -77,13 +76,35 @@ function FirebaseAuthScreen() {
 
   const { theme, toggleTheme } = useDisplayMode();
 
+  const getThemeIcon = () => {
+    switch (theme) {
+      case "light": return <Sun className="w-5 h-5" />;
+      case "dark": return <Moon className="w-5 h-5" />;
+      case "soft-blue": return <Cloud className="w-5 h-5" />;
+      case "soft-green": return <Leaf className="w-5 h-5" />;
+      case "soft-orange": return <Sunset className="w-5 h-5" />;
+      default: return <Sun className="w-5 h-5" />;
+    }
+  };
+
+  const getThemeGradient = () => {
+    switch (theme) {
+      case "light": return "from-blue-700 via-primary to-sky-500";
+      case "dark": return "from-slate-900 via-blue-900 to-slate-900";
+      case "soft-blue": return "from-blue-100 via-blue-200 to-blue-300";
+      case "soft-green": return "from-green-100 via-green-200 to-green-300";
+      case "soft-orange": return "from-orange-100 via-orange-200 to-orange-300";
+      default: return "from-blue-700 via-primary to-sky-500";
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-700 via-primary to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 relative transition-colors duration-500">
+    <div className={`min-h-screen bg-gradient-to-b ${getThemeGradient()} flex items-center justify-center p-4 relative transition-all duration-500`}>
       <button
         onClick={toggleTheme}
-        className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm z-50"
+        className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm z-50 flex items-center justify-center min-w-[44px]"
       >
-        {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+        {getThemeIcon()}
       </button>
 
       <div className="bg-card p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-2xl border border-border/50">
@@ -288,13 +309,35 @@ function KasirSelectionScreen() {
 
   const { theme, toggleTheme } = useDisplayMode();
 
+  const getThemeIcon = () => {
+    switch (theme) {
+      case "light": return <Sun className="w-5 h-5" />;
+      case "dark": return <Moon className="w-5 h-5" />;
+      case "soft-blue": return <Cloud className="w-5 h-5" />;
+      case "soft-green": return <Leaf className="w-5 h-5" />;
+      case "soft-orange": return <Sunset className="w-5 h-5" />;
+      default: return <Sun className="w-5 h-5" />;
+    }
+  };
+
+  const getThemeGradient = () => {
+    switch (theme) {
+      case "light": return "from-blue-700 via-primary to-sky-500";
+      case "dark": return "from-slate-900 via-blue-900 to-slate-900";
+      case "soft-blue": return "from-blue-100 via-blue-200 to-blue-300";
+      case "soft-green": return "from-green-100 via-green-200 to-green-300";
+      case "soft-orange": return "from-orange-100 via-orange-200 to-orange-300";
+      default: return "from-blue-700 via-primary to-sky-500";
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-700 via-primary to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 relative transition-colors duration-500">
+    <div className={`min-h-screen bg-gradient-to-b ${getThemeGradient()} flex items-center justify-center p-4 relative transition-all duration-500`}>
       <button
         onClick={toggleTheme}
-        className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm z-50"
+        className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm z-50 flex items-center justify-center min-w-[44px]"
       >
-        {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+        {getThemeIcon()}
       </button>
 
       <div className="bg-card p-6 sm:p-8 rounded-[2rem] w-full max-w-sm shadow-2xl border border-border/50">
@@ -452,9 +495,20 @@ export default function Login() {
 
   const { theme, toggleTheme } = useDisplayMode();
 
+  const getThemeGradient = () => {
+    switch (theme) {
+      case "light": return "from-blue-700 via-primary to-sky-500";
+      case "dark": return "from-slate-900 via-blue-900 to-slate-900";
+      case "soft-blue": return "from-blue-100 via-blue-200 to-blue-300";
+      case "soft-green": return "from-green-100 via-green-200 to-green-300";
+      case "soft-orange": return "from-orange-100 via-orange-200 to-orange-300";
+      default: return "from-blue-700 via-primary to-sky-500";
+    }
+  };
+
   if (firebaseLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-700 via-primary to-sky-500 dark:from-slate-900 dark:via-blue-900 dark:to-slate-900 flex items-center justify-center p-4 transition-colors duration-500">
+      <div className={`min-h-screen bg-gradient-to-b ${getThemeGradient()} flex items-center justify-center p-4 transition-all duration-500`}>
         <div className="bg-card p-8 rounded-[2rem] w-full max-w-sm shadow-2xl flex flex-col items-center gap-4 border border-border/50">
           <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg border-2 border-primary/20">
             <img src={logoUrl} alt="Alfaza" className="w-full h-full object-cover" />

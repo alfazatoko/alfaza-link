@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 
 type DisplayMode = "hp" | "tablet" | "pc";
-type Theme = "light" | "dark";
+type Theme = "light" | "dark" | "soft-blue" | "soft-green" | "soft-orange";
 
 interface DisplayModeContextType {
   mode: DisplayMode;
@@ -50,14 +50,14 @@ export function DisplayModeProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     localStorage.setItem("alfaza_theme", theme);
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    const root = document.documentElement;
+    // Remove all theme classes first
+    root.classList.remove("light", "dark", "soft-blue", "soft-green", "soft-orange");
+    // Add the current theme class
+    root.classList.add(theme);
   }, [theme]);
 
-  const currentPrimaryColor = theme === "dark" ? primaryColorDark : primaryColor;
+  const currentPrimaryColor = (theme === "dark") ? primaryColorDark : primaryColor;
 
   useEffect(() => {
     localStorage.setItem("alfaza_primary_color", primaryColor);
@@ -67,7 +67,12 @@ export function DisplayModeProvider({ children }: { children: React.ReactNode })
   }, [primaryColor, primaryColorDark, theme, currentPrimaryColor]);
 
   const toggleTheme = () => {
-    setTheme(prev => prev === "light" ? "dark" : "light");
+    const themes: Theme[] = ["light", "dark", "soft-blue", "soft-green", "soft-orange"];
+    setTheme(prev => {
+      const currentIndex = themes.indexOf(prev);
+      const nextIndex = (currentIndex + 1) % themes.length;
+      return themes[nextIndex];
+    });
   };
 
   return (

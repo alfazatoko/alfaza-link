@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { getSettings, type SettingsRecord } from "@/lib/firestore";
-import { User, Clock, CalendarDays, Sun, Moon, Fingerprint, Monitor, Tablet, Smartphone } from "lucide-react";
+import { User, Clock, CalendarDays, Sun, Moon, Fingerprint, Monitor, Tablet, Smartphone, Cloud, Leaf, Sunset } from "lucide-react";
 import { useDisplayMode } from "@/hooks/use-display-mode";
 
 export function Header() {
@@ -49,6 +49,28 @@ export function Header() {
     { id: "tablet" as const, icon: Tablet, label: "Tab" },
     { id: "pc" as const, icon: Monitor, label: "PC" },
   ];
+
+  const getThemeIcon = () => {
+    switch (theme) {
+      case "light": return <Sun className="w-3.5 h-3.5" />;
+      case "dark": return <Moon className="w-3.5 h-3.5" />;
+      case "soft-blue": return <Cloud className="w-3.5 h-3.5" />;
+      case "soft-green": return <Leaf className="w-3.5 h-3.5" />;
+      case "soft-orange": return <Sunset className="w-3.5 h-3.5" />;
+      default: return <Sun className="w-3.5 h-3.5" />;
+    }
+  };
+
+  const getThemeTitle = () => {
+    switch (theme) {
+      case "light": return "Mode Terang";
+      case "dark": return "Mode Gelap";
+      case "soft-blue": return "Mode Soft Biru";
+      case "soft-green": return "Mode Soft Hijau";
+      case "soft-orange": return "Mode Soft Orange";
+      default: return "Ganti Mode";
+    }
+  };
 
   return (
     <div 
@@ -110,10 +132,10 @@ export function Header() {
             <div className="flex items-center gap-0.5 bg-black/10 rounded-full p-0.5">
               <button
                 onClick={toggleTheme}
-                className="p-1.5 rounded-full transition-all hover:bg-white/10"
-                title={theme === "light" ? "Mode Gelap" : "Mode Terang"}
+                className="p-1.5 rounded-full transition-all hover:bg-white/10 flex items-center justify-center min-w-[28px]"
+                title={getThemeTitle()}
               >
-                {theme === "light" ? <Moon className="w-3 h-3" /> : <Sun className="w-3 h-3" />}
+                {getThemeIcon()}
               </button>
             </div>
 

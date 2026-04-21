@@ -44,13 +44,15 @@ function ProtectedRoute({ component: Component, allowedRoles }: { component: any
 }
 
 function Router() {
-  const { mode } = useDisplayMode();
+  const { mode, theme } = useDisplayMode();
   const { user } = useAuth();
   const maxW = getMaxWidth(mode);
   useAutoScheduler(!!user);
 
+  const shadowClass = theme === "light" ? "shadow-[0_0_40px_rgba(0,0,0,0.05)]" : "shadow-none";
+
   return (
-    <div className={`pb-20 ${maxW} mx-auto min-h-[100dvh] bg-background shadow-[0_0_40px_rgba(0,0,0,0.05)] dark:shadow-none transition-all duration-500 ease-in-out`}>
+    <div className={`pb-20 ${maxW} mx-auto min-h-[100dvh] bg-background ${shadowClass} transition-all duration-500 ease-in-out`}>
 
       <Switch>
         <Route path="/" component={Login} />
