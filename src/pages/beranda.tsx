@@ -148,7 +148,7 @@ export default function Beranda() {
     } finally {
       setSaving(false);
     }
-  }, [user, nominalDisplay, adminDisplay, category, keterangan, toast, loadBalance]);
+  }, [user, nominalDisplay, adminDisplay, category, keterangan, photoUrl, toast, loadBalance]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -180,7 +180,7 @@ export default function Beranda() {
   }, [category]);
 
   return (
-    <div className="px-3 pt-3 pb-2 landscape-scroll">
+    <div className="px-3 pt-3 pb-2">
       <Header />
 
       {shopSettings?.runningText && (
@@ -255,8 +255,7 @@ export default function Beranda() {
         {getMutiaraQuote()}
       </div>
 
-      {user?.role !== "owner" && (
-        <div className="grid grid-cols-6 gap-2 mb-3 px-1">
+      <div className="grid grid-cols-6 gap-2 mb-3 px-1">
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             const isActive = category === cat.id;
@@ -270,12 +269,10 @@ export default function Beranda() {
                   <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 1.5} />
                 </div>
                 <span className={`text-[10px] font-bold ${isActive ? 'text-primary' : 'text-foreground opacity-80'}`}>{cat.label}</span>
-
               </button>
             );
           })}
-        </div>
-      )}
+      </div>
 
       {user?.role === "owner" && (
         <div className="bg-card rounded-2xl p-4 shadow-sm border border-border text-center">
@@ -289,87 +286,84 @@ export default function Beranda() {
         </div>
       )}
 
-
-      {user?.role !== "owner" && (
-        <div className="bg-card rounded-2xl p-4 shadow-sm border border-border">
-          <div className="space-y-3 mb-4">
-            <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-12 bg-muted/30">
-              <span className="text-primary font-bold text-sm">Rp</span>
-              <input
-                ref={nominalRef}
-                type="text"
-                inputMode="numeric"
-                placeholder="Nominal"
-                value={nominalDisplay}
-                onChange={(e) => setNominalDisplay(formatThousands(e.target.value))}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); adminRef.current?.focus(); } }}
-                className="flex-1 bg-transparent outline-none text-base font-bold text-foreground placeholder:text-muted-foreground placeholder:font-normal"
-              />
-            </div>
-            <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-11 bg-muted/30">
-              <span className="text-amber-500 font-bold text-sm">%</span>
-              <input
-                ref={adminRef}
-                type="text"
-                inputMode="numeric"
-                placeholder="Admin"
-                value={adminDisplay}
-                onChange={(e) => setAdminDisplay(formatThousands(e.target.value))}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ketRef.current?.focus(); } }}
-                className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
-              />
-            </div>
-            <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-11 bg-muted/30">
-              <span className="text-blue-400 text-sm">📝</span>
-              <input
-                ref={ketRef}
-                placeholder="Keterangan"
-                value={keterangan}
-                onChange={(e) => setKeterangan(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleProses(); } }}
-                className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <label className="flex-1 flex items-center justify-center gap-2 bg-blue-50 border-2 border-blue-100 rounded-xl py-2.5 cursor-pointer hover:bg-blue-100 transition active:scale-95">
-                  {isCapturing ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                  ) : (
-                    <Camera className="w-4 h-4 text-blue-600" />
-                  )}
-                  <span className="text-[10px] font-bold text-blue-700">Kamera Live</span>
-                  <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} className="hidden" />
-                </label>
-                <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 border-2 border-gray-100 rounded-xl py-2.5 cursor-pointer hover:bg-gray-100 transition active:scale-95">
-                  <ImageIcon className="w-4 h-4 text-gray-400" />
-                  <span className="text-[10px] font-bold text-gray-500">Galeri</span>
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-                </label>
-              </div>
-              {photoUrl && (
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-border bg-muted/20">
-                  <img src={photoUrl} alt="Preview" className="w-full h-full object-contain" />
-                  <button onClick={() => setPhotoUrl("")} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-lg active:scale-90 transition">
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
-            </div>
+      <div className="bg-card rounded-2xl p-4 shadow-sm border border-border mt-3">
+        <div className="space-y-3 mb-4">
+          <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-12 bg-muted/30">
+            <span className="text-primary font-bold text-sm">Rp</span>
+            <input
+              ref={nominalRef}
+              type="text"
+              inputMode="numeric"
+              placeholder="Nominal"
+              value={nominalDisplay}
+              onChange={(e) => setNominalDisplay(formatThousands(e.target.value))}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); adminRef.current?.focus(); } }}
+              className="flex-1 bg-transparent outline-none text-base font-bold text-foreground placeholder:text-muted-foreground placeholder:font-normal"
+            />
+          </div>
+          <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-11 bg-muted/30">
+            <span className="text-amber-500 font-bold text-sm">%</span>
+            <input
+              ref={adminRef}
+              type="text"
+              inputMode="numeric"
+              placeholder="Admin"
+              value={adminDisplay}
+              onChange={(e) => setAdminDisplay(formatThousands(e.target.value))}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ketRef.current?.focus(); } }}
+              className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
+          <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-11 bg-muted/30">
+            <span className="text-blue-400 text-sm">📝</span>
+            <input
+              ref={ketRef}
+              placeholder="Keterangan"
+              value={keterangan}
+              onChange={(e) => setKeterangan(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleProses(); } }}
+              className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
+            />
           </div>
 
-
-          <button
-            onClick={handleProses}
-            disabled={saving}
-            className="w-full h-12 rounded-2xl font-bold text-sm bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? "MEMPROSES..." : "SIMPAN TRANSAKSI"}
-          </button>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <label className="flex-1 flex items-center justify-center gap-2 bg-blue-50 border-2 border-blue-100 rounded-xl py-2.5 cursor-pointer hover:bg-blue-100 transition active:scale-95">
+                {isCapturing ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                ) : (
+                  <Camera className="w-4 h-4 text-blue-600" />
+                )}
+                <span className="text-[10px] font-bold text-blue-700">Kamera Live</span>
+                <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} className="hidden" />
+              </label>
+              <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 border-2 border-gray-100 rounded-xl py-2.5 cursor-pointer hover:bg-gray-100 transition active:scale-95">
+                <ImageIcon className="w-4 h-4 text-gray-400" />
+                <span className="text-[10px] font-bold text-gray-500">Galeri</span>
+                <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+              </label>
+            </div>
+            {photoUrl && (
+              <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-border bg-muted/20">
+                <img src={photoUrl} alt="Preview" className="w-full h-full object-contain" />
+                <button onClick={() => setPhotoUrl("")} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-lg active:scale-90 transition">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+
+
+        <button
+          onClick={handleProses}
+          disabled={saving}
+          className="w-full h-12 rounded-2xl font-bold text-sm bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-50"
+        >
+          <Save className="w-4 h-4" />
+          {saving ? "MEMPROSES..." : "SIMPAN TRANSAKSI"}
+        </button>
+      </div>
 
       <AddSaldoModal
         open={isSaldoModalOpen}

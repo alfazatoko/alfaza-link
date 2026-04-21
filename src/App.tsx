@@ -55,14 +55,30 @@ function Router() {
     <div className={`pb-20 ${maxW} mx-auto min-h-[100dvh] bg-background ${shadowClass} transition-all duration-500 ease-in-out`}>
 
       <Switch>
-        <Route path="/" component={Login} />
-        <Route path="/beranda" component={() => <ProtectedRoute component={Beranda} />} />
-        <Route path="/riwayat" component={() => <ProtectedRoute component={Riwayat} />} />
-        <Route path="/non-tunai" component={() => <ProtectedRoute component={NonTunai} />} />
-        <Route path="/catatan" component={() => <ProtectedRoute component={Catatan} />} />
-        <Route path="/laporan" component={() => <ProtectedRoute component={Laporan} />} />
-        <Route path="/owner" component={() => <ProtectedRoute component={Owner} allowedRoles={["owner"]} />} />
-        <Route component={NotFound} />
+        <Route path="/">
+          <Login />
+        </Route>
+        <Route path="/beranda">
+          <ProtectedRoute component={Beranda} />
+        </Route>
+        <Route path="/riwayat">
+          <ProtectedRoute component={Riwayat} />
+        </Route>
+        <Route path="/non-tunai">
+          <ProtectedRoute component={NonTunai} />
+        </Route>
+        <Route path="/catatan">
+          <ProtectedRoute component={Catatan} />
+        </Route>
+        <Route path="/laporan">
+          <ProtectedRoute component={Laporan} />
+        </Route>
+        <Route path="/owner">
+          <ProtectedRoute component={Owner} allowedRoles={["owner"]} />
+        </Route>
+        <Route>
+          <NotFound />
+        </Route>
       </Switch>
       <BottomNav />
     </div>

@@ -21,7 +21,7 @@ interface AddSaldoModalProps {
   mode?: "all" | "isi-saldo" | "penyesuaian";
 }
 
-export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner }: AddSaldoModalProps) {
+export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode }: AddSaldoModalProps) {
   const [jenis, setJenis] = useState(mode === "penyesuaian" ? "Real App" : "Bank");
   const [nominalDisplay, setNominalDisplay] = useState("");
   const [keterangan, setKeterangan] = useState("");

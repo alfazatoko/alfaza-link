@@ -151,9 +151,41 @@ export async function deleteUser(id: string): Promise<void> {
 
 export async function getSettings(): Promise<SettingsRecord> {
   const ref = doc(db, "settings", "main");
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
-    const defaults: SettingsRecord = {
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      const defaults: SettingsRecord = {
+        shopName: "ALFAZA LINK",
+        logoUrl: "",
+        profilePhotoUrl: "",
+        autoLockHour: 1,
+        autoLockMinute: 0,
+        autoResetHour: 2,
+        autoResetMinute: 0,
+        autoUnlockHour: 8,
+        autoUnlockMinute: 0,
+        mutiaraQuotes: "Kesuksesan berawal dari kedisiplinan dan kejujuran.",
+        runningText: "Selamat Datang di Alfaza Link",
+        pinEnabled: false,
+        categoryLabels: {
+          BANK: { name: "BANK", visible: true },
+          FLIP: { name: "FLIP", visible: true },
+          APP: { name: "APP", visible: true },
+          DANA: { name: "DANA", visible: true },
+          AKS: { name: "AKS", visible: true },
+          TARIK: { name: "TARIK", visible: true },
+        },
+        lastLockDate: "",
+        lastResetDate: "",
+      };
+
+      await setDoc(ref, defaults).catch(() => {});
+      return defaults;
+    }
+    return snap.data() as SettingsRecord;
+  } catch (err) {
+    console.error("Error getting settings:", err);
+    return {
       shopName: "ALFAZA LINK",
       logoUrl: "",
       profilePhotoUrl: "",
@@ -163,8 +195,8 @@ export async function getSettings(): Promise<SettingsRecord> {
       autoResetMinute: 0,
       autoUnlockHour: 8,
       autoUnlockMinute: 0,
-      mutiaraQuotes: "",
-      runningText: "",
+      mutiaraQuotes: "Kesuksesan berawal dari kedisiplinan dan kejujuran.",
+      runningText: "Selamat Datang di Alfaza Link",
       pinEnabled: false,
       categoryLabels: {
         BANK: { name: "BANK", visible: true },
