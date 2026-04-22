@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 
 type DisplayMode = "hp" | "tablet" | "pc";
-type Theme = "light" | "dark" | "soft-blue" | "soft-green" | "soft-orange";
+type Theme = "light" | "dark" | "sky-blue" | "soft-green" | "sunset-orange";
 
 interface DisplayModeContextType {
   mode: DisplayMode;
@@ -52,7 +52,7 @@ export function DisplayModeProvider({ children }: { children: React.ReactNode })
     localStorage.setItem("alfaza_theme", theme);
     const root = document.documentElement;
     // Remove all theme classes first
-    root.classList.remove("light", "dark", "soft-blue", "soft-green", "soft-orange");
+    root.classList.remove("light", "dark", "sky-blue", "soft-green", "sunset-orange");
     // Add the current theme class
     root.classList.add(theme);
   }, [theme]);
@@ -67,7 +67,7 @@ export function DisplayModeProvider({ children }: { children: React.ReactNode })
   }, [primaryColor, primaryColorDark, theme, currentPrimaryColor]);
 
   const toggleTheme = () => {
-    const themes: Theme[] = ["light", "dark", "soft-blue", "soft-green", "soft-orange"];
+    const themes: Theme[] = ["light", "dark", "sky-blue", "soft-green", "sunset-orange"];
     setTheme(prev => {
       const currentIndex = themes.indexOf(prev);
       const nextIndex = (currentIndex + 1) % themes.length;

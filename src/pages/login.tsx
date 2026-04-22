@@ -80,9 +80,9 @@ function FirebaseAuthScreen() {
     switch (theme) {
       case "light": return <Sun className="w-5 h-5" />;
       case "dark": return <Moon className="w-5 h-5" />;
-      case "soft-blue": return <Cloud className="w-5 h-5" />;
+      case "sky-blue": return <Cloud className="w-5 h-5" />;
       case "soft-green": return <Leaf className="w-5 h-5" />;
-      case "soft-orange": return <Sunset className="w-5 h-5" />;
+      case "sunset-orange": return <Sunset className="w-5 h-5" />;
       default: return <Sun className="w-5 h-5" />;
     }
   };
@@ -91,9 +91,9 @@ function FirebaseAuthScreen() {
     switch (theme) {
       case "light": return "from-blue-700 via-primary to-sky-500";
       case "dark": return "from-slate-900 via-blue-900 to-slate-900";
-      case "soft-blue": return "from-blue-100 via-blue-200 to-blue-300";
+      case "sky-blue": return "from-sky-300 via-sky-400 to-sky-500";
       case "soft-green": return "from-green-100 via-green-200 to-green-300";
-      case "soft-orange": return "from-orange-100 via-orange-200 to-orange-300";
+      case "sunset-orange": return "from-orange-400 via-amber-500 to-orange-600";
       default: return "from-blue-700 via-primary to-sky-500";
     }
   };
@@ -313,9 +313,9 @@ function KasirSelectionScreen() {
     switch (theme) {
       case "light": return <Sun className="w-5 h-5" />;
       case "dark": return <Moon className="w-5 h-5" />;
-      case "soft-blue": return <Cloud className="w-5 h-5" />;
+      case "sky-blue": return <Cloud className="w-5 h-5" />;
       case "soft-green": return <Leaf className="w-5 h-5" />;
-      case "soft-orange": return <Sunset className="w-5 h-5" />;
+      case "sunset-orange": return <Sunset className="w-5 h-5" />;
       default: return <Sun className="w-5 h-5" />;
     }
   };
@@ -324,9 +324,9 @@ function KasirSelectionScreen() {
     switch (theme) {
       case "light": return "from-blue-700 via-primary to-sky-500";
       case "dark": return "from-slate-900 via-blue-900 to-slate-900";
-      case "soft-blue": return "from-blue-100 via-blue-200 to-blue-300";
+      case "sky-blue": return "from-sky-300 via-sky-400 to-sky-500";
       case "soft-green": return "from-green-100 via-green-200 to-green-300";
-      case "soft-orange": return "from-orange-100 via-orange-200 to-orange-300";
+      case "sunset-orange": return "from-orange-400 via-amber-500 to-orange-600";
       default: return "from-blue-700 via-primary to-sky-500";
     }
   };
@@ -499,9 +499,9 @@ export default function Login() {
     switch (theme) {
       case "light": return "from-blue-700 via-primary to-sky-500";
       case "dark": return "from-slate-900 via-blue-900 to-slate-900";
-      case "soft-blue": return "from-blue-100 via-blue-200 to-blue-300";
+      case "sky-blue": return "from-sky-300 via-sky-400 to-sky-500";
       case "soft-green": return "from-green-100 via-green-200 to-green-300";
-      case "soft-orange": return "from-orange-100 via-orange-200 to-orange-300";
+      case "sunset-orange": return "from-orange-400 via-amber-500 to-orange-600";
       default: return "from-blue-700 via-primary to-sky-500";
     }
   };

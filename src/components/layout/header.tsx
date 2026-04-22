@@ -54,9 +54,9 @@ export function Header() {
     switch (theme) {
       case "light": return <Sun className="w-3.5 h-3.5" />;
       case "dark": return <Moon className="w-3.5 h-3.5" />;
-      case "soft-blue": return <Cloud className="w-3.5 h-3.5" />;
+      case "sky-blue": return <Cloud className="w-3.5 h-3.5" />;
       case "soft-green": return <Leaf className="w-3.5 h-3.5" />;
-      case "soft-orange": return <Sunset className="w-3.5 h-3.5" />;
+      case "sunset-orange": return <Sunset className="w-3.5 h-3.5" />;
       default: return <Sun className="w-3.5 h-3.5" />;
     }
   };
@@ -65,9 +65,9 @@ export function Header() {
     switch (theme) {
       case "light": return "Mode Terang";
       case "dark": return "Mode Gelap";
-      case "soft-blue": return "Mode Soft Biru";
+      case "sky-blue": return "Mode Biru Langit";
       case "soft-green": return "Mode Soft Hijau";
-      case "soft-orange": return "Mode Soft Orange";
+      case "sunset-orange": return "Mode Sunset Orange";
       default: return "Ganti Mode";
     }
   };
