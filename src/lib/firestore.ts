@@ -38,6 +38,7 @@ export interface SettingsRecord {
   categoryLabels: CategoryLabels;
   lastLockDate?: string;
   lastResetDate?: string;
+  address?: string;
 }
 
 

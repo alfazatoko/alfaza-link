@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/header";
 import { AddSaldoModal } from "@/components/modals/add-saldo-modal";
 import { getBalance, createTransaction, getSettings, type BalanceRecord, type SettingsRecord } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
-import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Plus, Lock, Save, ClipboardList, BookUser, Settings, X, Loader2 } from "lucide-react";
+import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Plus, Lock, Save, ClipboardList, BookUser, Settings, X, Loader2, SlidersHorizontal, SmartphoneNfc, NotebookPen, ListPlus, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_QUOTES = [
@@ -152,63 +152,87 @@ export default function Beranda() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2.5 mb-3">
-        <div className="bg-gradient-to-br from-blue-900 to-primary rounded-2xl p-3 text-white shadow-md relative overflow-hidden">
-          <div className="absolute -right-3 -top-3 w-12 h-12 bg-white/10 rounded-full" />
-          <p className="text-[10px] font-semibold opacity-90 mb-0.5 flex items-center gap-1">
-            <Landmark className="w-3 h-3" /> SALDO BANK
-          </p>
-          <h3 className="text-xl font-extrabold">{formatRupiah(balance?.bank || 0)}</h3>
+      <div className="bg-[#118eea] rounded-2xl p-3 border-2 border-sky-400/50 shadow-md mb-3">
+        <div className="grid grid-cols-2 gap-2.5 mb-3">
+          <div className="bg-white rounded-xl p-3 text-gray-950 border border-white/20 shadow-sm relative overflow-hidden">
+            <div className="absolute -right-3 -top-3 w-12 h-12 bg-sky-100/50 rounded-full" />
+            <p className="text-[10px] font-semibold mb-0.5 flex items-center gap-1 text-gray-950">
+              <Landmark className="w-3 h-3" /> SALDO BANK
+            </p>
+            <h3 className="text-xl font-extrabold text-gray-950">{formatRupiah(balance?.bank || 0)}</h3>
+          </div>
+          <div className="bg-white rounded-xl p-3 text-gray-950 border border-white/20 shadow-sm relative overflow-hidden">
+            <div className="absolute -right-3 -bottom-3 w-12 h-12 bg-sky-100/50 rounded-full" />
+            <p className="text-[10px] font-semibold mb-0.5 flex items-center gap-1 text-gray-950">
+              <Wallet className="w-3 h-3" /> SALDO CASH
+            </p>
+            <h3 className="text-xl font-extrabold text-gray-950">{formatRupiah(balance?.cash || 0)}</h3>
+          </div>
         </div>
-        <div className="bg-gradient-to-br from-emerald-700 to-emerald-500 rounded-2xl p-3 text-white shadow-md relative overflow-hidden">
-          <div className="absolute -right-3 -bottom-3 w-12 h-12 bg-white/10 rounded-full" />
-          <p className="text-[10px] font-semibold opacity-90 mb-0.5 flex items-center gap-1">
-            <Wallet className="w-3 h-3" /> SALDO CASH
-          </p>
-          <h3 className="text-xl font-extrabold">{formatRupiah(balance?.cash || 0)}</h3>
+
+        <div className="flex gap-2.5">
+          <div className="flex-1 bg-white rounded-xl py-2.5 px-2 text-center shadow-sm">
+            <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
+              <ArrowDownToLine className="w-3 h-3 text-[#118eea]" /> Tarik Tunai
+            </span>
+            <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.tarik || 0)}</span>
+          </div>
+          <div className="flex-1 bg-white rounded-xl py-2.5 px-2 text-center shadow-sm">
+            <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
+              <Gem className="w-3 h-3 text-rose-500" /> Aksesoris
+            </span>
+            <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.aks || 0)}</span>
+          </div>
+          <div className="flex-1 bg-white rounded-xl py-2.5 px-2 text-center shadow-sm">
+            <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
+              <Lock className="w-3 h-3 text-amber-500" /> Admin
+            </span>
+            <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.adminTotal || 0)}</span>
+          </div>
         </div>
       </div>
 
-      <div className="flex gap-2.5 mb-3">
-        <div className="flex-1 bg-white border border-gray-100 rounded-2xl py-3 px-2 text-center shadow-sm">
-          <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
-            <ArrowDownToLine className="w-3 h-3 text-emerald-600" /> Tarik Tunai
-          </span>
-          <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.tarik || 0)}</span>
-        </div>
-        <div className="flex-1 bg-white border border-gray-100 rounded-2xl py-3 px-2 text-center shadow-sm">
-          <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
-            <Gem className="w-3 h-3 text-rose-500" /> Aksesoris
-          </span>
-          <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.aks || 0)}</span>
-        </div>
-        <div className="flex-1 bg-white border border-gray-100 rounded-2xl py-3 px-2 text-center shadow-sm">
-          <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
-            <Lock className="w-3 h-3 text-amber-500" /> Admin
-          </span>
-          <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.adminTotal || 0)}</span>
-        </div>
-      </div>
 
-
-      <div className="flex gap-2 mb-4">
+      <div className="grid grid-cols-5 gap-2 mb-4">
         <button 
           onClick={() => setIsPenyesuaianModalOpen(true)} 
-          className="flex-1 bg-[#00b894] text-white py-3.5 rounded-3xl text-sm font-bold shadow-lg shadow-emerald-500/20 active:scale-95 transition"
+          className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl border-2 border-transparent bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
+          style={{ borderImage: 'linear-gradient(135deg, #1a5276, #2e86c1) 1', borderImageSlice: 1, borderRadius: '16px', border: '2px solid transparent', backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #1a5276, #2e86c1)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }}
         >
-          Penyesuaian
+          <SlidersHorizontal className="w-6 h-6 text-[#1a5276] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+          <span className="text-[8px] font-bold text-[#1a5276] uppercase tracking-wide">Penyesuaian</span>
         </button>
         <button 
           onClick={() => setLocation("/non-tunai")} 
-          className="flex-1 bg-[#0984e3] text-white py-3.5 rounded-3xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition"
+          className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
+          style={{ backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #1e8449, #27ae60)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', border: '2px solid transparent' }}
         >
-          Nontunai
+          <SmartphoneNfc className="w-6 h-6 text-[#1e8449] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+          <span className="text-[8px] font-bold text-[#1e8449] uppercase tracking-wide">Non Tunai</span>
         </button>
         <button 
           onClick={() => setLocation("/catatan")} 
-          className="flex-1 bg-[#00cec9] text-white py-3.5 rounded-3xl text-sm font-bold shadow-lg shadow-teal-500/20 active:scale-95 transition"
+          className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
+          style={{ backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #d35400, #f39c12)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', border: '2px solid transparent' }}
         >
-          Catatan
+          <NotebookPen className="w-6 h-6 text-[#d35400] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+          <span className="text-[8px] font-bold text-[#d35400] uppercase tracking-wide">Catatan</span>
+        </button>
+        <button 
+          onClick={() => setLocation("/nota")} 
+          className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
+          style={{ backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #b71c1c, #e74c3c)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', border: '2px solid transparent' }}
+        >
+          <Receipt className="w-6 h-6 text-[#b71c1c] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+          <span className="text-[8px] font-bold text-[#b71c1c] uppercase tracking-wide">Nota</span>
+        </button>
+        <button 
+          onClick={() => setLocation("/lainnya")} 
+          className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
+          style={{ backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #7d3c98, #c0392b)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', border: '2px solid transparent' }}
+        >
+          <ListPlus className="w-6 h-6 text-[#7d3c98] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+          <span className="text-[8px] font-bold text-[#7d3c98] uppercase tracking-wide">Lainnya</span>
         </button>
       </div>
 

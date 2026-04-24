@@ -15,7 +15,15 @@ import NonTunai from "@/pages/non-tunai";
 import Catatan from "@/pages/catatan";
 import Laporan from "@/pages/laporan";
 import Owner from "@/pages/owner";
-import { useEffect } from "react";
+import Nota from "@/pages/nota";
+import Lainnya from "@/pages/lainnya";
+import Kalender from "@/pages/kalender";
+import { useEffect, lazy, Suspense } from "react";
+
+const VisualInspector = import.meta.env.DEV 
+  ? lazy(() => import("@/components/dev/visual-inspector").then(module => ({ default: module.VisualInspector })))
+  : () => null;
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,6 +84,15 @@ function Router() {
         <Route path="/owner">
           <ProtectedRoute component={Owner} allowedRoles={["owner"]} />
         </Route>
+        <Route path="/nota">
+          <ProtectedRoute component={Nota} />
+        </Route>
+        <Route path="/lainnya">
+          <ProtectedRoute component={Lainnya} />
+        </Route>
+        <Route path="/kalender">
+          <ProtectedRoute component={Kalender} />
+        </Route>
         <Route>
           <NotFound />
         </Route>
@@ -95,6 +112,9 @@ function App() {
               <Router />
             </WouterRouter>
             <Toaster />
+            <Suspense fallback={null}>
+              <VisualInspector />
+            </Suspense>
           </TooltipProvider>
         </DisplayModeProvider>
       </AuthProvider>
