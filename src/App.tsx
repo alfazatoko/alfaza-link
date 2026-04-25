@@ -20,6 +20,7 @@ import Lainnya from "@/pages/lainnya";
 import Kalender from "@/pages/kalender";
 import PrinterPage from "@/pages/printer";
 import { useEffect, lazy, Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
 const VisualInspector = import.meta.env.DEV 
   ? lazy(() => import("@/components/dev/visual-inspector").then(module => ({ default: module.VisualInspector })))
