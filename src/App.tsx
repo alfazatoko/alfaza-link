@@ -61,7 +61,7 @@ function Router() {
   const shadowClass = theme === "light" ? "shadow-[0_0_40px_rgba(0,0,0,0.05)]" : "shadow-none";
 
   return (
-    <div className={`pb-20 ${maxW} mx-auto min-h-[100dvh] bg-background ${shadowClass} transition-all duration-500 ease-in-out`}>
+    <div className={`pb-20 ${maxW} mx-auto min-h-[100dvh] bg-background ${shadowClass}`}>
 
       <Switch>
         <Route path="/">
@@ -116,7 +116,7 @@ function App() {
               <Router />
             </WouterRouter>
             <Toaster />
-            <Suspense fallback={null}>
+            <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
               <VisualInspector />
             </Suspense>
           </TooltipProvider>

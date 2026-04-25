@@ -99,7 +99,7 @@ function FirebaseAuthScreen() {
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-b ${getThemeGradient()} flex items-center justify-center p-4 relative transition-all duration-500`}>
+    <div className={`min-h-screen bg-gradient-to-b ${getThemeGradient()} flex items-center justify-center p-4 relative`}>
       <button
         onClick={toggleTheme}
         className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm z-50 flex items-center justify-center min-w-[44px]"
@@ -332,7 +332,7 @@ function KasirSelectionScreen() {
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-b ${getThemeGradient()} flex items-center justify-center p-4 relative transition-all duration-500`}>
+    <div className={`min-h-screen bg-gradient-to-b ${getThemeGradient()} flex items-center justify-center p-4 relative`}>
       <button
         onClick={toggleTheme}
         className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm z-50 flex items-center justify-center min-w-[44px]"
