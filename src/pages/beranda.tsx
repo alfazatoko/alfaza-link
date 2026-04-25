@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/header";
 import { AddSaldoModal } from "@/components/modals/add-saldo-modal";
 import { getBalance, createTransaction, getSettings, type BalanceRecord, type SettingsRecord } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
-import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Plus, Lock, Save, ClipboardList, BookUser, Settings, X, Loader2, SlidersHorizontal, SmartphoneNfc, NotebookPen, ListPlus, Receipt, Printer } from "lucide-react";
+import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Plus, Lock, Save, ClipboardList, BookUser, Settings, X, Loader2, SlidersHorizontal, SmartphoneNfc, NotebookPen, ListPlus, Receipt, Printer, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_QUOTES = [
