@@ -352,8 +352,11 @@ export default function PrinterPage() {
         {screen === "receipt" && (
           <div className="min-h-screen p-5" style={{ background: "#f0f0f0", backgroundImage: "radial-gradient(#d1d5db 1px, transparent 1px)", backgroundSize: "20px 20px" }}>
             <div className="flex items-center mb-5 gap-4 no-print">
-              <button onClick={() => setScreen("home")} className="bg-white border-none rounded-lg w-9 h-9 flex items-center justify-center shadow cursor-pointer font-bold"><ArrowLeft className="w-4 h-4" /></button>
-              <h3 className="font-bold text-base">{serviceType === "transfer" ? "Preview Bukti Transfer" : "Preview Token PLN"}</h3>
+              <button onClick={() => setScreen("home")} className="bg-white border-none rounded-lg w-9 h-9 flex items-center justify-center shadow cursor-pointer font-bold transition active:scale-90"><ArrowLeft className="w-4 h-4" /></button>
+              <h3 className="font-bold text-base flex-1">{serviceType === "transfer" ? "Preview Bukti Transfer" : "Preview Token PLN"}</h3>
+              <button onClick={handlePrint} className="bg-indigo-600 text-white px-4 py-2 rounded-full font-bold text-xs shadow-md hover:bg-indigo-700 transition active:scale-95 flex items-center gap-2">
+                <PrinterIcon className="w-4 h-4" /> CETAK
+              </button>
             </div>
 
             <div className="flex gap-2.5 mb-5 overflow-x-auto pb-1 no-print">
@@ -372,8 +375,8 @@ export default function PrinterPage() {
               <div className="text-center p-8 text-gray-500">Gagal memuat data struk</div>
             )}
 
-            <button onClick={handlePrint} className="w-full bg-amber-500 text-white border-none py-4 rounded-lg text-base font-bold mt-8 cursor-pointer hover:bg-amber-600 transition flex items-center justify-center gap-2 active:scale-[0.98] no-print">
-              <PrinterIcon className="w-5 h-5" /> HUBUNGKAN PRINTER
+            <button onClick={handlePrint} className="w-full bg-indigo-600 text-white border-none py-4 rounded-xl text-base font-bold mt-8 cursor-pointer hover:bg-indigo-700 transition shadow-[0_4px_15px_rgba(79,70,229,0.4)] flex items-center justify-center gap-2 active:scale-[0.98] no-print">
+              <PrinterIcon className="w-5 h-5" /> CETAK STRUK SEKARANG
             </button>
           </div>
         )}
