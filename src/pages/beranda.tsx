@@ -193,46 +193,53 @@ export default function Beranda() {
       </div>
 
 
-      <div className="grid grid-cols-5 gap-2 mb-4">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         <button 
           onClick={() => setIsPenyesuaianModalOpen(true)} 
-          className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl border-2 border-transparent bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
-          style={{ borderImage: 'linear-gradient(135deg, #1a5276, #2e86c1) 1', borderImageSlice: 1, borderRadius: '16px', border: '2px solid transparent', backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #1a5276, #2e86c1)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }}
+          className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
           <SlidersHorizontal className="w-6 h-6 text-[#1a5276] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[8px] font-bold text-[#1a5276] uppercase tracking-wide">Penyesuaian</span>
+          <span className="text-[9px] font-bold text-[#1a5276] uppercase tracking-wide">Penyesuaian</span>
         </button>
         <button 
           onClick={() => setLocation("/non-tunai")} 
-          className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
-          style={{ backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #1e8449, #27ae60)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', border: '2px solid transparent' }}
+          className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
           <SmartphoneNfc className="w-6 h-6 text-[#1e8449] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[8px] font-bold text-[#1e8449] uppercase tracking-wide">Non Tunai</span>
+          <span className="text-[9px] font-bold text-[#1e8449] uppercase tracking-wide">Non Tunai</span>
         </button>
         <button 
           onClick={() => setLocation("/catatan")} 
-          className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
-          style={{ backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #d35400, #f39c12)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', border: '2px solid transparent' }}
+          className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
           <NotebookPen className="w-6 h-6 text-[#d35400] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[8px] font-bold text-[#d35400] uppercase tracking-wide">Catatan</span>
+          <span className="text-[9px] font-bold text-[#d35400] uppercase tracking-wide">Catatan</span>
         </button>
+
+        <button 
+          onClick={() => setLocation("/printer")} 
+          className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border-2 border-indigo-500 bg-gradient-to-br from-indigo-50 to-white"
+        >
+          <div className="relative">
+            <Printer className="w-6 h-6 text-indigo-600 group-hover:scale-110 transition-transform" strokeWidth={2} />
+            <Zap className="w-3 h-3 text-amber-500 absolute -top-1 -right-1 fill-amber-500" />
+          </div>
+          <span className="text-[9px] font-black text-indigo-700 uppercase tracking-tight">Generator Struk</span>
+        </button>
+
         <button 
           onClick={() => setLocation("/nota")} 
-          className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
-          style={{ backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #b71c1c, #e74c3c)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', border: '2px solid transparent' }}
+          className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
           <Receipt className="w-6 h-6 text-[#b71c1c] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[8px] font-bold text-[#b71c1c] uppercase tracking-wide">Nota</span>
+          <span className="text-[9px] font-bold text-[#b71c1c] uppercase tracking-wide">Nota</span>
         </button>
         <button 
           onClick={() => setLocation("/lainnya")} 
-          className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
-          style={{ backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #7d3c98, #c0392b)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', border: '2px solid transparent' }}
+          className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
           <ListPlus className="w-6 h-6 text-[#7d3c98] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[8px] font-bold text-[#7d3c98] uppercase tracking-wide">Lainnya</span>
+          <span className="text-[9px] font-bold text-[#7d3c98] uppercase tracking-wide">Lainnya</span>
         </button>
       </div>
 
