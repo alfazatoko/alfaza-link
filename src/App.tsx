@@ -18,6 +18,7 @@ import Owner from "@/pages/owner";
 import Nota from "@/pages/nota";
 import Lainnya from "@/pages/lainnya";
 import Kalender from "@/pages/kalender";
+import PrinterPage from "@/pages/printer";
 import { useEffect, lazy, Suspense } from "react";
 
 const VisualInspector = import.meta.env.DEV 
@@ -92,6 +93,9 @@ function Router() {
         </Route>
         <Route path="/kalender">
           <ProtectedRoute component={Kalender} />
+        </Route>
+        <Route path="/printer">
+          <ProtectedRoute component={PrinterPage} />
         </Route>
         <Route>
           <NotFound />

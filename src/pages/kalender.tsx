@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft } from "lucide-react";
-import { getHolidays, getHijriDate } from "@/lib/calendar-utils";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchHolidays, getHijriDate, Holiday } from "@/lib/calendar-utils";
 
 const MONTH_NAMES = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -35,7 +36,15 @@ export default function Kalender() {
 
   const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
 
-  const holidays = getHolidays(currentYear, currentMonth);
+  const { data: yearHolidays = [], isLoading } = useQuery({
+    queryKey: ["holidays", currentYear],
+    queryFn: () => fetchHolidays(currentYear),
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
+  });
+
+  const holidays = useMemo(() => {
+    return yearHolidays.filter(h => h.month === currentMonth);
+  }, [yearHolidays, currentMonth]);
 
   // Compute hijri dates for the first and last day to show in header
   const firstHijri = getHijriDate(firstDayOfMonth);
