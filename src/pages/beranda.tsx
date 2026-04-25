@@ -218,13 +218,13 @@ export default function Beranda() {
 
         <button 
           onClick={() => setLocation("/printer")} 
-          className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border-2 border-indigo-500 bg-gradient-to-br from-indigo-50 to-white"
+          className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
           <div className="relative">
-            <Printer className="w-6 h-6 text-indigo-600 group-hover:scale-110 transition-transform" strokeWidth={2} />
+            <Printer className="w-6 h-6 text-[#b71c1c] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
             <Zap className="w-3 h-3 text-amber-500 absolute -top-1 -right-1 fill-amber-500" />
           </div>
-          <span className="text-[9px] font-black text-indigo-700 uppercase tracking-tight">Generator Struk</span>
+          <span className="text-[9px] font-bold text-[#b71c1c] uppercase tracking-wide">PRINTER</span>
         </button>
 
         <button 

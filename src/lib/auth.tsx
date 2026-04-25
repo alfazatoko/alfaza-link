@@ -28,10 +28,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [firebaseLoading, setFirebaseLoading] = useState(true);
-  const [user, setUser] = useState<UserRecord | null>(null);
-  const [shift, setShift] = useState<string | null>(null);
-  const [loginTime, setLoginTime] = useState<string | null>(null);
-  const [absenTime, setAbsenTime] = useState<string | null>(null);
+  const [user, setUser] = useState<UserRecord | null>(() => {
+    const stored = localStorage.getItem("alfaza_user");
+    return stored ? JSON.parse(stored) : null;
+  });
+  const [shift, setShift] = useState<string | null>(() => localStorage.getItem("alfaza_shift"));
+  const [loginTime, setLoginTime] = useState<string | null>(() => localStorage.getItem("alfaza_login_time"));
+  const [absenTime, setAbsenTime] = useState<string | null>(() => localStorage.getItem("alfaza_absen_time"));
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
