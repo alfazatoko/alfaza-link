@@ -1,11 +1,28 @@
 import { useLocation } from "wouter";
-import { ArrowLeft, Printer, Package, Ticket, CalendarDays } from "lucide-react";
+import { ArrowLeft, Printer, Package, Ticket, CalendarDays, RefreshCw } from "lucide-react";
+
+const APP_VERSION = "2.1.0 (Build 2026-04-26)";
 
 export default function Lainnya() {
   const [, setLocation] = useLocation();
 
+  const handleUpdate = () => {
+    if (confirm("Perbarui aplikasi ke versi terbaru? Halaman akan dimuat ulang.")) {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
+          window.location.reload();
+        });
+      } else {
+        window.location.reload();
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 pb-24">
+    <div className="min-h-screen bg-gray-100 pb-24 flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-800 via-blue-600 to-blue-500 text-white p-4 shadow-lg">
         <div className="flex items-center gap-4">
@@ -20,7 +37,7 @@ export default function Lainnya() {
       </div>
 
       {/* Content */}
-      <div className="px-4 py-6">
+      <div className="px-4 py-6 flex-grow">
         <div className="grid grid-cols-5 gap-2">
           {/* Stok Barang */}
           <button 
@@ -52,6 +69,20 @@ export default function Lainnya() {
             <span className="text-[8px] font-bold text-[#2980b9] uppercase tracking-wide text-center leading-[1.1]">Kalender<br/>Hijri</span>
           </button>
         </div>
+      </div>
+
+      {/* Version Footer */}
+      <div className="p-8 text-center border-t border-gray-200">
+        <p className="text-xs text-gray-400 font-bold mb-3 uppercase tracking-widest">
+          Versi Aplikasi: {APP_VERSION}
+        </p>
+        <button
+          onClick={handleUpdate}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-full text-xs font-black transition-all active:scale-95"
+        >
+          <RefreshCw className="w-3 h-3" />
+          PERBARUI APLIKASI
+        </button>
       </div>
     </div>
   );
