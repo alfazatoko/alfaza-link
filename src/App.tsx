@@ -18,7 +18,7 @@ import Owner from "@/pages/owner";
 import Nota from "@/pages/nota";
 import Lainnya from "@/pages/lainnya";
 import Kalender from "@/pages/kalender";
-import PrinterPage from "@/pages/printer";
+import StokVoucher from "@/pages/stok-voucher";
 import { useEffect, lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -95,8 +95,8 @@ function Router() {
         <Route path="/kalender">
           <ProtectedRoute component={Kalender} />
         </Route>
-        <Route path="/printer">
-          <ProtectedRoute component={PrinterPage} />
+        <Route path="/stok-voucher">
+          <ProtectedRoute component={StokVoucher} />
         </Route>
         <Route>
           <NotFound />

@@ -61,12 +61,19 @@ export const VisualInspector: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (hoveredElement) {
-      setSelectedElement(hoveredElement);
+    // Determine target from click coordinates to support touch devices
+    const elements = document.elementsFromPoint(e.clientX, e.clientY);
+    const target = elements.find(el => 
+      el instanceof HTMLElement && 
+      !el.closest("#visual-inspector-ui")
+    ) as HTMLElement | null;
+
+    if (target && target !== document.body && target !== document.documentElement) {
+      setSelectedElement(target);
     } else {
       setSelectedElement(null);
     }
-  }, [isActive, hoveredElement]);
+  }, [isActive]);
 
   useEffect(() => {
     if (isActive) {
@@ -88,21 +95,34 @@ export const VisualInspector: React.FC = () => {
     };
   }, [isActive, handleMouseMove, handleClick]);
 
-  const copyToClipboard = () => {
+  const copyToClipboard = async () => {
     if (!selectedElement) return;
     const info = getElementInfo(selectedElement);
-    const prompt = `Please edit this element:
+    const prompt = `Tolong edit elemen ini:
 Tag: ${info.tag}
 ID: ${info.id}
 Classes: ${info.classes}
-Text content: "${info.text}"
-Context: ${info.context}
+Teks: "${info.text}"
+Konteks: ${info.context}
 
-Desired changes: [Describe your changes here]`;
+Perubahan yang diinginkan: `;
 
-    navigator.clipboard.writeText(prompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(prompt);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = prompt;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      alert("Gagal menyalin teks. Silakan coba lagi.");
+    }
   };
 
   const activeElement = selectedElement || hoveredElement;

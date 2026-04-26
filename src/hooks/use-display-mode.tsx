@@ -3,15 +3,29 @@ import { useState, useEffect, createContext, useContext } from "react";
 type DisplayMode = "hp" | "tablet" | "pc";
 type Theme = "light" | "dark" | "sky-blue" | "soft-green" | "sunset-orange";
 
+type ThemeColors = {
+  "light": string;
+  "dark": string;
+  "sky-blue": string;
+  "soft-green": string;
+  "sunset-orange": string;
+};
+
+const defaultThemeColors: ThemeColors = {
+  "light": "#3b82f6",
+  "dark": "#3b82f6",
+  "sky-blue": "#0ea5e9",
+  "soft-green": "#22c55e",
+  "sunset-orange": "#f97316"
+};
+
 interface DisplayModeContextType {
   mode: DisplayMode;
   setMode: (mode: DisplayMode) => void;
   theme: Theme;
   toggleTheme: () => void;
-  primaryColor: string;
-  setPrimaryColor: (color: string) => void;
-  primaryColorDark: string;
-  setPrimaryColorDark: (color: string) => void;
+  themeColors: ThemeColors;
+  setThemeColor: (theme: Theme, color: string) => void;
   currentPrimaryColor: string;
 }
 
@@ -20,10 +34,8 @@ const DisplayModeContext = createContext<DisplayModeContextType>({
   setMode: () => {},
   theme: "light",
   toggleTheme: () => {},
-  primaryColor: "#3b82f6",
-  setPrimaryColor: () => {},
-  primaryColorDark: "#3b82f6",
-  setPrimaryColorDark: () => {},
+  themeColors: defaultThemeColors,
+  setThemeColor: () => {},
   currentPrimaryColor: "#3b82f6",
 });
 
@@ -36,12 +48,14 @@ export function DisplayModeProvider({ children }: { children: React.ReactNode })
     return (localStorage.getItem("alfaza_theme") as Theme) || "light";
   });
 
-  const [primaryColor, setPrimaryColor] = useState(() => {
-    return localStorage.getItem("alfaza_primary_color") || "#3b82f6";
-  });
-
-  const [primaryColorDark, setPrimaryColorDark] = useState(() => {
-    return localStorage.getItem("alfaza_primary_color_dark") || "#60a5fa";
+  const [themeColors, setThemeColors] = useState<ThemeColors>(() => {
+    const saved = localStorage.getItem("alfaza_theme_colors");
+    if (saved) {
+      try {
+        return { ...defaultThemeColors, ...JSON.parse(saved) };
+      } catch (e) {}
+    }
+    return defaultThemeColors;
   });
 
   useEffect(() => {
@@ -51,20 +65,15 @@ export function DisplayModeProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     localStorage.setItem("alfaza_theme", theme);
     const root = document.documentElement;
-    // Remove all theme classes first
     root.classList.remove("light", "dark", "sky-blue", "soft-green", "sunset-orange");
-    // Add the current theme class
     root.classList.add(theme);
   }, [theme]);
 
-  const currentPrimaryColor = (theme === "dark") ? primaryColorDark : primaryColor;
+  const currentPrimaryColor = themeColors[theme] || defaultThemeColors[theme];
 
   useEffect(() => {
-    localStorage.setItem("alfaza_primary_color", primaryColor);
-    localStorage.setItem("alfaza_primary_color_dark", primaryColorDark);
-    
     document.documentElement.style.setProperty("--primary-hex", currentPrimaryColor);
-  }, [primaryColor, primaryColorDark, theme, currentPrimaryColor]);
+  }, [currentPrimaryColor]);
 
   const toggleTheme = () => {
     const themes: Theme[] = ["light", "dark", "sky-blue", "soft-green", "sunset-orange"];
@@ -75,12 +84,19 @@ export function DisplayModeProvider({ children }: { children: React.ReactNode })
     });
   };
 
+  const setThemeColor = (t: Theme, color: string) => {
+    setThemeColors(prev => {
+      const next = { ...prev, [t]: color };
+      localStorage.setItem("alfaza_theme_colors", JSON.stringify(next));
+      return next;
+    });
+  };
+
   return (
     <DisplayModeContext.Provider value={{ 
       mode, setMode, 
       theme, toggleTheme, 
-      primaryColor, setPrimaryColor,
-      primaryColorDark, setPrimaryColorDark,
+      themeColors, setThemeColor,
       currentPrimaryColor
     }}>
       {children}

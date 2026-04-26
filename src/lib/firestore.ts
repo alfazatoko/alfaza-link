@@ -36,6 +36,13 @@ export interface SettingsRecord {
   runningText: string;
   pinEnabled: boolean;
   categoryLabels: CategoryLabels;
+  themeColors?: {
+    light: string;
+    dark: string;
+    "sky-blue": string;
+    "soft-green": string;
+    "sunset-orange": string;
+  };
   lastLockDate?: string;
   lastResetDate?: string;
   address?: string;
@@ -210,11 +217,7 @@ export async function getSettings(): Promise<SettingsRecord> {
       lastLockDate: "",
       lastResetDate: "",
     };
-
-    await setDoc(ref, defaults);
-    return defaults;
   }
-  return snap.data() as SettingsRecord;
 }
 
 export async function updateSettings(data: Partial<SettingsRecord>): Promise<void> {
@@ -665,4 +668,32 @@ export async function loginUser(name: string, pin?: string, shift?: string, devi
     role: user.role,
     absenTime,
   };
+}
+
+export interface StokVoucherRecord {
+  kasirName: string;
+  date?: string;
+  dataVoucher: Record<string, any>;
+  dataQris: any[];
+  updatedAt: string;
+}
+
+export async function getStokVoucher(kasirName: string, date: string): Promise<StokVoucherRecord | null> {
+  const docId = `${kasirName}_${date}`;
+  const ref = doc(db, "stok_voucher", docId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return snap.data() as StokVoucherRecord;
+}
+
+export async function syncStokVoucher(kasirName: string, date: string, dataVoucher: any, dataQris: any): Promise<void> {
+  const docId = `${kasirName}_${date}`;
+  const ref = doc(db, "stok_voucher", docId);
+  await setDoc(ref, {
+    kasirName,
+    date,
+    dataVoucher,
+    dataQris,
+    updatedAt: new Date().toISOString()
+  });
 }

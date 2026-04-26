@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/header";
 import { AddSaldoModal } from "@/components/modals/add-saldo-modal";
 import { getBalance, createTransaction, getSettings, type BalanceRecord, type SettingsRecord } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
-import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Plus, Lock, Save, ClipboardList, BookUser, Settings, X, Loader2, SlidersHorizontal, SmartphoneNfc, NotebookPen, ListPlus, Receipt, Printer, Zap } from "lucide-react";
+import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Lock, Save, Settings, SlidersHorizontal, SmartphoneNfc, NotebookPen, ListPlus, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_QUOTES = [
@@ -193,53 +193,41 @@ export default function Beranda() {
       </div>
 
 
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-5 gap-2 mb-4">
         <button 
           onClick={() => setIsPenyesuaianModalOpen(true)} 
           className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
-          <SlidersHorizontal className="w-6 h-6 text-[#1a5276] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[9px] font-bold text-[#1a5276] uppercase tracking-wide">Penyesuaian</span>
+          <SlidersHorizontal className="w-5 h-5 text-[#1a5276] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+          <span className="text-[8px] font-bold text-[#1a5276] uppercase tracking-wide">Sesuaian</span>
         </button>
         <button 
           onClick={() => setLocation("/non-tunai")} 
           className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
-          <SmartphoneNfc className="w-6 h-6 text-[#1e8449] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[9px] font-bold text-[#1e8449] uppercase tracking-wide">Non Tunai</span>
+          <SmartphoneNfc className="w-5 h-5 text-[#1e8449] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+          <span className="text-[8px] font-bold text-[#1e8449] uppercase tracking-wide">Non Tunai</span>
         </button>
         <button 
           onClick={() => setLocation("/catatan")} 
           className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
-          <NotebookPen className="w-6 h-6 text-[#d35400] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[9px] font-bold text-[#d35400] uppercase tracking-wide">Catatan</span>
+          <NotebookPen className="w-5 h-5 text-[#d35400] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+          <span className="text-[8px] font-bold text-[#d35400] uppercase tracking-wide">Catatan</span>
         </button>
-
-        <button 
-          onClick={() => setLocation("/printer")} 
-          className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
-        >
-          <div className="relative">
-            <Printer className="w-6 h-6 text-[#b71c1c] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-            <Zap className="w-3 h-3 text-amber-500 absolute -top-1 -right-1 fill-amber-500" />
-          </div>
-          <span className="text-[9px] font-bold text-[#b71c1c] uppercase tracking-wide">PRINTER</span>
-        </button>
-
         <button 
           onClick={() => setLocation("/nota")} 
           className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
-          <Receipt className="w-6 h-6 text-[#b71c1c] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[9px] font-bold text-[#b71c1c] uppercase tracking-wide">Nota</span>
+          <Receipt className="w-5 h-5 text-[#b71c1c] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+          <span className="text-[8px] font-bold text-[#b71c1c] uppercase tracking-wide">Nota</span>
         </button>
         <button 
           onClick={() => setLocation("/lainnya")} 
           className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
-          <ListPlus className="w-6 h-6 text-[#7d3c98] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[9px] font-bold text-[#7d3c98] uppercase tracking-wide">Lainnya</span>
+          <ListPlus className="w-5 h-5 text-[#7d3c98] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+          <span className="text-[8px] font-bold text-[#7d3c98] uppercase tracking-wide">Lainnya</span>
         </button>
       </div>
 

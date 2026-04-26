@@ -22,16 +22,6 @@ export default function Lainnya() {
       {/* Content */}
       <div className="px-4 py-6">
         <div className="grid grid-cols-5 gap-2">
-          {/* Printer */}
-          <button 
-            onClick={() => setLocation("/printer")}
-            className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
-            style={{ backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #b71c1c, #e74c3c)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', border: '2px solid transparent' }}
-          >
-            <Printer className="w-6 h-6 text-[#b71c1c] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-            <span className="text-[8px] font-bold text-[#b71c1c] uppercase tracking-wide">Printer</span>
-          </button>
-
           {/* Stok Barang */}
           <button 
             onClick={() => {}}
@@ -44,7 +34,7 @@ export default function Lainnya() {
 
           {/* Stok Voucher */}
           <button 
-            onClick={() => {}}
+            onClick={() => setLocation("/stok-voucher")}
             className="flex flex-col items-center justify-center gap-1.5 h-[60px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md"
             style={{ backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #d35400, #f39c12)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', border: '2px solid transparent' }}
           >

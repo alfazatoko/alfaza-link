@@ -1,9 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Printer, Share2, Plus, Trash2, Edit2, Save } from "lucide-react";
+import { ArrowLeft, Printer, Share2, Plus, Trash2, Edit2, Save, Loader2, Download } from "lucide-react";
 import { getSettings, type SettingsRecord } from "@/lib/firestore";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+import { printToBluetooth } from "@/lib/bluetooth-print";
+import { useToast } from "@/hooks/use-toast";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { toPng } from "html-to-image";
 
 interface NotaItem {
   nama: string;
@@ -13,6 +18,7 @@ interface NotaItem {
 
 export default function Nota() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const printRef = useRef<HTMLDivElement>(null);
   
   const [settings, setSettings] = useState<SettingsRecord | null>(null);
@@ -24,6 +30,8 @@ export default function Nota() {
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
 
   const [isPreview, setIsPreview] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     getSettings().then(setSettings).catch(() => {});
@@ -65,12 +73,113 @@ export default function Nota() {
     setIsPreview(true);
   };
 
-  const executePrint = () => {
-    window.print();
+  const executePrint = async () => {
+    if (isPrinting) return;
+    
+    setIsPrinting(true);
+    try {
+      await printToBluetooth({
+        shopName: settings?.shopName || "ALFAZA CELL",
+        address: settings?.address || "",
+        items: items,
+        total: calculateTotal(),
+        tanggal: tanggal,
+        hari: getDayName(tanggal)
+      });
+      toast({ title: "Berhasil mencetak ke Bluetooth" });
+    } catch (err: any) {
+      console.error(err);
+      toast({ 
+        title: "Gagal mencetak Bluetooth", 
+        description: err.message || "Pastikan Bluetooth aktif dan printer terhubung.",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
+
   const handleShare = async () => {
-    window.print();
+    if (items.length === 0) {
+      toast({ title: "Daftar barang kosong", variant: "destructive" });
+      return;
+    }
+
+    if (isSharing) return;
+    setIsSharing(true);
+
+    try {
+      const element = printRef.current;
+      if (!element) throw new Error("Element not found");
+
+      // Wait a bit for images to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Capture element as PNG (filtering out no-print elements)
+      const dataUrl = await toPng(element, {
+        quality: 1,
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+        filter: (node: any) => {
+          return !node.classList?.contains('no-print');
+        }
+      });
+      
+      // Create PDF - Using custom size to feel more like a receipt
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [80, 150] // Receipt style width
+      });
+
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      // Auto-adjust page height if content is longer
+      if (pdfHeight > 150) {
+        pdf.addPage([80, pdfHeight + 20]);
+        pdf.deletePage(1);
+      }
+
+      pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
+      
+      const pdfBlob = pdf.output("blob");
+      const fileName = `Nota_${settings?.shopName || "ALFAZA"}_${tanggal}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: "application/pdf" });
+
+      // Share using Web Share API
+      const canShare = navigator.share && navigator.canShare && navigator.canShare({ files: [file] });
+
+      if (canShare) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `Nota ${settings?.shopName}`,
+            text: `Nota transaksi dari ${settings?.shopName} tanggal ${tanggal}`
+          });
+          toast({ title: "Berhasil dibagikan" });
+        } catch (shareErr: any) {
+          if (shareErr.name !== "AbortError") {
+            throw shareErr;
+          }
+        }
+      } else {
+        // Fallback: Download
+        pdf.save(fileName);
+        toast({ title: "Berhasil diunduh (Sharing tidak didukung)" });
+      }
+    } catch (error: any) {
+      console.error("Share error:", error);
+      toast({ 
+        title: "Gagal membagikan PDF", 
+        description: error.message || "Terjadi kesalahan saat memproses file.",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const calculateTotal = () => {
@@ -114,15 +223,17 @@ export default function Nota() {
           </button>
           <button
             onClick={executePrint}
-            className="px-6 py-2 bg-blue-600 text-white rounded-full font-black shadow-lg flex items-center gap-2"
+            disabled={isPrinting}
+            className="px-6 py-2 bg-blue-600 text-white rounded-full font-black shadow-lg flex items-center gap-2 disabled:opacity-50"
           >
-            <Printer className="w-5 h-5" /> CETAK SEKARANG
+            {isPrinting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
+            {isPrinting ? "MENCETAK..." : "CETAK SEKARANG"}
           </button>
         </div>
 
         {/* Tampilan Review Full 1 Halaman */}
         <div className="pt-20 px-4 pb-4 w-full h-full min-h-screen flex flex-col font-black text-black">
-          <div className="text-center mb-4 pb-4 border-b-2 border-black">
+          <div className="text-center mb-4 pb-4">
             <img 
               src={settings?.profilePhotoUrl || `${import.meta.env.BASE_URL}alfaza-logo.png`} 
               alt="Logo" 
@@ -137,7 +248,7 @@ export default function Nota() {
           </div>
 
           {/* Rincian Barang Review */}
-          <div className="flex-grow border-2 border-black rounded-xl p-4 bg-white">
+          <div className="flex-grow bg-white">
             <h3 className="text-2xl font-black text-black mb-3 text-center">RINCIAN BARANG</h3>
             
             <div className="mb-3 text-lg">
@@ -161,7 +272,7 @@ export default function Nota() {
               ))}
             </div>
 
-            <div className="mt-4 pt-3 border-t-2 border-black">
+            <div className="mt-4 pt-3">
               <p className="text-2xl font-black text-black text-center">
                 TOTAL: Rp {calculateTotal().toLocaleString('id-ID')}
               </p>
@@ -177,7 +288,7 @@ export default function Nota() {
                 {settings?.shopName || "ALFAZA CELL"}
               </p>
             </div>
-            <div className="text-center border-t-2 border-black pt-1">
+            <div className="text-center pt-1">
               <p className="text-lg font-black text-black leading-tight">TERIMA KASIH</p>
               <p className="text-sm font-black text-black leading-none mt-0">Atas Kepercayaan Anda</p>
             </div>
@@ -214,10 +325,11 @@ export default function Nota() {
           <div className="flex gap-2">
             <button
               onClick={handleShare}
-              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition"
-              title="Bagikan"
+              disabled={isSharing}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition disabled:opacity-50"
+              title="Bagikan PDF"
             >
-              <Share2 className="w-4 h-4" />
+              {isSharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
             </button>
             <button
               onClick={handlePrint}
@@ -237,7 +349,7 @@ export default function Nota() {
           className="nota-print-area bg-white rounded-2xl shadow-lg p-6 max-w-2xl mx-auto"
         >
           {/* Header Nota */}
-          <div className="text-center mb-6 pb-6 border-b-2 border-gray-300">
+          <div className="text-center mb-6 pb-6">
             <img 
               src={settings?.profilePhotoUrl || `${import.meta.env.BASE_URL}alfaza-logo.png`} 
               alt="Logo" 
@@ -338,7 +450,7 @@ export default function Nota() {
           </div>
 
           {/* Rincian Barang */}
-          <div className="rincian-barang mt-4 border-2 border-gray-300 rounded-xl p-4 bg-white">
+          <div className="rincian-barang mt-4 bg-white">
             <h3 className="text-lg font-black text-black mb-3 text-center">RINCIAN BARANG</h3>
             
             {/* Info Tanggal dan Hari */}
@@ -373,7 +485,7 @@ export default function Nota() {
             </div>
 
             {/* Total */}
-            <div className="mt-3 pt-2 border-t-2 border-gray-500">
+            <div className="mt-3 pt-2">
               <p className="text-lg font-black text-blue-700 text-center">
                 TOTAL: Rp {calculateTotal().toLocaleString('id-ID')}
               </p>
@@ -391,7 +503,7 @@ export default function Nota() {
           </div>
 
           {/* Terima Kasih */}
-          <div className="text-center border-t-2 border-gray-300 pt-4">
+          <div className="text-center pt-4">
             <p className="text-xl font-black text-gray-800">
               TERIMA KASIH
             </p>
@@ -490,10 +602,8 @@ export default function Nota() {
           .rincian-barang {
             width: 100% !important;
             max-width: 100% !important;
-            margin: 10px 0 !important;
-            padding: 5mm !important;
-            border: 3px solid #000 !important;
-            border-radius: 8px !important;
+            margin: 5px 0 !important;
+            padding: 2mm 0 !important;
             box-sizing: border-box !important;
             text-align: left !important;
             flex-grow: 1 !important;

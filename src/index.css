@@ -171,7 +171,7 @@
   --popover-foreground: 200 80% 15%;
   --popover-border: 200 100% 88%;
 
-  --primary: 197 90% 50%;
+  --primary: 197 90% 42%;
   --primary-foreground: 0 0% 100%;
 
   --secondary: 197 100% 88%;
@@ -188,16 +188,16 @@
 
   --border: 200 100% 88%;
   --input: 200 100% 88%;
-  --ring: 197 90% 50%;
+  --ring: 197 90% 42%;
 
   --sidebar: 200 100% 96%;
   --sidebar-foreground: 200 80% 15%;
-  --sidebar-primary: 197 90% 50%;
+  --sidebar-primary: 197 90% 42%;
   --sidebar-primary-foreground: 210 40% 98%;
   --sidebar-accent: 197 100% 88%;
   --sidebar-accent-foreground: 200 80% 15%;
   --sidebar-border: 200 100% 88%;
-  --sidebar-ring: 197 90% 50%;
+  --sidebar-ring: 197 90% 42%;
 }
 
 .soft-green {
@@ -212,7 +212,7 @@
   --popover-foreground: 140 50% 15%;
   --popover-border: 140 20% 85%;
 
-  --primary: 140 60% 40%;
+  --primary: 140 65% 32%;
   --primary-foreground: 0 0% 100%;
 
   --secondary: 140 20% 85%;
@@ -229,16 +229,16 @@
 
   --border: 140 20% 85%;
   --input: 140 20% 85%;
-  --ring: 140 60% 40%;
+  --ring: 140 65% 32%;
 
   --sidebar: 140 20% 92%;
   --sidebar-foreground: 140 50% 15%;
-  --sidebar-primary: 140 60% 40%;
+  --sidebar-primary: 140 65% 32%;
   --sidebar-primary-foreground: 210 40% 98%;
   --sidebar-accent: 140 20% 85%;
   --sidebar-accent-foreground: 140 50% 15%;
   --sidebar-border: 140 20% 85%;
-  --sidebar-ring: 140 60% 40%;
+  --sidebar-ring: 140 65% 32%;
 }
 
 .sunset-orange {
@@ -253,7 +253,7 @@
   --popover-foreground: 38 80% 12%;
   --popover-border: 38 60% 88%;
 
-  --primary: 38 90% 48%;
+  --primary: 38 90% 40%;
   --primary-foreground: 0 0% 100%;
 
   --secondary: 38 70% 88%;
@@ -270,16 +270,16 @@
 
   --border: 38 60% 88%;
   --input: 38 60% 88%;
-  --ring: 38 90% 48%;
+  --ring: 38 90% 40%;
 
   --sidebar: 38 60% 95%;
   --sidebar-foreground: 38 80% 12%;
-  --sidebar-primary: 38 90% 48%;
+  --sidebar-primary: 38 90% 40%;
   --sidebar-primary-foreground: 210 40% 98%;
   --sidebar-accent: 38 70% 88%;
   --sidebar-accent-foreground: 38 80% 12%;
   --sidebar-border: 38 60% 88%;
-  --sidebar-ring: 38 90% 48%;
+  --sidebar-ring: 38 90% 40%;
 }
 
 

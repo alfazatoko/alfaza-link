@@ -128,36 +128,26 @@ export function Header() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            <div className="flex items-center gap-0.5 bg-black/10 rounded-full p-0.5">
-              <button
-                onClick={toggleTheme}
-                className="p-1.5 rounded-full transition-all hover:bg-white/10 flex items-center justify-center min-w-[28px]"
-                title={getThemeTitle()}
-              >
-                {getThemeIcon()}
-              </button>
-            </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center bg-black/10 hover:bg-black/20 transition-all rounded-full w-8 h-8 border border-white/10 shadow-inner"
+              title={getThemeTitle()}
+            >
+              {getThemeIcon()}
+            </button>
 
-            <div className="flex items-center gap-0.5 bg-black/10 rounded-full p-0.5">
-              {displayModes.map(dm => {
-                const Icon = dm.icon;
-                return (
-                  <button
-                    key={dm.id}
-                    onClick={() => {
-                      console.log("Setting mode to:", dm.id);
-                      setMode(dm.id);
-                    }}
-                    className={`p-1.5 rounded-full transition-all flex items-center gap-1 ${mode === dm.id ? 'bg-white text-primary shadow-sm' : 'opacity-60 hover:opacity-100 text-white'}`}
-                    title={dm.id.toUpperCase()}
-                  >
-                    <Icon className="w-3 h-3" />
-                    {mode === dm.id && <span className="text-[8px] font-bold">{dm.label}</span>}
-                  </button>
-                );
-              })}
-            </div>
+            <button
+              onClick={() => {
+                const modes: ("hp" | "tablet" | "pc")[] = ["hp", "tablet", "pc"];
+                const nextIndex = (modes.indexOf(mode) + 1) % modes.length;
+                setMode(modes[nextIndex]);
+              }}
+              className="flex items-center justify-center bg-black/10 hover:bg-black/20 transition-all rounded-full w-8 h-8 border border-white/10 shadow-inner"
+              title={`Ukuran: ${mode === 'hp' ? 'Kecil' : mode === 'tablet' ? 'Sedang' : 'Besar'}`}
+            >
+              <Monitor className="w-3.5 h-3.5" />
+            </button>
           </div>
 
         </div>

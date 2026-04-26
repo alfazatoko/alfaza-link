@@ -15,17 +15,53 @@ export async function recognizeText(
   return result.data.text;
 }
 
+// Daftar model Gemini sebagai fallback — jika model utama deprecated, otomatis coba berikutnya
+const GEMINI_MODELS = [
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
+];
+
+async function callGeminiModel(model: string, apiKey: string, prompt: string, base64: string, mimeType: string): Promise<any> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType, data: base64 } }] }],
+        generationConfig: { responseMimeType: "application/json" }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    const errMsg = err?.error?.message || "";
+    const isModelGone = response.status === 404 || errMsg.toLowerCase().includes("not found") || errMsg.toLowerCase().includes("not supported");
+    const error: any = new Error(errMsg || "Gagal menghubungi server Gemini.");
+    error.isModelGone = isModelGone;
+    throw error;
+  }
+
+  const data = await response.json();
+  let jsonStr = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+  jsonStr = jsonStr.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim();
+  return JSON.parse(jsonStr);
+}
+
 export async function recognizeWithGemini(file: File, apiKey: string, type: "transfer" | "token"): Promise<any> {
   const cleanApiKey = apiKey.trim();
   if (!cleanApiKey) throw new Error("API Key kosong.");
 
   const base64 = await new Promise<string>((resolve) => {
     const reader = new FileReader();
-    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
     reader.readAsDataURL(file);
   });
 
-  const prompt = type === "transfer" 
+  const prompt = type === "transfer"
     ? `Anda adalah sistem OCR paling cerdas yang dikhususkan untuk struk transfer bank Indonesia. 
 Tugas: Ekstrak data dari gambar struk dan kembalikan HANYA JSON.
 
@@ -54,39 +90,28 @@ Penting: Jika data tidak ditemukan, gunakan "-". Nominal harus angka murni (misa
 Format: {"idPln": "nomor", "nama": "nama pelanggan", "tarifDaya": "R1M/900VA", "nominal": angka_tanpa_titik, "jmlDaya": "string_kwh", "tokenNumber": "20 digit angka tanpa spasi", "tokenLine1": "10 digit pertama", "tokenLine2": "10 digit terakhir"}
 Penting: Pastikan tokenNumber hanya berisi angka. nominal harus angka murni tanpa Rp atau titik/koma.`;
 
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${cleanApiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType: file.type || "image/jpeg", data: base64 } }
-          ]
-        }],
-        generationConfig: { responseMimeType: "application/json" }
-      })
-    });
+  const mimeType = file.type || "image/jpeg";
+  let lastError: Error | null = null;
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => null);
-      console.error("Gemini API Error:", err);
-      const errMsg = err?.error?.message || "Gagal menghubungi server Gemini.";
-      throw new Error(`API Error: ${errMsg}`);
+  for (const model of GEMINI_MODELS) {
+    try {
+      const result = await callGeminiModel(model, cleanApiKey, prompt, base64, mimeType);
+      console.log(`Berhasil dengan model: ${model}`);
+      return result;
+    } catch (err: any) {
+      if (err.isModelGone) {
+        // Model dihapus/tidak support — coba model berikutnya secara senyap
+        console.warn(`Model ${model} tidak tersedia, mencoba cadangan...`);
+        lastError = err;
+        continue;
+      }
+      // Error lain (network, API key salah, dll) — langsung lempar
+      throw err;
     }
-
-    const data = await response.json();
-    let jsonStr = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-    
-    // Kadang Gemini membungkus hasil dalam markdown ```json ... ```
-    jsonStr = jsonStr.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
-    
-    return JSON.parse(jsonStr);
-  } catch (error) {
-    console.error("recognizeWithGemini Error:", error);
-    throw error;
   }
+
+  // Semua model habis
+  throw lastError || new Error("Semua model AI tidak tersedia. Cek koneksi atau API Key.");
 }
 
 // ===== TRANSFER DATA INTERFACE =====
@@ -104,9 +129,7 @@ export interface TransferData {
 
 // ===== TOKEN DATA INTERFACE =====
 export interface TokenData {
-  idTrx: string;
   idPln: string;
-  produk: string;
   nama: string;
   tarifDaya: string;
   jmlDaya: string;
@@ -330,9 +353,7 @@ export function parseTokenData(rawText: string): TokenData {
   const nominal = extractNominal(fullText);
 
   return {
-    idTrx: idTrx || Math.random().toString(36).substring(2, 10).toUpperCase(),
     idPln: idPln || "-",
-    produk: produk.toUpperCase(),
     nama: nama ? nama.toUpperCase() : "-",
     tarifDaya: tarifDaya ? tarifDaya.toUpperCase() : "-",
     jmlDaya: jmlDaya ? `${jmlDaya} KWH` : "-",

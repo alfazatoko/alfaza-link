@@ -1299,7 +1299,7 @@ function BackupPage({ goBack }: { goBack: () => void }) {
 
 function SettingPage({ goBack }: { goBack: () => void }) {
   const { toast } = useToast();
-  const { theme } = useDisplayMode();
+  const { theme, themeColors, setThemeColor } = useDisplayMode();
   const [settings, setSettings] = useState<SettingsRecord | null>(null);
   const [shopName, setShopName] = useState("");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState("");
@@ -1310,6 +1310,9 @@ function SettingPage({ goBack }: { goBack: () => void }) {
   const [autoResetMinute, setAutoResetMinute] = useState(0);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
+  
+  const [localThemeColors, setLocalThemeColors] = useState(themeColors);
+
   const defaultLabels: CategoryLabels = {
     BANK: { name: "BANK", visible: true },
     FLIP: { name: "FLIP", visible: true },
@@ -1355,6 +1358,13 @@ function SettingPage({ goBack }: { goBack: () => void }) {
       if (s.categoryLabels) {
         setCatLabels(s.categoryLabels);
       }
+      if (s.themeColors) {
+        setLocalThemeColors(prev => ({ ...prev, ...s.themeColors }));
+        // Sync local device theme colors with cloud ones
+        Object.entries(s.themeColors).forEach(([t, color]) => {
+           setThemeColor(t as any, color);
+        });
+      }
     }).catch(() => {});
   }, []);
 
@@ -1370,7 +1380,14 @@ function SettingPage({ goBack }: { goBack: () => void }) {
         autoResetHour,
         autoResetMinute,
         categoryLabels: catLabels,
+        themeColors: localThemeColors,
       });
+      
+      // Update display mode provider state immediately
+      Object.entries(localThemeColors).forEach(([t, color]) => {
+        setThemeColor(t as any, color);
+      });
+
       toast({ title: "Pengaturan disimpan" });
     } catch {
       toast({ title: "Gagal menyimpan", variant: "destructive" });
@@ -1546,6 +1563,35 @@ function SettingPage({ goBack }: { goBack: () => void }) {
               );
             })}
           </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
+            <Palette className="w-4 h-4 text-pink-500" /> Pengaturan Warna Tema
+          </h3>
+          <div className="grid grid-cols-1 gap-3">
+            {[
+              { id: 'light', label: 'Tema Biru (Standar)', color: localThemeColors.light },
+              { id: 'dark', label: 'Tema Dark (Gelap)', color: localThemeColors.dark },
+              { id: 'sky-blue', label: 'Tema Biru Sky', color: localThemeColors['sky-blue'] },
+              { id: 'soft-green', label: 'Tema Hijau Soft', color: localThemeColors['soft-green'] },
+              { id: 'sunset-orange', label: 'Tema Orange Sunset', color: localThemeColors['sunset-orange'] },
+            ].map((t) => (
+              <div key={t.id} className="flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                <span className="text-xs font-semibold text-gray-600">{t.label}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-gray-400 uppercase">{t.color}</span>
+                  <input 
+                    type="color" 
+                    value={t.color} 
+                    onChange={(e) => setLocalThemeColors(prev => ({ ...prev, [t.id]: e.target.value }))}
+                    className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-400 mt-2 italic">*Warna ini akan menjadi warna utama saat tema tersebut dipilih.</p>
         </div>
 
         <button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-primary to-blue-500 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30">
