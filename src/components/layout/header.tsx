@@ -75,8 +75,8 @@ export function Header() {
   return (
     <div 
       style={{ 
-        background: `linear-gradient(135deg, #004a8f 0%, #003d79 100%)`,
-        boxShadow: `0 10px 25px -5px #003d7940`
+        background: `linear-gradient(135deg, #0000FF 0%, #0033cc 100%)`,
+        boxShadow: `0 10px 25px -5px #0000ff40`
       }}
       className="rounded-3xl p-4 mb-4 text-white relative overflow-hidden transition-all duration-500"
     >

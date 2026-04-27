@@ -1,6 +1,6 @@
 import {
   collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc,
-  setDoc
+  setDoc, query, where
 } from "firebase/firestore/lite";
 import { db } from "./firebase";
 import { getWibDate } from "./utils";
@@ -696,4 +696,48 @@ export async function syncStokVoucher(kasirName: string, date: string, dataVouch
     dataQris,
     updatedAt: new Date().toISOString()
   });
+}
+
+export async function getStokVoucherByRange(kasirName: string | undefined, startDate: string, endDate: string): Promise<StokVoucherRecord[]> {
+  // Jika tanggal awal === tanggal akhir, langsung lookup per doc ID
+  if (startDate === endDate) {
+    if (kasirName) {
+      const docId = `${kasirName}_${startDate}`;
+      const ref = doc(db, "stok_voucher", docId);
+      const snap = await getDoc(ref);
+      if (snap.exists()) return [snap.data() as StokVoucherRecord];
+      return [];
+    }
+    // Tanpa kasirName, fallback ke query sederhana hanya filter date
+    const colRef = collection(db, "stok_voucher");
+    const q = query(colRef, where("date", "==", startDate));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => d.data() as StokVoucherRecord);
+  }
+
+  // Range tanggal: generate semua tanggal dalam range, lalu fetch per doc
+  const results: StokVoucherRecord[] = [];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().split("T")[0];
+    if (kasirName) {
+      const docId = `${kasirName}_${dateStr}`;
+      const ref = doc(db, "stok_voucher", docId);
+      try {
+        const snap = await getDoc(ref);
+        if (snap.exists()) results.push(snap.data() as StokVoucherRecord);
+      } catch { /* skip */ }
+    } else {
+      // Tanpa kasirName, query per tanggal
+      try {
+        const colRef = collection(db, "stok_voucher");
+        const q = query(colRef, where("date", "==", dateStr));
+        const snap = await getDocs(q);
+        snap.docs.forEach(d => results.push(d.data() as StokVoucherRecord));
+      } catch { /* skip */ }
+    }
+  }
+  return results;
 }

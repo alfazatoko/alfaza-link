@@ -137,13 +137,32 @@ export default function StokVoucher() {
     }
   }, [kasirName, selectedDate, dataVoucher, dataQris, isSyncing, isLoading, toast]);
 
-  // Auto-sync every 30 minutes
+  const autoSyncTimeout = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-sync every time data changes (with 2 seconds debounce)
   useEffect(() => {
-    const interval = setInterval(() => {
-      handleSync(false);
-    }, 30 * 60 * 1000); // 30 minutes
-    return () => clearInterval(interval);
-  }, [handleSync]);
+    if (isLoading) return;
+    
+    if (autoSyncTimeout.current) {
+      clearTimeout(autoSyncTimeout.current);
+    }
+    
+    autoSyncTimeout.current = setTimeout(async () => {
+      try {
+        await syncStokVoucher(kasirName, selectedDate, dataVoucher, dataQris);
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setLastSync(timeStr);
+      } catch (error) {
+        console.error("Auto-sync failed:", error);
+      }
+    }, 2000);
+
+    return () => {
+      if (autoSyncTimeout.current) {
+        clearTimeout(autoSyncTimeout.current);
+      }
+    };
+  }, [dataVoucher, dataQris, kasirName, selectedDate, isLoading]);
 
   const toggleEditProvider = (provider: string) => {
     setProvidersEditState(prev => ({ ...prev, [provider]: !prev[provider] }));
@@ -344,7 +363,7 @@ export default function StokVoucher() {
               className="flex flex-col items-center justify-center bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors border border-white/20"
             >
               {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mb-0.5" /> : <CloudUpload className="w-4 h-4 mb-0.5" />}
-              <span className="text-[8px] font-medium leading-none">{lastSync ? `Sync: ${lastSync}` : 'Sync Cloud'}</span>
+              <span className="text-[8px] font-medium leading-none">{lastSync ? `Sync: ${lastSync}` : 'Auto Sync'}</span>
             </button>
           </div>
           

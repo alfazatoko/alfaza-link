@@ -108,6 +108,20 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    // Attempt to unlock orientation to allow landscape mode
+    const unlockOrientation = async () => {
+      try {
+        if ('screen' in window && (window.screen as any).orientation && (window.screen as any).orientation.unlock) {
+          await (window.screen as any).orientation.unlock();
+        }
+      } catch (e) {
+        console.warn('Screen orientation unlock failed:', e);
+      }
+    };
+    unlockOrientation();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

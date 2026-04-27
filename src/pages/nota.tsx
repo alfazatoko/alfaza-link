@@ -150,7 +150,8 @@ export default function Nota() {
       const file = new File([pdfBlob], fileName, { type: "application/pdf" });
 
       // Share using Web Share API
-      const canShare = navigator.share && navigator.canShare && navigator.canShare({ files: [file] });
+      const nav = navigator as any;
+      const canShare = nav.share && nav.canShare && nav.canShare({ files: [file] });
 
       if (canShare) {
         try {

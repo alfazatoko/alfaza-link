@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/header";
 import { AddSaldoModal } from "@/components/modals/add-saldo-modal";
 import { getBalance, createTransaction, getSettings, type BalanceRecord, type SettingsRecord } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
-import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Lock, Save, Settings, SlidersHorizontal, SmartphoneNfc, NotebookPen, ListPlus, Receipt } from "lucide-react";
+import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Lock, Save, Settings, SlidersHorizontal, SmartphoneNfc, NotebookPen, ListPlus, Receipt, X, Home, FileText, Ticket, CalendarDays } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_QUOTES = [
@@ -35,6 +35,8 @@ export default function Beranda() {
   const [shopSettings, setShopSettings] = useState<SettingsRecord | null>(null);
   const [saving, setSaving] = useState(false);
   const [isPenyesuaianModalOpen, setIsPenyesuaianModalOpen] = useState(false);
+  const [showLainnyaMenu, setShowLainnyaMenu] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const nominalRef = useRef<HTMLInputElement>(null);
   const adminRef = useRef<HTMLInputElement>(null);
@@ -58,9 +60,14 @@ export default function Beranda() {
     window.addEventListener("open-isi-saldo", openIsiSaldo);
 
     const interval = setInterval(loadBalance, 5000);
+
+    const onUpdate = () => setUpdateAvailable(true);
+    window.addEventListener("pwa-update-available", onUpdate);
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("open-isi-saldo", openIsiSaldo);
+      window.removeEventListener("pwa-update-available", onUpdate);
     };
   }, [loadBalance]);
 
@@ -152,42 +159,46 @@ export default function Beranda() {
         </div>
       )}
 
-      <div className="bg-[#118eea] rounded-2xl p-3 border-2 border-sky-400/50 shadow-md mb-3">
-        <div className="grid grid-cols-2 gap-2.5 mb-3">
-          <div className="bg-white rounded-xl p-3 text-gray-950 border border-white/20 shadow-sm relative overflow-hidden">
-            <div className="absolute -right-3 -top-3 w-12 h-12 bg-sky-100/50 rounded-full" />
-            <p className="text-[10px] font-semibold mb-0.5 flex items-center gap-1 text-gray-950">
-              <Landmark className="w-3 h-3" /> SALDO BANK
+      <div className="bg-gradient-to-br from-blue-500 via-blue-400 to-orange-400 rounded-3xl p-4 text-gray-950 shadow-lg relative overflow-hidden mb-4 border border-blue-200/30">
+        {/* Decorative shapes */}
+        <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -left-8 -bottom-8 w-32 h-32 bg-orange-200/20 rounded-full blur-2xl pointer-events-none" />
+        
+        {/* Top 2 Main Balances */}
+        <div className="grid grid-cols-2 gap-4 mb-4 relative z-10">
+          <div>
+            <p className="text-[10px] font-bold text-gray-800 mb-1 flex items-center gap-1.5 uppercase tracking-wide">
+              <Landmark className="w-3.5 h-3.5" /> Saldo Bank
             </p>
-            <h3 className="text-xl font-extrabold text-gray-950">{formatRupiah(balance?.bank || 0)}</h3>
+            <h3 className="text-2xl font-black tracking-tight">{formatRupiah(balance?.bank || 0)}</h3>
           </div>
-          <div className="bg-white rounded-xl p-3 text-gray-950 border border-white/20 shadow-sm relative overflow-hidden">
-            <div className="absolute -right-3 -bottom-3 w-12 h-12 bg-sky-100/50 rounded-full" />
-            <p className="text-[10px] font-semibold mb-0.5 flex items-center gap-1 text-gray-950">
-              <Wallet className="w-3 h-3" /> SALDO CASH
+          <div className="pl-4 border-l border-black/10">
+            <p className="text-[10px] font-bold text-gray-800 mb-1 flex items-center gap-1.5 uppercase tracking-wide">
+              <Wallet className="w-3.5 h-3.5" /> Saldo Cash
             </p>
-            <h3 className="text-xl font-extrabold text-gray-950">{formatRupiah(balance?.cash || 0)}</h3>
+            <h3 className="text-2xl font-black tracking-tight">{formatRupiah(balance?.cash || 0)}</h3>
           </div>
         </div>
 
-        <div className="flex gap-2.5">
-          <div className="flex-1 bg-white rounded-xl py-2.5 px-2 text-center shadow-sm">
-            <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
-              <ArrowDownToLine className="w-3 h-3 text-[#118eea]" /> Tarik Tunai
+        {/* Bottom 3 Secondary Balances */}
+        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-black/10 relative z-10">
+          <div>
+            <span className="text-[8px] font-bold text-gray-700 uppercase flex items-center gap-1 mb-1">
+              <ArrowDownToLine className="w-2.5 h-2.5" /> Tarik Tunai
             </span>
-            <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.tarik || 0)}</span>
+            <span className="text-xs font-black">{formatRupiah(balance?.tarik || 0)}</span>
           </div>
-          <div className="flex-1 bg-white rounded-xl py-2.5 px-2 text-center shadow-sm">
-            <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
-              <Gem className="w-3 h-3 text-rose-500" /> Aksesoris
+          <div className="pl-2 border-l border-black/10">
+            <span className="text-[8px] font-bold text-gray-700 uppercase flex items-center gap-1 mb-1">
+              <Gem className="w-2.5 h-2.5" /> Aksesoris
             </span>
-            <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.aks || 0)}</span>
+            <span className="text-xs font-black">{formatRupiah(balance?.aks || 0)}</span>
           </div>
-          <div className="flex-1 bg-white rounded-xl py-2.5 px-2 text-center shadow-sm">
-            <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center justify-center gap-1 mb-1">
-              <Lock className="w-3 h-3 text-amber-500" /> Admin
+          <div className="pl-2 border-l border-black/10">
+            <span className="text-[8px] font-bold text-gray-700 uppercase flex items-center gap-1 mb-1">
+              <RefreshCw className="w-2.5 h-2.5" /> Admin
             </span>
-            <span className="text-sm font-extrabold text-gray-900 block">{formatRupiah(balance?.adminTotal || 0)}</span>
+            <span className="text-xs font-black">{formatRupiah(balance?.adminTotal || 0)}</span>
           </div>
         </div>
       </div>
@@ -223,13 +234,54 @@ export default function Beranda() {
           <span className="text-[8px] font-bold text-[#b71c1c] uppercase tracking-wide">Nota</span>
         </button>
         <button 
-          onClick={() => setLocation("/lainnya")} 
-          className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
+          onClick={() => setShowLainnyaMenu(!showLainnyaMenu)} 
+          className={`flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md ring-2 ring-offset-1 ${showLainnyaMenu ? 'ring-[#7d3c98]/60 bg-purple-50' : 'ring-transparent border border-gray-100'}`}
         >
           <ListPlus className="w-5 h-5 text-[#7d3c98] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
           <span className="text-[8px] font-bold text-[#7d3c98] uppercase tracking-wide">Lainnya</span>
         </button>
       </div>
+
+      {showLainnyaMenu && (
+        <div className="mb-4 p-2 bg-purple-50/80 backdrop-blur-sm rounded-2xl border-2 border-[#7d3c98]/15 shadow-inner">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <span className="text-[9px] font-black text-[#7d3c98] uppercase tracking-widest">Menu Lainnya</span>
+            <button onClick={() => setShowLainnyaMenu(false)} className="p-0.5 rounded-full hover:bg-purple-200/60 transition">
+              <X className="w-3.5 h-3.5 text-[#7d3c98]" />
+            </button>
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            <button
+              onClick={() => { setLocation("/beranda"); setShowLainnyaMenu(false); }}
+              className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md ring-2 ring-blue-200 ring-offset-1"
+            >
+              <Home className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+              <span className="text-[8px] font-bold text-blue-600 uppercase tracking-wide">Beranda</span>
+            </button>
+            <button
+              onClick={() => { setLocation("/nota"); setShowLainnyaMenu(false); }}
+              className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md ring-2 ring-[#b71c1c]/20 ring-offset-1"
+            >
+              <FileText className="w-5 h-5 text-[#b71c1c] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+              <span className="text-[8px] font-bold text-[#b71c1c] uppercase tracking-wide">Nota</span>
+            </button>
+            <button
+              onClick={() => { setLocation("/stok-voucher"); setShowLainnyaMenu(false); }}
+              className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md ring-2 ring-emerald-200 ring-offset-1"
+            >
+              <Ticket className="w-5 h-5 text-emerald-600 group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+              <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-wide">Stok Voucher</span>
+            </button>
+            <button
+              onClick={() => { setLocation("/kalender"); setShowLainnyaMenu(false); }}
+              className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md ring-2 ring-orange-200 ring-offset-1"
+            >
+              <CalendarDays className="w-5 h-5 text-orange-600 group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+              <span className="text-[8px] font-bold text-orange-600 uppercase tracking-wide">Kalender</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="bg-gradient-to-r from-orange-500 to-amber-400 text-white text-center py-2 rounded-xl mb-3 text-[11px] font-bold">
         {getMutiaraQuote()}
@@ -245,10 +297,10 @@ export default function Beranda() {
                 onClick={() => setCategory(cat.id)}
                 className="flex flex-col items-center gap-1 transition-all"
               >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm transition-all ${isActive ? cat.activeColor + ' shadow-lg scale-110' : 'bg-card text-muted-foreground border border-border'}`}>
-                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 1.5} />
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm transition-all ${isActive ? cat.activeColor + ' shadow-lg scale-110' : 'bg-card text-gray-950 border border-border'}`}>
+                  <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-950'}`} strokeWidth={isActive ? 2.5 : 1.8} />
                 </div>
-                <span className={`text-[10px] font-bold ${isActive ? 'text-primary' : 'text-foreground opacity-80'}`}>{cat.label}</span>
+                <span className={`text-[10px] font-black ${isActive ? 'text-gray-950' : 'text-gray-950'}`}>{cat.label}</span>
               </button>
             );
           })}
@@ -315,6 +367,18 @@ export default function Beranda() {
           <Save className="w-4 h-4" />
           {saving ? "MEMPROSES..." : "SIMPAN TRANSAKSI"}
         </button>
+
+        {updateAvailable && (
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full h-12 rounded-2xl font-black text-sm bg-red-600 text-white shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 active:scale-[0.98] transition animate-bounce border-2 border-white"
+            >
+              <RefreshCw className="w-4 h-4" />
+              PERBAHARUI APLIKASI
+            </button>
+          </div>
+        )}
       </div>
 
       <AddSaldoModal
