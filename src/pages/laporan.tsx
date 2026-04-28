@@ -541,6 +541,7 @@ export default function Laporan() {
             <span className="text-gray-900 font-extrabold text-xl">{formatRupiah(sisaCashTotal)}</span>
           </div>
           <p className="text-[10px] text-gray-800">Sisa Cash: {formatRupiah(sisaCashPenjualan)} + Admin: {formatRupiah(totalAdmin)} + Aks: {formatRupiah(totalAks)}</p>
+          <p className="text-[10px] text-gray-800">Total Transaksi : {transactions.length} &nbsp;&nbsp;&nbsp;&nbsp; Total vc laku : {totalVoucherQty}</p>
         </div>
       </div>
 
