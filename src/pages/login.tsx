@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { getUsers, getSettings, loginUser, type UserRecord } from "@/lib/firestore";
 import { User, Clock, CalendarDays, Sun, Moon, Fingerprint, Monitor, Tablet, Smartphone, ChevronDown, Loader2, Lock, SunMedium, SunMoon, Eye, EyeOff, Mail, KeyRound, LogOut, Store, Cloud, Leaf, Sunset } from "lucide-react";
 import { useDisplayMode } from "@/hooks/use-display-mode";
+import { LogoutConfirmModal } from "@/components/auth/logout-confirm-modal";
 
 const logoUrl = `${import.meta.env.BASE_URL}alfaza-logo.png`;
 
@@ -224,6 +225,7 @@ function KasirSelectionScreen() {
   const [selectedShift, setSelectedShift] = useState<string>("PAGI");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showPin, setShowPin] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { login, firebaseLogout, firebaseUser } = useAuth();
 
@@ -478,15 +480,21 @@ function KasirSelectionScreen() {
 
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm("Apakah Anda yakin ingin keluar dari Firebase?")) {
-                  firebaseLogout();
-                }
-              }}
+              onClick={() => setIsLogoutModalOpen(true)}
               className="w-full flex items-center justify-center gap-2 text-red-500 text-sm font-semibold py-2"
             >
               <LogOut className="w-4 h-4" /> Logout Firebase
             </button>
+            <LogoutConfirmModal 
+              isOpen={isLogoutModalOpen}
+              onClose={() => setIsLogoutModalOpen(false)}
+              onConfirm={() => {
+                setIsLogoutModalOpen(false);
+                firebaseLogout();
+              }}
+              title="Konfirmasi Keluar"
+              description="Apakah Anda yakin ingin keluar dari Firebase?"
+            />
           </>
         )}
       </div>

@@ -116,3 +116,4 @@ export function getMaxWidth(mode: DisplayMode): string {
     default: return "max-w-[450px]";
   }
 }
+

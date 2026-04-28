@@ -2,10 +2,13 @@ import { Link, useLocation } from "wouter";
 import { Home, Clock, CreditCard, BarChart3, Settings, LogOut, History, ArrowLeft, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { useState } from "react";
+import { LogoutConfirmModal } from "@/components/auth/logout-confirm-modal";
 
 export function BottomNav() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   if (location === "/") return null;
 
@@ -33,10 +36,13 @@ export function BottomNav() {
   });
 
   const handleLogout = () => {
-    if (window.confirm("Apakah Anda yakin ingin keluar dari akun ini?")) {
-      logout();
-      window.location.href = import.meta.env.BASE_URL || "/";
-    }
+    setIsLogoutModalOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setIsLogoutModalOpen(false);
+    logout();
+    window.location.href = import.meta.env.BASE_URL || "/";
   };
 
   return (
@@ -91,6 +97,14 @@ export function BottomNav() {
           </div>
         );
       })}
+      
+      <LogoutConfirmModal 
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={confirmLogout}
+        title="Konfirmasi Keluar"
+        description="Apakah Anda yakin ingin keluar dari akun ini?"
+      />
     </div>
 
   );
