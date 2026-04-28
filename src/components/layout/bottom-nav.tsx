@@ -33,8 +33,10 @@ export function BottomNav() {
   });
 
   const handleLogout = () => {
-    logout();
-    window.location.href = import.meta.env.BASE_URL || "/";
+    if (window.confirm("Apakah Anda yakin ingin keluar dari akun ini?")) {
+      logout();
+      window.location.href = import.meta.env.BASE_URL || "/";
+    }
   };
 
   return (

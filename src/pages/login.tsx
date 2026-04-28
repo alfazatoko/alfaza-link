@@ -478,7 +478,11 @@ function KasirSelectionScreen() {
 
             <button
               type="button"
-              onClick={firebaseLogout}
+              onClick={() => {
+                if (window.confirm("Apakah Anda yakin ingin keluar dari Firebase?")) {
+                  firebaseLogout();
+                }
+              }}
               className="w-full flex items-center justify-center gap-2 text-red-500 text-sm font-semibold py-2"
             >
               <LogOut className="w-4 h-4" /> Logout Firebase
