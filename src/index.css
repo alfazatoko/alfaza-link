@@ -309,6 +309,12 @@
   }
 }
 
+@media (max-width: 1023px) and (orientation: landscape) {
+  .responsive-landscape {
+    max-width: 100% !important;
+  }
+}
+
 @keyframes runningText {
   0% { transform: translateX(100%); }
   40% { transform: translateX(0); }

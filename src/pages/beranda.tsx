@@ -118,6 +118,21 @@ export default function Beranda() {
     }
   }, [user, nominalDisplay, adminDisplay, category, keterangan, toast, loadBalance]);
 
+  const handleUpdate = useCallback(() => {
+    if (confirm("Perbarui aplikasi ke versi terbaru? Halaman akan dimuat ulang.")) {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
+          window.location.reload();
+        });
+      } else {
+        window.location.reload();
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const active = document.activeElement;
@@ -278,6 +293,13 @@ export default function Beranda() {
             >
               <CalendarDays className="w-5 h-5 text-orange-600 group-hover:scale-110 transition-transform" strokeWidth={1.8} />
               <span className="text-[8px] font-bold text-orange-600 uppercase tracking-wide">Kalender</span>
+            </button>
+            <button
+              onClick={() => { handleUpdate(); setShowLainnyaMenu(false); }}
+              className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md ring-2 ring-gray-200 ring-offset-1 bg-gray-50"
+            >
+              <RefreshCw className="w-5 h-5 text-gray-600 group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+              <span className="text-[8px] font-bold text-gray-600 uppercase tracking-wide">Perbarui</span>
             </button>
           </div>
         </div>

@@ -110,10 +110,10 @@ export function useDisplayMode() {
 
 export function getMaxWidth(mode: DisplayMode): string {
   switch (mode) {
-    case "hp": return "max-w-[450px]";
-    case "tablet": return "max-w-[768px]";
+    case "hp": return "max-w-[450px] responsive-landscape";
+    case "tablet": return "max-w-[768px] responsive-landscape";
     case "pc": return "max-w-full";
-    default: return "max-w-[450px]";
+    default: return "max-w-[450px] responsive-landscape";
   }
 }
 
