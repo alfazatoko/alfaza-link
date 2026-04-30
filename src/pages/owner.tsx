@@ -847,6 +847,8 @@ function GajihPage({ goBack }: { goBack: () => void }) {
   const [bonusDisplay, setBonusDisplay] = useState("0");
   const [editHariKerja, setEditHariKerja] = useState(false);
   const [hariKerjaManual, setHariKerjaManual] = useState("");
+  const [editIzin, setEditIzin] = useState(false);
+  const [izinManual, setIzinManual] = useState("");
   const [catatan, setCatatan] = useState("");
   const slipRef = useRef<HTMLDivElement>(null);
 
@@ -878,12 +880,15 @@ function GajihPage({ goBack }: { goBack: () => void }) {
   const izinCount = izinList.filter(iz => iz.nama === selectedKasir && iz.status === "approved").length;
 
   const hariKerja = editHariKerja ? (parseInt(hariKerjaManual) || 0) : absenCount;
+  const currentIzin = editIzin ? (parseInt(izinManual) || 0) : izinCount;
   const gajiPerHari = parseInt(parseThousands(gajiPerHariDisplay)) || 0;
   const gajiBulanan = parseInt(parseThousands(gajiBulananDisplay)) || 0;
   const bonus = parseInt(parseThousands(bonusDisplay)) || 0;
 
   const gajiPokok = mode === "harian" ? hariKerja * gajiPerHari : gajiBulanan;
-  const totalGaji = gajiPokok + bonus;
+  const ratePerHari = mode === "harian" ? gajiPerHari : Math.round(gajiBulanan / 30);
+  const potonganIzin = currentIzin * ratePerHari;
+  const totalGaji = gajiPokok + bonus - potonganIzin;
 
   const [y, m2] = month.split("-").map(Number);
   const monthLabel = format(new Date(y, m2 - 1), "MMMM yyyy", { locale: idLocale });
@@ -891,16 +896,19 @@ function GajihPage({ goBack }: { goBack: () => void }) {
   useEffect(() => {
     setHariKerjaManual(String(absenCount));
     setEditHariKerja(false);
-  }, [selectedKasir, month, absenCount]);
+    setIzinManual(String(izinCount));
+    setEditIzin(false);
+  }, [selectedKasir, month, absenCount, izinCount]);
 
   const handleShareText = async () => {
     const lines = [
       `Slip Gaji - ${monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}`,
       `Nama: ${selectedKasir}`,
       `Hari Kerja: ${hariKerja} hari`,
-      `Izin: ${izinCount} hari`,
+      `Izin: ${currentIzin} hari ${potonganIzin > 0 ? `(-${formatRupiah(potonganIzin)})` : ""}`,
       `Gaji Pokok: ${formatRupiah(gajiPokok)}`,
       `Bonus: ${formatRupiah(bonus)}`,
+      `Potongan Izin: -${formatRupiah(potonganIzin)}`,
       `Total Gaji: ${formatRupiah(totalGaji)}`,
     ];
     if (catatan) lines.push(`Catatan: ${catatan}`);
@@ -1064,15 +1072,33 @@ function GajihPage({ goBack }: { goBack: () => void }) {
             )}
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-500 block mb-1">Izin (Hari):</label>
-            <div className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold text-gray-700">
-              {izinCount}
-            </div>
+            <label className="text-xs font-semibold text-gray-500 flex items-center gap-1.5 mb-1">
+              Izin (Hari):
+              <input
+                type="checkbox"
+                checked={editIzin}
+                onChange={e => { setEditIzin(e.target.checked); if (e.target.checked) setIzinManual(String(izinCount)); }}
+                className="w-3.5 h-3.5"
+              />
+              <span className="text-primary text-[10px]">Edit</span>
+            </label>
+            {editIzin ? (
+              <input
+                type="number"
+                value={izinManual}
+                onChange={e => setIzinManual(e.target.value)}
+                className="w-full border border-orange-300 rounded-xl px-3 py-2.5 text-sm font-bold outline-none bg-orange-50"
+              />
+            ) : (
+              <div className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold text-gray-700">
+                {izinCount} hari
+              </div>
+            )}
           </div>
         </div>
 
         <p className="text-[11px] text-gray-400 italic mb-4">
-          *Hari kerja dari absen: <span className="font-semibold">{absenCount} hari</span>. Centang Edit untuk ubah manual.
+          *Hari kerja dari absen: <span className="font-semibold">{absenCount} hari</span>. Izin: <span className="font-semibold text-orange-600">{currentIzin} hari (-{formatRupiah(potonganIzin)}{mode === "bulanan" ? ` @ ${formatRupiah(ratePerHari)}/hari` : ""})</span>.
         </p>
 
         <div className="mb-0">
@@ -1104,7 +1130,7 @@ function GajihPage({ goBack }: { goBack: () => void }) {
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-blue-100">Izin:</span>
-            <span className="font-bold">{izinCount} hari</span>
+            <span className="font-bold">{currentIzin} hari {potonganIzin > 0 && `(-${formatRupiah(potonganIzin)})`}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-blue-100">Gaji Pokok:</span>
