@@ -18,7 +18,7 @@ import {
   Database, Settings, ArrowLeft, Plus, Trash2, Edit, Eye, EyeOff,
   Shield, Check, X, CalendarDays, Download, RefreshCw,
   BookOpen, AlertTriangle, Star, Activity, Loader2, Lock,
-  Share2, ImageIcon
+  Share2, ImageIcon, ChevronRight, ChevronUp
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -845,6 +845,8 @@ function GajihPage({ goBack }: { goBack: () => void }) {
   const [gajiPerHariDisplay, setGajiPerHariDisplay] = useState(() => formatThousands(localStorage.getItem("alfaza_gaji_per_hari") || "50000"));
   const [gajiBulananDisplay, setGajiBulananDisplay] = useState(() => formatThousands(localStorage.getItem("alfaza_gaji_bulanan") || "0"));
   const [bonusDisplay, setBonusDisplay] = useState("0");
+  const [potonganLainDisplay, setPotonganLainDisplay] = useState("0");
+  const [ketPotongan, setKetPotongan] = useState("");
   const [editHariKerja, setEditHariKerja] = useState(false);
   const [hariKerjaManual, setHariKerjaManual] = useState("");
   const [editIzin, setEditIzin] = useState(false);
@@ -884,11 +886,12 @@ function GajihPage({ goBack }: { goBack: () => void }) {
   const gajiPerHari = parseInt(parseThousands(gajiPerHariDisplay)) || 0;
   const gajiBulanan = parseInt(parseThousands(gajiBulananDisplay)) || 0;
   const bonus = parseInt(parseThousands(bonusDisplay)) || 0;
-
+  const potonganLain = parseInt(parseThousands(potonganLainDisplay)) || 0;
+  
   const gajiPokok = mode === "harian" ? hariKerja * gajiPerHari : gajiBulanan;
   const ratePerHari = mode === "harian" ? gajiPerHari : Math.round(gajiBulanan / 30);
   const potonganIzin = currentIzin * ratePerHari;
-  const totalGaji = gajiPokok + bonus - potonganIzin;
+  const totalGaji = gajiPokok + bonus - potonganIzin - potonganLain;
 
   const [y, m2] = month.split("-").map(Number);
   const monthLabel = format(new Date(y, m2 - 1), "MMMM yyyy", { locale: idLocale });
@@ -909,6 +912,7 @@ function GajihPage({ goBack }: { goBack: () => void }) {
       `Gaji Pokok: ${formatRupiah(gajiPokok)}`,
       `Bonus: ${formatRupiah(bonus)}`,
       `Potongan Izin: -${formatRupiah(potonganIzin)}`,
+      ...(potonganLain > 0 ? [`Potongan Lain: -${formatRupiah(potonganLain)}${ketPotongan ? ` (${ketPotongan})` : ""}`] : []),
       `Total Gaji: ${formatRupiah(totalGaji)}`,
     ];
     if (catatan) lines.push(`Catatan: ${catatan}`);
@@ -923,27 +927,79 @@ function GajihPage({ goBack }: { goBack: () => void }) {
     } catch { }
   };
 
-  const handleShareImage = async () => {
-    if (!slipRef.current) return;
+  const buildPdf = async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const pdf = new jsPDF("p", "mm", "a5");
+    const pw = 148;
+    const ml = 12;
+    const cw = pw - ml * 2;
+    let y = 15;
+
+    pdf.setFillColor(30, 60, 150);
+    pdf.roundedRect(ml, y, cw, 16, 3, 3, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(14); pdf.setFont("helvetica", "bold");
+    pdf.text("SLIP GAJI KARYAWAN", pw / 2, y + 7, { align: "center" });
+    pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
+    const pBulan = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+    pdf.text(`Periode: ${pBulan}`, pw / 2, y + 12.5, { align: "center" });
+    y += 22;
+
+    const row = (left: string, right: string, bold = false) => {
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", bold ? "bold" : "normal");
+      pdf.setTextColor(50, 50, 50);
+      pdf.text(left, ml + 2, y + 4);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(right, ml + cw - 2, y + 4, { align: "right" });
+      pdf.setDrawColor(220, 220, 220);
+      pdf.line(ml, y + 6, ml + cw, y + 6);
+      y += 8;
+    };
+
+    row("Nama", selectedKasir.toUpperCase(), true);
+    row("Hari Kerja", `${hariKerja} hari`);
+    row("Izin", `${currentIzin} hari ${potonganIzin > 0 ? `(-${formatRupiah(potonganIzin)})` : ""}`);
+    row("Gaji Pokok", formatRupiah(gajiPokok));
+    row("Bonus", formatRupiah(bonus));
+    if (potonganLain > 0) {
+      row(`Potongan ${ketPotongan ? `(${ketPotongan})` : "Lain"}`, `-${formatRupiah(potonganLain)}`);
+    }
+    if (catatan) {
+      row("Catatan", catatan);
+    }
+
+    y += 4;
+    pdf.setFillColor(240, 240, 245);
+    pdf.roundedRect(ml, y, cw, 12, 2, 2, "F");
+    pdf.setFontSize(11); pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(30, 60, 150);
+    pdf.text("TOTAL GAJI", ml + 4, y + 7.5);
+    pdf.setFontSize(13);
+    pdf.text(formatRupiah(totalGaji), ml + cw - 4, y + 7.5, { align: "right" });
+    y += 18;
+
+    pdf.setFontSize(8); pdf.setFont("helvetica", "italic");
+    pdf.setTextColor(150, 150, 150);
+    pdf.text(`Dicetak pada: ${new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}`, pw / 2, y, { align: "center" });
+
+    return pdf;
+  };
+
+  const handleDownloadPDF = async () => {
     try {
-      const canvas = await html2canvas(slipRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        const file = new File([blob], `slip-gaji-${selectedKasir}-${month}.png`, { type: "image/png" });
-        if (navigator.share && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file] });
-        } else {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = file.name;
-          link.click();
-          URL.revokeObjectURL(url);
-          toast({ title: "Gambar diunduh" });
-        }
-      }, "image/png");
+      const pdf = await buildPdf();
+      const blob = pdf.output("blob");
+      const filename = `slip-gaji-${selectedKasir.replace(/\s+/g, '-')}-${month}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "PDF berhasil diunduh" });
     } catch {
-      toast({ title: "Gagal membuat gambar", variant: "destructive" });
+      toast({ title: "Gagal mengunduh PDF", variant: "destructive" });
     }
   };
 
@@ -1046,6 +1102,30 @@ function GajihPage({ goBack }: { goBack: () => void }) {
           </div>
         )}
 
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className="text-xs font-semibold text-gray-500 block mb-1">Potongan Gaji:</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={potonganLainDisplay}
+              onChange={e => setPotonganLainDisplay(formatThousands(e.target.value))}
+              className="w-full border border-red-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none bg-red-50/30"
+              placeholder="0"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 block mb-1">Ket. Potongan:</label>
+            <input
+              type="text"
+              value={ketPotongan}
+              onChange={e => setKetPotongan(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none"
+              placeholder="Misal: Kasbon, dll"
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-3 mb-2">
           <div>
             <label className="text-xs font-semibold text-gray-500 flex items-center gap-1.5 mb-1">
@@ -1140,6 +1220,12 @@ function GajihPage({ goBack }: { goBack: () => void }) {
             <span className="text-blue-100">Bonus:</span>
             <span className="font-bold">{formatRupiah(bonus)}</span>
           </div>
+          {potonganLain > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-blue-100">Potongan {ketPotongan ? `(${ketPotongan})` : "Lain"}:</span>
+              <span className="font-bold">-{formatRupiah(potonganLain)}</span>
+            </div>
+          )}
           {catatan && (
             <div className="flex justify-between text-sm">
               <span className="text-blue-100">Catatan:</span>
@@ -1163,10 +1249,10 @@ function GajihPage({ goBack }: { goBack: () => void }) {
           🍰 Bagikan Teks
         </button>
         <button
-          onClick={handleShareImage}
+          onClick={handleDownloadPDF}
           className="bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow active:scale-95 transition"
         >
-          📸 Bagikan Gambar
+          ⬇️ Download PDF
         </button>
       </div>
     </div>
@@ -1326,7 +1412,6 @@ function BackupPage({ goBack }: { goBack: () => void }) {
 function SettingPage({ goBack }: { goBack: () => void }) {
   const { toast } = useToast();
   const { theme, themeColors, setThemeColor } = useDisplayMode();
-  const [settings, setSettings] = useState<SettingsRecord | null>(null);
   const [shopName, setShopName] = useState("");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState("");
   const [pinEnabled, setPinEnabled] = useState(false);
@@ -1335,9 +1420,21 @@ function SettingPage({ goBack }: { goBack: () => void }) {
   const [autoResetHour, setAutoResetHour] = useState(2);
   const [autoResetMinute, setAutoResetMinute] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [resetting, setResetting] = useState(false);
   
   const [localThemeColors, setLocalThemeColors] = useState(themeColors);
+  const [balanceColors, setBalanceColors] = useState<SettingsRecord["balanceColors"]>({});
+
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    profil: false,
+    kategori: false,
+    tema: false,
+    saldo: false,
+    fitur: false
+  });
+
+  const toggleSection = (id: string) => {
+    setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const defaultLabels: CategoryLabels = {
     BANK: { name: "BANK", visible: true },
@@ -1349,7 +1446,6 @@ function SettingPage({ goBack }: { goBack: () => void }) {
   };
   const [catLabels, setCatLabels] = useState<CategoryLabels>(defaultLabels);
 
-  // PWA Install State
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
   useEffect(() => {
@@ -1373,7 +1469,6 @@ function SettingPage({ goBack }: { goBack: () => void }) {
 
   useEffect(() => {
     getSettings().then(s => {
-      setSettings(s);
       setShopName(s.shopName || "ALFAZA LINK");
       setProfilePhotoUrl(s.profilePhotoUrl || "");
       setPinEnabled(s.pinEnabled || false);
@@ -1381,16 +1476,14 @@ function SettingPage({ goBack }: { goBack: () => void }) {
       setRunningText(s.runningText || "");
       setAutoResetHour(s.autoResetHour ?? 2);
       setAutoResetMinute(s.autoResetMinute ?? 0);
-      if (s.categoryLabels) {
-        setCatLabels(s.categoryLabels);
-      }
+      if (s.categoryLabels) setCatLabels(s.categoryLabels);
       if (s.themeColors) {
         setLocalThemeColors(prev => ({ ...prev, ...s.themeColors }));
-        // Sync local device theme colors with cloud ones
         Object.entries(s.themeColors).forEach(([t, color]) => {
            setThemeColor(t as any, color);
         });
       }
+      if (s.balanceColors) setBalanceColors(s.balanceColors);
     }).catch(() => {});
   }, []);
 
@@ -1407,9 +1500,9 @@ function SettingPage({ goBack }: { goBack: () => void }) {
         autoResetMinute,
         categoryLabels: catLabels,
         themeColors: localThemeColors,
+        balanceColors,
       });
       
-      // Update display mode provider state immediately
       Object.entries(localThemeColors).forEach(([t, color]) => {
         setThemeColor(t as any, color);
       });
@@ -1440,22 +1533,12 @@ function SettingPage({ goBack }: { goBack: () => void }) {
     img.src = URL.createObjectURL(file);
   };
 
-  const handleResetAll = async () => {
-    if (!confirm("RESET SEMUA DATA? Tindakan ini tidak bisa dibatalkan!")) return;
-    if (!confirm("Yakin? Semua transaksi, saldo, kasbon, kontak, absen, izin akan dihapus.")) return;
-    setResetting(true);
-    try {
-      await resetAllData();
-      toast({ title: "Semua data berhasil direset" });
-    } catch {
-      toast({ title: "Gagal reset", variant: "destructive" });
-    } finally {
-      setResetting(false);
-    }
-  };
-
   const updateCatLabel = (key: keyof CategoryLabels, field: "name" | "visible", value: string | boolean) => {
     setCatLabels(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
+  };
+
+  const updateBalanceColor = (key: keyof SettingsRecord["balanceColors"], val: string) => {
+    setBalanceColors(prev => ({ ...prev, [key]: val }));
   };
 
   const catKeys: (keyof CategoryLabels)[] = ["BANK", "FLIP", "APP", "DANA", "AKS", "TARIK"];
@@ -1463,39 +1546,41 @@ function SettingPage({ goBack }: { goBack: () => void }) {
   return (
     <div className="px-3 pt-3 pb-20 min-h-screen bg-gray-50 dark:bg-slate-950">
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={goBack} className="text-gray-600 dark:text-gray-400"><ArrowLeft className="w-5 h-5" /></button>
-        <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        <h1 className="font-extrabold text-base dark:text-white">Pengaturan</h1>
+        <button onClick={goBack} className="text-gray-600 dark:text-gray-400 p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 bg-gray-100 dark:bg-slate-800 rounded-lg">
+            <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          </div>
+          <h1 className="font-extrabold text-base dark:text-white">Pengaturan Aplikasi</h1>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        {/* PWA Install Button */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-500 rounded-2xl p-4 shadow-lg text-white">
+      <div className="space-y-1">
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-500 rounded-2xl p-4 shadow-lg text-white mb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-xl">
-                <Download className="w-5 h-5" />
-              </div>
+              <div className="bg-white/20 p-2 rounded-xl"><Download className="w-5 h-5" /></div>
               <div>
                 <h3 className="font-bold text-sm">Instal Aplikasi (PWA)</h3>
                 <p className="text-[10px] opacity-80">Akses lebih cepat & ikon di layar utama</p>
               </div>
             </div>
-            <button 
-              onClick={handleInstallPWA}
-              className="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition"
-            >
-              {installPrompt ? "INSTAL SEKARANG" : "CEK STATUS"}
+            <button onClick={handleInstallPWA} className="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition">
+              {installPrompt ? "INSTAL" : "STATUS"}
             </button>
           </div>
         </div>
 
-
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
-            <Users className="w-4 h-4 text-blue-500" /> Profil Toko
-          </h3>
-          <div className="flex items-center gap-4 mb-4">
+        <SettingSection 
+          id="profil" 
+          icon={Users} 
+          title="Profil Toko" 
+          isOpen={openSections.profil} 
+          onToggle={() => toggleSection("profil")}
+        >
+          <div className="flex items-center gap-4 py-2">
             <div className="relative">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-400 flex items-center justify-center overflow-hidden shadow">
                 {profilePhotoUrl ? (
@@ -1510,70 +1595,20 @@ function SettingPage({ goBack }: { goBack: () => void }) {
               </label>
             </div>
             <div className="flex-1">
-              <label className="text-[11px] font-semibold text-gray-500 block mb-1">Nama Toko</label>
-              <input value={shopName} onChange={e => setShopName(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none font-bold" />
+              <label className="text-[10px] font-semibold text-gray-400 block mb-1">Nama Toko</label>
+              <input value={shopName} onChange={e => setShopName(e.target.value)} className="w-full border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 rounded-xl px-3 py-2.5 text-sm outline-none font-bold" />
             </div>
           </div>
-        </div>
+        </SettingSection>
 
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
-            <RefreshCw className="w-4 h-4 text-green-500" /> Jam Reset Otomatis Saldo
-          </h3>
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 block mb-1">Jam</label>
-              <select value={autoResetHour} onChange={e => setAutoResetHour(parseInt(e.target.value))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none text-center font-bold bg-white appearance-none">
-                {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{i}</option>)}
-              </select>
-            </div>
-            <span className="font-bold text-lg mt-4">:</span>
-            <div className="flex-1">
-              <label className="text-[10px] text-gray-500 block mb-1">Menit</label>
-              <select value={autoResetMinute} onChange={e => setAutoResetMinute(parseInt(e.target.value))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none text-center font-bold bg-white appearance-none">
-                {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{i}</option>)}
-              </select>
-            </div>
-          </div>
-          <p className="text-[10px] text-gray-400 mt-2">Saldo semua kasir akan direset otomatis pada jam ini (WIB)</p>
-        </div>
-
-
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-sm text-gray-700 flex items-center gap-2">
-                <Lock className="w-4 h-4 text-indigo-500" /> PIN Login
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Aktifkan PIN untuk kasir saat login</p>
-            </div>
-            <button onClick={() => setPinEnabled(!pinEnabled)} className={`w-12 h-6 rounded-full flex items-center transition-all ${pinEnabled ? 'bg-primary justify-end' : 'bg-gray-300 justify-start'}`}>
-              <div className="w-5 h-5 bg-white rounded-full mx-0.5 shadow" />
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
-            <Star className="w-4 h-4 text-amber-500" /> Kata-kata Mutiara
-          </h3>
-          <textarea value={quotes} onChange={e => setQuotes(e.target.value)} rows={4} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none resize-none" placeholder="Masukkan quotes motivasi (satu per baris)..." />
-          <p className="text-[10px] text-gray-400 mt-1">Tampil secara acak di header kasir</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-red-500" /> Teks Berjalan (Merah)
-          </h3>
-          <input value={runningText} onChange={e => setRunningText(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none" placeholder="Contoh: Semoga Hari ini penuh Berkah..." />
-          <p className="text-[10px] text-gray-400 mt-1">Teks berjalan merah di beranda kasir (kosongkan untuk sembunyikan)</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
-            <Edit className="w-4 h-4 text-purple-500" /> Edit Nama / Sembunyikan Kategori
-          </h3>
-          <div className="space-y-2">
+        <SettingSection 
+          id="kategori" 
+          icon={Edit} 
+          title="Edit Nama Kategori" 
+          isOpen={openSections.kategori} 
+          onToggle={() => toggleSection("kategori")}
+        >
+          <div className="space-y-2 py-1">
             {catKeys.map(key => {
               const cat = catLabels[key] || { name: key, visible: true };
               return (
@@ -1582,20 +1617,23 @@ function SettingPage({ goBack }: { goBack: () => void }) {
                     {cat.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                   </button>
                   <div className="flex-1">
-                    <input value={cat.name} onChange={e => updateCatLabel(key, "name", e.target.value)} className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none font-semibold ${!cat.visible ? 'opacity-40 line-through' : ''}`} />
+                    <input value={cat.name} onChange={e => updateCatLabel(key, "name", e.target.value)} className={`w-full border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 rounded-lg px-3 py-2 text-xs outline-none font-semibold ${!cat.visible ? 'opacity-40 line-through' : ''}`} />
                   </div>
                   <span className="text-[9px] text-gray-400 w-10">{key}</span>
                 </div>
               );
             })}
           </div>
-        </div>
+        </SettingSection>
 
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-sm text-gray-700 mb-3 flex items-center gap-2">
-            <Palette className="w-4 h-4 text-pink-500" /> Pengaturan Warna Tema
-          </h3>
-          <div className="grid grid-cols-1 gap-3">
+        <SettingSection 
+          id="tema" 
+          icon={Palette} 
+          title="Warna Tema & Aplikasi" 
+          isOpen={openSections.tema} 
+          onToggle={() => toggleSection("tema")}
+        >
+           <div className="grid grid-cols-1 gap-2.5 py-1">
             {[
               { id: 'light', label: 'Tema Biru (Standar)', color: localThemeColors.light },
               { id: 'dark', label: 'Tema Dark (Gelap)', color: localThemeColors.dark },
@@ -1603,30 +1641,140 @@ function SettingPage({ goBack }: { goBack: () => void }) {
               { id: 'soft-green', label: 'Tema Hijau Soft', color: localThemeColors['soft-green'] },
               { id: 'sunset-orange', label: 'Tema Orange Sunset', color: localThemeColors['sunset-orange'] },
             ].map((t) => (
-              <div key={t.id} className="flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                <span className="text-xs font-semibold text-gray-600">{t.label}</span>
+              <div key={t.id} className="flex items-center justify-between bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800">
+                <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">{t.label}</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-gray-400 uppercase">{t.color}</span>
-                  <input 
-                    type="color" 
-                    value={t.color} 
-                    onChange={(e) => setLocalThemeColors(prev => ({ ...prev, [t.id]: e.target.value }))}
-                    className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent"
-                  />
+                  <span className="text-[9px] font-mono text-gray-400 uppercase">{t.color}</span>
+                  <input type="color" value={t.color} onChange={(e) => setLocalThemeColors(prev => ({ ...prev, [t.id]: e.target.value }))} className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent" />
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-gray-400 mt-2 italic">*Warna ini akan menjadi warna utama saat tema tersebut dipilih.</p>
+        </SettingSection>
+
+        <SettingSection 
+          id="saldo" 
+          icon={DollarSign} 
+          title="Warna Kartu Saldo (Beranda)" 
+          isOpen={openSections.saldo} 
+          onToggle={() => toggleSection("saldo")}
+        >
+          <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-gray-100 dark:border-slate-800">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-200 block">Warna Gradasi 1</span>
+                  <span className="text-[9px] text-gray-400">Warna awal (kiri atas)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-gray-400 uppercase">{balanceColors?.bank || '#3b82f6'}</span>
+                  <input type="color" value={balanceColors?.bank || '#3b82f6'} onChange={(e) => updateBalanceColor('bank', e.target.value)} className="w-10 h-10 rounded-xl cursor-pointer border-none bg-transparent" />
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between pt-3 border-t border-gray-200/50 dark:border-slate-700/50">
+                <div>
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-200 block">Warna Gradasi 2</span>
+                  <span className="text-[9px] text-gray-400">Warna akhir (kanan bawah)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-gray-400 uppercase">{balanceColors?.cash || '#60a5fa'}</span>
+                  <input type="color" value={balanceColors?.cash || '#60a5fa'} onChange={(e) => updateBalanceColor('cash', e.target.value)} className="w-10 h-10 rounded-xl cursor-pointer border-none bg-transparent" />
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-[10px] text-gray-500 leading-relaxed italic mt-4">
+              *Pilih dua warna untuk membuat efek gradasi pada kotak saldo. Gunakan warna putih (#ffffff) pada kedua pilihan untuk kembali ke tema gradien default.
+            </p>
+          </div>
+        </SettingSection>
+
+        <SettingSection 
+          id="fitur" 
+          icon={Activity} 
+          title="Fitur & Tampilan" 
+          isOpen={openSections.fitur} 
+          onToggle={() => toggleSection("fitur")}
+        >
+          <div className="space-y-4 py-2">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 text-indigo-500" /> PIN Login Kasir
+                </label>
+                <button onClick={() => setPinEnabled(!pinEnabled)} className={`w-10 h-5 rounded-full flex items-center transition-all ${pinEnabled ? 'bg-primary justify-end' : 'bg-gray-300 justify-start'}`}>
+                  <div className="w-4 h-4 bg-white rounded-full mx-0.5 shadow" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="pt-2 border-t border-gray-50 dark:border-slate-800">
+              <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-2 flex items-center gap-2">
+                <RefreshCw className="w-3.5 h-3.5 text-green-500" /> Jam Reset Otomatis
+              </label>
+              <div className="flex items-center gap-2">
+                <select value={autoResetHour} onChange={e => setAutoResetHour(parseInt(e.target.value))} className="flex-1 border border-gray-100 dark:border-slate-800 rounded-xl px-3 py-2 text-xs bg-gray-50 dark:bg-slate-800/50 outline-none font-bold text-center">
+                  {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2, '0')}</option>)}
+                </select>
+                <span className="font-bold">:</span>
+                <select value={autoResetMinute} onChange={e => setAutoResetMinute(parseInt(e.target.value))} className="flex-1 border border-gray-100 dark:border-slate-800 rounded-xl px-3 py-2 text-xs bg-gray-50 dark:bg-slate-800/50 outline-none font-bold text-center">
+                  {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2, '0')}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-gray-50 dark:border-slate-800">
+              <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1.5 flex items-center gap-2">
+                <Star className="w-3.5 h-3.5 text-amber-500" /> Kata Mutiara
+              </label>
+              <textarea value={quotes} onChange={e => setQuotes(e.target.value)} rows={3} className="w-full border border-gray-100 dark:border-slate-800 rounded-xl px-3 py-2 text-xs bg-gray-50 dark:bg-slate-800/50 outline-none resize-none" placeholder="Masukkan quotes motivasi..." />
+            </div>
+
+            <div className="pt-2 border-t border-gray-50 dark:border-slate-800">
+              <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1.5 flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5 text-red-500" /> Teks Berjalan
+              </label>
+              <input value={runningText} onChange={e => setRunningText(e.target.value)} className="w-full border border-gray-100 dark:border-slate-800 rounded-xl px-3 py-2 text-xs bg-gray-50 dark:bg-slate-800/50 outline-none font-semibold" placeholder="Teks berjalan..." />
+            </div>
+          </div>
+        </SettingSection>
+
+        <div className="pt-4">
+          <button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-primary to-blue-500 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-transform">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {saving ? "MENYIMPAN..." : "SIMPAN PENGATURAN"}
+          </button>
         </div>
 
-        <button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-primary to-blue-500 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-          {saving ? "Menyimpan..." : "Simpan Pengaturan"}
-        </button>
+        <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-4 text-center mt-2">
+          <p className="text-[10px] text-blue-600 dark:text-blue-400">Pengaturan Reset Data & Backup ada di menu <strong>Backup</strong>.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
-          <p className="text-[11px] text-primary">Reset Data & Backup sekarang ada di menu <strong>Backup</strong>.</p>
+function SettingSection({ id, icon: Icon, title, children, isOpen, onToggle }: { id: string, icon: any, title: string, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) {
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden mb-3 transition-all duration-300">
+      <button 
+        onClick={onToggle}
+        className={`w-full px-5 py-4 flex items-center justify-between transition-all duration-300 ${isOpen ? 'bg-blue-50/50 dark:bg-blue-900/10' : 'hover:bg-gray-50 dark:hover:bg-slate-800/50'}`}
+      >
+        <div className="flex items-center gap-3.5">
+          <div className={`p-2 rounded-xl transition-all duration-300 ${isOpen ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'}`}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <h3 className={`font-bold text-sm transition-all ${isOpen ? 'text-primary dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}`}>{title}</h3>
+        </div>
+        <div className={`transition-all duration-500 ${isOpen ? 'rotate-90 text-primary' : 'rotate-0 text-gray-400'}`}>
+          <ChevronRight className="w-4 h-4" />
+        </div>
+      </button>
+      <div className={`transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
+        <div className="px-5 pb-5 pt-2 border-t border-gray-100/50 dark:border-slate-800/50">
+          {children}
         </div>
       </div>
     </div>

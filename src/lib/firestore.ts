@@ -43,6 +43,13 @@ export interface SettingsRecord {
     "soft-green": string;
     "sunset-orange": string;
   };
+  balanceColors?: {
+    bank?: string;
+    cash?: string;
+    tarik?: string;
+    aks?: string;
+    admin?: string;
+  };
   lastLockDate?: string;
   lastResetDate?: string;
   address?: string;

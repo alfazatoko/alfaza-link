@@ -174,21 +174,32 @@ export default function Beranda() {
         </div>
       )}
 
-      <div className="bg-gradient-to-br from-blue-500 via-blue-400 to-orange-400 rounded-3xl p-4 text-gray-950 shadow-lg relative overflow-hidden mb-4 border border-blue-200/30">
+      {/* Main Balance Card (Bank & Cash) */}
+      <div 
+        className="rounded-3xl p-4 text-gray-950 shadow-lg relative overflow-hidden mb-4 border border-blue-200/30"
+        style={{ 
+          background: (shopSettings?.balanceColors?.bank && shopSettings?.balanceColors?.bank !== '#ffffff') || (shopSettings?.balanceColors?.cash && shopSettings?.balanceColors?.cash !== '#ffffff')
+            ? `linear-gradient(135deg, ${shopSettings?.balanceColors?.bank || '#3b82f6'}, ${shopSettings?.balanceColors?.cash || shopSettings?.balanceColors?.bank || '#60a5fa'})`
+            : 'linear-gradient(135deg, #3b82f6, #60a5fa, #fb923c)',
+          backgroundImage: (!shopSettings?.balanceColors?.bank || shopSettings?.balanceColors?.bank === '#ffffff') && (!shopSettings?.balanceColors?.cash || shopSettings?.balanceColors?.cash === '#ffffff')
+            ? undefined 
+            : undefined // Always use background style for gradients
+        }}
+      >
         {/* Decorative shapes */}
         <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/20 rounded-full blur-2xl pointer-events-none" />
         <div className="absolute -left-8 -bottom-8 w-32 h-32 bg-orange-200/20 rounded-full blur-2xl pointer-events-none" />
         
         {/* Top 2 Main Balances */}
-        <div className="grid grid-cols-2 gap-4 mb-4 relative z-10">
-          <div>
-            <p className="text-[10px] font-bold text-gray-800 mb-1 flex items-center gap-1.5 uppercase tracking-wide">
+        <div className="grid grid-cols-2 gap-0 relative z-10">
+          <div className="p-2">
+            <p className="text-[10px] font-bold text-gray-800/80 mb-1 flex items-center gap-1.5 uppercase tracking-wide">
               <Landmark className="w-3.5 h-3.5" /> Saldo Bank
             </p>
             <h3 className="text-2xl font-black tracking-tight">{formatRupiah(balance?.bank || 0)}</h3>
           </div>
-          <div className="pl-4 border-l border-black/10">
-            <p className="text-[10px] font-bold text-gray-800 mb-1 flex items-center gap-1.5 uppercase tracking-wide">
+          <div className="p-2 pl-4 border-l border-black/10">
+            <p className="text-[10px] font-bold text-gray-800/80 mb-1 flex items-center gap-1.5 uppercase tracking-wide">
               <Wallet className="w-3.5 h-3.5" /> Saldo Cash
             </p>
             <h3 className="text-2xl font-black tracking-tight">{formatRupiah(balance?.cash || 0)}</h3>
@@ -196,21 +207,21 @@ export default function Beranda() {
         </div>
 
         {/* Bottom 3 Secondary Balances */}
-        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-black/10 relative z-10">
-          <div>
-            <span className="text-[8px] font-bold text-gray-700 uppercase flex items-center gap-1 mb-1">
+        <div className="grid grid-cols-3 gap-0 pt-3 border-t border-black/10 relative z-10 mt-2">
+          <div className="p-1 px-2">
+            <span className="text-[8px] font-bold text-gray-700/80 uppercase flex items-center gap-1 mb-1">
               <ArrowDownToLine className="w-2.5 h-2.5" /> Tarik Tunai
             </span>
             <span className="text-xs font-black">{formatRupiah(balance?.tarik || 0)}</span>
           </div>
-          <div className="pl-2 border-l border-black/10">
-            <span className="text-[8px] font-bold text-gray-700 uppercase flex items-center gap-1 mb-1">
+          <div className="p-1 px-2 pl-4 border-l border-black/10">
+            <span className="text-[8px] font-bold text-gray-700/80 uppercase flex items-center gap-1 mb-1">
               <Gem className="w-2.5 h-2.5" /> Aksesoris
             </span>
             <span className="text-xs font-black">{formatRupiah(balance?.aks || 0)}</span>
           </div>
-          <div className="pl-2 border-l border-black/10">
-            <span className="text-[8px] font-bold text-gray-700 uppercase flex items-center gap-1 mb-1">
+          <div className="p-1 px-2 pl-4 border-l border-black/10">
+            <span className="text-[8px] font-bold text-gray-700/80 uppercase flex items-center gap-1 mb-1">
               <RefreshCw className="w-2.5 h-2.5" /> Admin
             </span>
             <span className="text-xs font-black">{formatRupiah(balance?.adminTotal || 0)}</span>
