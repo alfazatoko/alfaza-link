@@ -167,6 +167,18 @@ export default function Laporan() {
 
   const saldoBankHistory = saldoHistory.filter(s => s.jenis === "Bank");
   const totalIsiSaldoBank = saldoBankHistory.reduce((s, h) => s + h.nominal, 0);
+  const saldoCashHistory = saldoHistory.filter(s => s.jenis === "Cash");
+  const totalIsiSaldoCash = saldoCashHistory.reduce((s, h) => s + h.nominal, 0);
+
+  // Find Last Balance for Ledger System
+  const allHistory = [
+    ...transactions.map(t => ({ ...t, timestamp: t.createdAt })),
+    ...saldoHistory.map(s => ({ ...s, timestamp: s.createdAt }))
+  ].sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
+
+  const lastRecord = allHistory[0] as any;
+  const saldoAkhirBank = lastRecord?.saldoBankAfter ?? 0;
+  const saldoAkhirCash = lastRecord?.saldoCashAfter ?? 0;
 
   const sisaSaldoBank = dailyNotes.sisaSaldoBank || 0;
   const saldoRealApp = dailyNotes.saldoRealApp || 0;
@@ -177,6 +189,8 @@ export default function Laporan() {
     { label: "FLIP", count: flipTx.length, total: totalFlip },
     { label: "DANA", count: danaTx.length, total: totalDana },
     { label: "APP PULSA", count: appTx.length, total: totalApp },
+    { label: "ISI BANK", count: saldoBankHistory.length, total: totalIsiSaldoBank },
+    { label: "ISI CASH", count: saldoCashHistory.length, total: totalIsiSaldoCash },
   ].filter(c => c.count > 0);
 
   const handleResetSaldo = async () => {
@@ -235,6 +249,10 @@ export default function Laporan() {
       wsData.push(["Sisa Saldo Bank (Catatan)", sisaSaldoBank]);
       wsData.push(["Saldo Real App", saldoRealApp]);
       wsData.push(["Selisih", selisih]);
+      wsData.push([]);
+      wsData.push(["🏛️ SALDO AKHIR PERIODE (LEDGER)"]);
+      wsData.push(["Saldo Bank", saldoAkhirBank]);
+      wsData.push(["Saldo Cash", saldoAkhirCash]);
 
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       const wb = XLSX.utils.book_new();
@@ -342,6 +360,11 @@ export default function Laporan() {
     row("Sisa Saldo Bank (Catatan)", formatRupiah(sisaSaldoBank), { leftColor: [30, 30, 200], rightColor: [30, 30, 200] });
     row("Saldo Real App", formatRupiah(saldoRealApp), { leftColor: [200, 30, 30], rightColor: [200, 30, 30] });
     row("Selisih", formatRupiah(selisih), { leftColor: selisih >= 0 ? [16, 130, 90] : [220, 50, 50], rightColor: selisih >= 0 ? [16, 130, 90] : [220, 50, 50], bold: true });
+    y += 4;
+
+    sectionHeader("🏛️ SALDO AKHIR PERIODE", 20, 40, 80);
+    row("Saldo Bank (Terakhir)", formatRupiah(saldoAkhirBank), { bold: true });
+    row("Saldo Cash (Terakhir)", formatRupiah(saldoAkhirCash), { bold: true });
     y += 4;
 
     if (transactions.length > 0) {
@@ -542,6 +565,25 @@ export default function Laporan() {
           </div>
           <p className="text-[10px] text-gray-800">Sisa Cash: {formatRupiah(sisaCashPenjualan)} + Admin: {formatRupiah(totalAdmin)} + Aks: {formatRupiah(totalAks)}</p>
           <p className="text-[10px] text-gray-800">Total Transaksi : {transactions.length} &nbsp;&nbsp;&nbsp;&nbsp; Total vc laku : {totalVoucherQty}</p>
+        </div>
+      </div>
+
+      {/* GRUP 1.5: SALDO AKHIR PERIODE (LEDGER) */}
+      <div className="rounded-2xl border-2 border-gray-900 overflow-hidden mb-3">
+        <div className="bg-gray-900 px-4 py-2.5 flex justify-between items-center">
+          <h3 className="text-white font-bold text-sm flex items-center gap-1.5">🏛️ SALDO AKHIR PERIODE</h3>
+          <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">LEDGER AKTIF</span>
+        </div>
+        <div className="bg-white px-4 py-3 space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-bold text-gray-700">Saldo Bank</span>
+            <span className="text-base font-black text-blue-700">{formatRupiah(saldoAkhirBank)}</span>
+          </div>
+          <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+            <span className="text-sm font-bold text-gray-700">Saldo Cash</span>
+            <span className="text-base font-black text-orange-600">{formatRupiah(saldoAkhirCash)}</span>
+          </div>
+          <p className="text-[9px] text-gray-400 italic mt-1 font-medium">* Saldo otomatis terkunci dari riwayat transaksi terakhir di periode ini.</p>
         </div>
       </div>
 
