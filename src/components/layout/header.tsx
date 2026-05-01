@@ -80,8 +80,8 @@ export function Header() {
       }}
       className="rounded-3xl p-4 mb-4 text-white relative overflow-hidden transition-all duration-500"
     >
-      <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full" />
-      <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-white/5 rounded-full" />
+      <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full pointer-events-none" />
+      <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-white/5 rounded-full pointer-events-none" />
 
       <div className="relative z-10">
         <div className="flex justify-between items-start mb-2">
@@ -128,10 +128,10 @@ export function Header() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 relative z-50">
             <button
               onClick={toggleTheme}
-              className="flex items-center justify-center bg-black/10 hover:bg-black/20 transition-all rounded-full w-8 h-8 border border-white/10 shadow-inner"
+              className="flex items-center justify-center bg-black/20 hover:bg-black/30 active:scale-90 transition-all rounded-full w-10 h-10 border border-white/20 shadow-lg backdrop-blur-sm touch-manipulation"
               title={getThemeTitle()}
             >
               {getThemeIcon()}
@@ -143,10 +143,10 @@ export function Header() {
                 const nextIndex = (modes.indexOf(mode) + 1) % modes.length;
                 setMode(modes[nextIndex]);
               }}
-              className="flex items-center justify-center bg-black/10 hover:bg-black/20 transition-all rounded-full w-8 h-8 border border-white/10 shadow-inner"
+              className="flex items-center justify-center bg-black/20 hover:bg-black/30 active:scale-90 transition-all rounded-full w-10 h-10 border border-white/20 shadow-lg backdrop-blur-sm touch-manipulation"
               title={`Ukuran: ${mode === 'hp' ? 'Kecil' : mode === 'tablet' ? 'Sedang' : 'Besar'}`}
             >
-              <Monitor className="w-3.5 h-3.5" />
+              <Monitor className="w-4 h-4" />
             </button>
           </div>
 
