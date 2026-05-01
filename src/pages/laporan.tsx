@@ -33,6 +33,7 @@ export default function Laporan() {
   const [locking, setLocking] = useState(false);
   const [dailyNotes, setDailyNotes] = useState<DailyNoteRecord>({ sisaSaldoBank: 0, saldoRealApp: 0 });
   const [showJurnal, setShowJurnal] = useState(false);
+  const [showSelisih, setShowSelisih] = useState(false);
 
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -67,7 +68,7 @@ export default function Laporan() {
         getTransactions({ kasirName, startDate, endDate }),
         getSaldoHistory({ kasirName, startDate, endDate }),
         isOwner ? Promise.resolve(null) : getDailySnapshot(user.name, startDate),
-        isOwner ? Promise.resolve({ sisaSaldoBank: 0, saldoRealApp: 0 }) : getDailyNotes(user.name, startDate),
+        getDailyNotes(kasirName || user.name, startDate),
       ]);
 
       // Voucher data
@@ -622,23 +623,29 @@ export default function Laporan() {
           </div>
         )}
 
-        <div className="bg-gradient-to-r from-green-700 to-green-500 px-4 py-2.5">
+        <div 
+          className="bg-gradient-to-r from-green-700 to-green-500 px-4 py-2.5 flex justify-between items-center cursor-pointer active:opacity-80 transition-all border-t-2 border-gray-900"
+          onClick={() => setShowSelisih(!showSelisih)}
+        >
           <h3 className="text-white font-bold text-sm flex items-center gap-1.5">🏦 Saldo & Selisih</h3>
+          <ChevronDown className={`w-4 h-4 text-white transition-transform duration-300 ${showSelisih ? 'rotate-180' : ''}`} />
         </div>
-        <div className="bg-white px-4 space-y-0">
-          <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
-            <span className="text-sm text-gray-700 flex items-center gap-1">🏛️ <strong>Sisa Saldo Bank (Catatan)</strong></span>
-            <span className="text-sm font-extrabold text-blue-700">{formatRupiah(sisaSaldoBank)}</span>
+        {showSelisih && (
+          <div className="bg-white px-4 space-y-0">
+            <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
+              <span className="text-sm text-gray-700 flex items-center gap-1">🏛️ <strong>Sisa Saldo Bank (Catatan)</strong></span>
+              <span className="text-sm font-extrabold text-blue-700">{formatRupiah(sisaSaldoBank)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
+              <span className="text-sm text-gray-700 flex items-center gap-1">📱 <strong>Saldo Real App</strong></span>
+              <span className="text-sm font-extrabold text-red-600">{formatRupiah(saldoRealApp)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-sm text-gray-700 flex items-center gap-1">🔄 <strong>Selisih</strong></span>
+              <span className={`text-sm font-extrabold ${selisih >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatRupiah(selisih)}</span>
+            </div>
           </div>
-          <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
-            <span className="text-sm text-gray-700 flex items-center gap-1">📱 <strong>Saldo Real App</strong></span>
-            <span className="text-sm font-extrabold text-red-600">{formatRupiah(saldoRealApp)}</span>
-          </div>
-          <div className="flex justify-between items-center py-2">
-            <span className="text-sm text-gray-700 flex items-center gap-1">🔄 <strong>Selisih</strong></span>
-            <span className={`text-sm font-extrabold ${selisih >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatRupiah(selisih)}</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Tombol aksi */}
