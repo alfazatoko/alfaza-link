@@ -246,18 +246,24 @@ export async function getTransactions(params: {
   startDate?: string;
   endDate?: string;
 }): Promise<TransactionRecord[]> {
-  const snap = await getDocs(collection(db, "transactions"));
-  let results = snap.docs.map(d => ({ id: d.id, ...d.data() } as TransactionRecord));
+  const colRef = collection(db, "transactions");
+  let q = query(colRef);
 
-  if (params.kasirName) {
-    results = results.filter(t => t.kasirName === params.kasirName);
+  if (params.kasirName && params.kasirName !== "Semua") {
+    q = query(q, where("kasirName", "==", params.kasirName));
   }
   if (params.startDate) {
-    results = results.filter(t => t.transDate >= params.startDate!);
+    q = query(q, where("transDate", ">=", params.startDate));
   }
   if (params.endDate) {
-    results = results.filter(t => t.transDate <= params.endDate!);
+    q = query(q, where("transDate", "<=", params.endDate));
   }
+
+  const snap = await getDocs(q);
+  let results = snap.docs.map(d => ({ id: d.id, ...d.data() } as TransactionRecord));
+
+  // Sort manually to avoid needing composite indexes for everything immediately, 
+  // though server-side orderBy is better if indexes exist.
   results.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
   return results;
 }
@@ -382,18 +388,22 @@ export async function getSaldoHistory(params: {
   startDate?: string;
   endDate?: string;
 }): Promise<SaldoHistoryRecord[]> {
-  const snap = await getDocs(collection(db, "saldo_history"));
-  let results = snap.docs.map(d => ({ id: d.id, ...d.data() } as SaldoHistoryRecord));
+  const colRef = collection(db, "saldo_history");
+  let q = query(colRef);
 
-  if (params.kasirName) {
-    results = results.filter(s => s.kasirName === params.kasirName);
+  if (params.kasirName && params.kasirName !== "Semua") {
+    q = query(q, where("kasirName", "==", params.kasirName));
   }
   if (params.startDate) {
-    results = results.filter(s => s.saldoDate >= params.startDate!);
+    q = query(q, where("saldoDate", ">=", params.startDate));
   }
   if (params.endDate) {
-    results = results.filter(s => s.saldoDate <= params.endDate!);
+    q = query(q, where("saldoDate", "<=", params.endDate));
   }
+
+  const snap = await getDocs(q);
+  let results = snap.docs.map(d => ({ id: d.id, ...d.data() } as SaldoHistoryRecord));
+
   results.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
   return results;
 }

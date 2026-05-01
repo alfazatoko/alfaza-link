@@ -8,7 +8,7 @@ import {
 } from "@/lib/firestore";
 import { formatRupiah, getWibDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, Share2, Loader2, RotateCcw } from "lucide-react";
+import { Lock, Download, Share2, Loader2, RotateCcw, ChevronDown } from "lucide-react";
 
 export default function Laporan() {
   const { user, shift } = useAuth();
@@ -32,6 +32,7 @@ export default function Laporan() {
   const [loading, setLoading] = useState(true);
   const [locking, setLocking] = useState(false);
   const [dailyNotes, setDailyNotes] = useState<DailyNoteRecord>({ sisaSaldoBank: 0, saldoRealApp: 0 });
+  const [showJurnal, setShowJurnal] = useState(false);
 
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -352,7 +353,7 @@ export default function Laporan() {
     sectionHeaderRight("SISA CASH TOTAL", formatRupiah(sisaCashTotal), 230, 160, 20, 12);
     y += 3;
 
-    sectionHeader("Jurnal Penyesuaian", 130, 60, 200);
+    sectionHeader("Jurnal Penyesuaian Saldo Catatan VS Saldo Bank", 130, 60, 200);
     row("Total Tambah/Isi Saldo Bank", formatRupiah(totalIsiSaldoBank), { bold: true });
     y += 2;
 
@@ -589,31 +590,37 @@ export default function Laporan() {
 
       {/* GRUP 2: Jurnal Penyesuaian + Saldo & Selisih */}
       <div className="rounded-2xl border-2 border-gray-900 overflow-hidden mb-4">
-        <div className="bg-gradient-to-r from-purple-700 to-purple-500 px-4 py-2.5">
-          <h3 className="text-white font-bold text-sm flex items-center gap-1.5">📒 Jurnal Penyesuaian</h3>
+        <div 
+          className="bg-gradient-to-r from-purple-700 to-purple-500 px-4 py-2.5 flex justify-between items-center cursor-pointer active:opacity-80 transition-all"
+          onClick={() => setShowJurnal(!showJurnal)}
+        >
+          <h3 className="text-white font-bold text-sm flex items-center gap-1.5">📒 Jurnal Penyesuaian Saldo Catatan VS Saldo Bank</h3>
+          <ChevronDown className={`w-4 h-4 text-white transition-transform duration-300 ${showJurnal ? 'rotate-180' : ''}`} />
         </div>
-        <div className="bg-white px-4 space-y-0 border-b-2 border-gray-900">
-          <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
-            <span className="text-sm text-gray-700">💳 <strong>Total Tambah/Isi Saldo Bank</strong></span>
-            <span className="text-sm font-extrabold text-blue-700">{formatRupiah(totalIsiSaldoBank)}</span>
+        {showJurnal && (
+          <div className="bg-white px-4 space-y-0 border-b-2 border-gray-900">
+            <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
+              <span className="text-sm text-gray-700">💳 <strong>Total Tambah/Isi Saldo Bank</strong></span>
+              <span className="text-sm font-extrabold text-blue-700">{formatRupiah(totalIsiSaldoBank)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-300">
+              <span className="text-sm text-gray-700">Sisa Saldo Bank (Catatan)</span>
+              <span className="text-sm font-bold text-gray-800">{formatRupiah(sisaSaldoBank)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
+              <span className="text-sm text-gray-700">Total Penjualan</span>
+              <span className="text-sm font-bold text-gray-800">{formatRupiah(totalPenjualan)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
+              <span className="text-sm font-bold text-gray-900">Total</span>
+              <span className="text-sm font-extrabold text-gray-900">{formatRupiah(sisaSaldoBank + totalPenjualan)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-sm font-bold text-gray-700">Selisih</span>
+              <span className={`text-sm font-extrabold ${(totalIsiSaldoBank - (sisaSaldoBank + totalPenjualan)) >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatRupiah(totalIsiSaldoBank - (sisaSaldoBank + totalPenjualan))}</span>
+            </div>
           </div>
-          <div className="flex justify-between items-center py-2 border-b border-gray-300">
-            <span className="text-sm text-gray-700">Sisa Saldo Bank (Catatan)</span>
-            <span className="text-sm font-bold text-gray-800">{formatRupiah(sisaSaldoBank)}</span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
-            <span className="text-sm text-gray-700">Total Penjualan</span>
-            <span className="text-sm font-bold text-gray-800">{formatRupiah(totalPenjualan)}</span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
-            <span className="text-sm font-bold text-gray-900">Total</span>
-            <span className="text-sm font-extrabold text-gray-900">{formatRupiah(sisaSaldoBank + totalPenjualan)}</span>
-          </div>
-          <div className="flex justify-between items-center py-2">
-            <span className="text-sm font-bold text-gray-700">Selisih</span>
-            <span className={`text-sm font-extrabold ${(totalIsiSaldoBank - (sisaSaldoBank + totalPenjualan)) >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatRupiah(totalIsiSaldoBank - (sisaSaldoBank + totalPenjualan))}</span>
-          </div>
-        </div>
+        )}
 
         <div className="bg-gradient-to-r from-green-700 to-green-500 px-4 py-2.5">
           <h3 className="text-white font-bold text-sm flex items-center gap-1.5">🏦 Saldo & Selisih</h3>
