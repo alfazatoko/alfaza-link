@@ -570,22 +570,21 @@ export default function Laporan() {
         </div>
       </div>
 
-      {/* GRUP 1.5: SALDO AKHIR PERIODE (LEDGER) */}
-      <div className="rounded-2xl border-2 border-gray-900 overflow-hidden mb-3">
-        <div className="bg-gray-900 px-4 py-2.5 flex justify-between items-center">
-          <h3 className="text-white font-bold text-sm flex items-center gap-1.5">🏛️ SALDO AKHIR PERIODE</h3>
-          <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">LEDGER AKTIF</span>
+      {/* JURNAL PENYESUAIAN */}
+      <div className="bg-white rounded-2xl border-2 border-gray-900 overflow-hidden mb-3 p-4">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-xs font-bold text-gray-500 uppercase">Status Saldo Akhir</span>
+          <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">OTOMATIS</span>
         </div>
-        <div className="bg-white px-4 py-3 space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-bold text-gray-700">Saldo Bank</span>
-            <span className="text-base font-black text-blue-700">{formatRupiah(saldoAkhirBank)}</span>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+            <p className="text-[9px] font-bold text-blue-400 uppercase mb-0.5">Bank Akhir</p>
+            <p className="text-sm font-black text-blue-700">{formatRupiah(saldoAkhirBank)}</p>
           </div>
-          <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-            <span className="text-sm font-bold text-gray-700">Saldo Cash</span>
-            <span className="text-base font-black text-orange-600">{formatRupiah(saldoAkhirCash)}</span>
+          <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
+            <p className="text-[9px] font-bold text-orange-400 uppercase mb-0.5">Cash Akhir</p>
+            <p className="text-sm font-black text-orange-600">{formatRupiah(saldoAkhirCash)}</p>
           </div>
-          <p className="text-[9px] text-gray-400 italic mt-1 font-medium">* Saldo otomatis terkunci dari riwayat transaksi terakhir di periode ini.</p>
         </div>
       </div>
 
@@ -660,9 +659,6 @@ export default function Laporan() {
         </div>
         <button onClick={handleBagikan} className="w-full flex items-center justify-center gap-1.5 bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm shadow active:scale-95 transition">
           <Share2 className="w-4 h-4" /> BAGIKAN (PDF)
-        </button>
-        <button onClick={handleResetSaldo} disabled={resetting} className="w-full flex items-center justify-center gap-1.5 bg-gray-900 text-white py-3.5 rounded-2xl font-bold text-sm shadow active:scale-95 transition disabled:opacity-50">
-          {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} RESET SALDO (MANUAL)
         </button>
       </div>
     </div>

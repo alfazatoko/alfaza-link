@@ -99,6 +99,7 @@ export interface BalanceRecord {
   cashNonTunai: number;
   tarikNonTunai: number;
   aksNonTunai: number;
+  lastUpdateDate?: string;
 }
 
 export interface HutangRecord {
@@ -249,9 +250,7 @@ export async function getTransactions(params: {
   const colRef = collection(db, "transactions");
   let q = query(colRef);
 
-  if (params.kasirName && params.kasirName !== "Semua") {
-    q = query(q, where("kasirName", "==", params.kasirName));
-  }
+  // Filter server-side hanya berdasarkan range tanggal (Single-field index, tidak butuh composite index)
   if (params.startDate) {
     q = query(q, where("transDate", ">=", params.startDate));
   }
@@ -262,8 +261,11 @@ export async function getTransactions(params: {
   const snap = await getDocs(q);
   let results = snap.docs.map(d => ({ id: d.id, ...d.data() } as TransactionRecord));
 
-  // Sort manually to avoid needing composite indexes for everything immediately, 
-  // though server-side orderBy is better if indexes exist.
+  // Filter kasirName di memori aplikasi
+  if (params.kasirName && params.kasirName !== "Semua") {
+    results = results.filter(tx => tx.kasirName === params.kasirName);
+  }
+
   results.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
   return results;
 }
@@ -307,9 +309,19 @@ export async function deleteTransaction(id: string): Promise<void> {
 async function updateBalance(kasirName: string, tx: Omit<TransactionRecord, "id" | "createdAt">) {
   const ref = doc(db, "balances", kasirName);
   const snap = await getDoc(ref);
-  const bal: BalanceRecord = snap.exists()
-    ? (snap.data() as BalanceRecord)
-    : { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0 };
+  const today = getWibDate();
+  
+  const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, lastUpdateDate: today };
+  let bal: BalanceRecord;
+
+  if (snap.exists()) {
+    bal = snap.data() as BalanceRecord;
+    if (bal.lastUpdateDate !== today) {
+      bal = { ...emptyBal };
+    }
+  } else {
+    bal = { ...emptyBal };
+  }
 
   const isNonTunai = tx.paymentMethod && tx.paymentMethod.toLowerCase().includes("non-tunai");
   const nominal = tx.nominal || 0;
@@ -331,6 +343,8 @@ async function updateBalance(kasirName: string, tx: Omit<TransactionRecord, "id"
     bal.adminTotal += admin;
   }
 
+  bal.lastUpdateDate = today;
+
   if (snap.exists()) {
     await updateDoc(ref, bal as any);
   } else {
@@ -345,6 +359,10 @@ async function reverseBalance(kasirName: string, tx: TransactionRecord) {
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
   const bal = snap.data() as BalanceRecord;
+  
+  const today = getWibDate();
+  // Hanya balikkan jika transaksi terjadi hari ini untuk menjaga integritas running balance
+  if (tx.transDate !== today) return;
 
   const isNonTunai = tx.paymentMethod && tx.paymentMethod.toLowerCase().includes("non-tunai");
   const nominal = tx.nominal || 0;
@@ -362,7 +380,7 @@ async function reverseBalance(kasirName: string, tx: TransactionRecord) {
     bal.aks -= nominal;
   }
 
-  if (!(tx.category === "NON TUNAI" || isNonTunai)) {
+  if (!(tx.category === "NON TUNai" || isNonTunai)) {
     bal.adminTotal -= admin;
   }
 
@@ -372,10 +390,21 @@ async function reverseBalance(kasirName: string, tx: TransactionRecord) {
 export async function getBalance(kasirName: string): Promise<BalanceRecord> {
   const ref = doc(db, "balances", kasirName);
   const snap = await getDoc(ref);
+  const today = getWibDate();
+
+  const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, lastUpdateDate: today };
+
   if (!snap.exists()) {
-    return { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0 };
+    return emptyBal;
   }
-  return snap.data() as BalanceRecord;
+  
+  const bal = snap.data() as BalanceRecord;
+  // OPSI A: Reset harian jika tanggal berbeda
+  if (bal.lastUpdateDate !== today) {
+    return emptyBal;
+  }
+  
+  return bal;
 }
 
 export async function resetBalance(kasirName: string): Promise<void> {
@@ -391,9 +420,7 @@ export async function getSaldoHistory(params: {
   const colRef = collection(db, "saldo_history");
   let q = query(colRef);
 
-  if (params.kasirName && params.kasirName !== "Semua") {
-    q = query(q, where("kasirName", "==", params.kasirName));
-  }
+  // Filter server-side hanya berdasarkan range tanggal
   if (params.startDate) {
     q = query(q, where("saldoDate", ">=", params.startDate));
   }
@@ -403,6 +430,11 @@ export async function getSaldoHistory(params: {
 
   const snap = await getDocs(q);
   let results = snap.docs.map(d => ({ id: d.id, ...d.data() } as SaldoHistoryRecord));
+
+  // Filter kasirName di memori aplikasi
+  if (params.kasirName && params.kasirName !== "Semua") {
+    results = results.filter(s => s.kasirName === params.kasirName);
+  }
 
   results.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
   return results;
@@ -419,15 +451,27 @@ export async function addSaldo(kasirName: string, data: {
 
   const balRef = doc(db, "balances", kasirName);
   const balSnap = await getDoc(balRef);
-  const bal: BalanceRecord = balSnap.exists()
-    ? (balSnap.data() as BalanceRecord)
-    : { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0 };
+  const today = getWibDate();
+  
+  const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, lastUpdateDate: today };
+  let bal: BalanceRecord;
+
+  if (balSnap.exists()) {
+    bal = balSnap.data() as BalanceRecord;
+    if (bal.lastUpdateDate !== today) {
+      bal = { ...emptyBal };
+    }
+  } else {
+    bal = { ...emptyBal };
+  }
 
   if (data.jenis === "Bank") {
     bal.bank += data.nominal;
   } else if (data.jenis === "Cash") {
     bal.cash += data.nominal;
   }
+
+  bal.lastUpdateDate = saldoDate;
 
   if (balSnap.exists()) {
     await updateDoc(balRef, bal as any);

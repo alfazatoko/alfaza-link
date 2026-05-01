@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
 import { getTransactions, getSaldoHistory, getUsers, updateTransaction, deleteTransaction, type TransactionRecord, type SaldoHistoryRecord, type UserRecord } from "@/lib/firestore";
-import { Receipt, AlertCircle, ImageIcon, X } from "lucide-react";
+import { Receipt, AlertCircle, ImageIcon, X, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORY_FILTERS = ["Semua", "Bank", "Flip", "App", "Dana", "Tarik", "Aks"];
@@ -47,10 +47,13 @@ export default function Riwayat() {
         getSaldoHistory({ kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), startDate, endDate }),
         getUsers(),
       ]);
-      setTransactions(txs);
-      setSaldoHistory(saldo);
-      setAllUsers(users);
-    } catch {}
+      setTransactions(txs || []);
+      setSaldoHistory(saldo || []);
+      setAllUsers(users || []);
+    } catch (err) {
+      console.error("Riwayat Load Error:", err);
+      toast({ title: "Gagal memuat data", variant: "destructive" });
+    }
   }, [user?.name, user?.role, kasirFilter, startDate, endDate, refreshKey]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -196,7 +199,20 @@ export default function Riwayat() {
                     <div className="text-xs text-gray-500 mb-1">Tanggal: <strong>{tx.transDate}</strong></div>
                     <div className="text-xs text-gray-500 mb-1">Pembayaran: <strong className={nt ? 'text-purple-600' : 'text-green-600'}>{nt ? "NON TUNAI" : "TUNAI"}</strong></div>
                     {ketText && <div className="text-xs text-gray-500 mb-1">Keterangan: <strong className="text-gray-700">{ketText}</strong></div>}
-                    {tx.kasirName && <div className="text-xs text-gray-500 mb-2">Kasir: <strong>{tx.kasirName}</strong></div>}
+                    <div className="text-xs text-gray-500 mb-1">Kasir: <strong>{tx.kasirName || "-"}</strong></div>
+                    
+                    {/* Running Balance Info */}
+                    <div className="grid grid-cols-2 gap-2 my-2.5 p-2.5 bg-blue-50/50 rounded-xl border border-blue-100">
+                      <div>
+                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">Sisa Saldo Bank</p>
+                        <p className="text-xs font-black text-blue-700">{formatRupiah(tx.saldoBankAfter || 0)}</p>
+                      </div>
+                      <div className="pl-2 border-l border-blue-100">
+                        <p className="text-[9px] font-bold text-orange-400 uppercase tracking-wider mb-0.5">Sisa Saldo Cash</p>
+                        <p className="text-xs font-black text-orange-600">{formatRupiah(tx.saldoCashAfter || 0)}</p>
+                      </div>
+                    </div>
+
                     {tx.photoUrl && (
                       <div className="mb-3">
                         <p className="text-[10px] font-bold text-gray-400 mb-1 uppercase">Foto Struk:</p>
@@ -208,9 +224,18 @@ export default function Riwayat() {
                         </div>
                       </div>
                     )}
+
                     <div className="flex gap-2.5">
-                      <button onClick={e => { e.stopPropagation(); openEdit(tx); }} className="bg-blue-50 border border-blue-200 rounded-[10px] px-4 py-1.5 text-[13px] font-bold text-blue-600 flex items-center gap-1">✏️ Edit</button>
-                      <button onClick={e => { e.stopPropagation(); handleDelete(tx.id); }} className="bg-red-50 border border-red-200 rounded-[10px] px-4 py-1.5 text-[13px] font-bold text-red-600 flex items-center gap-1">🗑️ Hapus</button>
+                      {tx.transDate === today ? (
+                        <>
+                          <button onClick={e => { e.stopPropagation(); openEdit(tx); }} className="bg-blue-50 border border-blue-200 rounded-[10px] px-4 py-1.5 text-[13px] font-bold text-blue-600 flex items-center gap-1">✏️ Edit</button>
+                          <button onClick={e => { e.stopPropagation(); handleDelete(tx.id); }} className="bg-red-50 border border-red-200 rounded-[10px] px-4 py-1.5 text-[13px] font-bold text-red-600 flex items-center gap-1">🗑️ Hapus</button>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-400 bg-gray-100 px-3 py-1.5 rounded-lg">
+                          <Lock className="w-3 h-3" /> Transaksi Terkunci (Masa Lalu)
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

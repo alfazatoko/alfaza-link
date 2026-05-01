@@ -6,7 +6,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getWibDate(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+  // Format YYYY-MM-DD menggunakan ISO string agar konsisten di semua browser
+  const now = new Date();
+  const offset = 7 * 60; // WIB (UTC+7)
+  const wibDate = new Date(now.getTime() + (offset + now.getTimezoneOffset()) * 60000);
+  return wibDate.toISOString().split('T')[0];
 }
 
 export function getWibDateTime(): Date {
