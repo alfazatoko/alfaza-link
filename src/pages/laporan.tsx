@@ -648,18 +648,30 @@ export default function Laporan() {
       </div>
 
       {/* Tombol aksi */}
-      <div className="space-y-2.5 mt-2">
-        <div className="grid grid-cols-2 gap-2.5">
-          <button onClick={handleExportPDF} className="flex items-center justify-center gap-1.5 bg-red-500 text-white py-3 rounded-2xl font-bold text-xs shadow active:scale-95 transition">
+      <div className="space-y-3 mt-4">
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={handleExportPDF} className="flex flex-col items-center justify-center gap-1 bg-red-500 text-white py-2.5 rounded-xl font-bold text-[10px] shadow active:scale-95 transition">
             <Download className="w-4 h-4" /> PDF
           </button>
-          <button onClick={handleExportExcel} className="flex items-center justify-center gap-1.5 bg-green-600 text-white py-3 rounded-2xl font-bold text-xs shadow active:scale-95 transition">
+          <button onClick={handleExportExcel} className="flex flex-col items-center justify-center gap-1 bg-green-600 text-white py-2.5 rounded-xl font-bold text-[10px] shadow active:scale-95 transition">
             <Download className="w-4 h-4" /> Excel
           </button>
+          <button onClick={handleBagikan} className="flex flex-col items-center justify-center gap-1 bg-blue-600 text-white py-2.5 rounded-xl font-bold text-[10px] shadow active:scale-95 transition">
+            <Share2 className="w-4 h-4" /> BAGIKAN
+          </button>
         </div>
-        <button onClick={handleBagikan} className="w-full flex items-center justify-center gap-1.5 bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm shadow active:scale-95 transition">
-          <Share2 className="w-4 h-4" /> BAGIKAN (PDF)
-        </button>
+
+        {/* Tombol Reset Saldo Manual - Hanya muncul jika hari ini dan mode harian */}
+        {viewMode === "day" && date === today && !isOwner && (
+          <button 
+            onClick={handleResetSaldo} 
+            disabled={resetting}
+            className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-500 py-3 rounded-2xl font-bold text-xs border border-gray-200 active:scale-95 transition disabled:opacity-50"
+          >
+            {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+            RESET SALDO MANUAL
+          </button>
+        )}
       </div>
     </div>
   );
