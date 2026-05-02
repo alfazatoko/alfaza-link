@@ -683,17 +683,22 @@ function AbsenPage({ goBack }: { goBack: () => void }) {
                   </div>
                   <div className="divide-y divide-inherit">
                     {records.map(a => (
-                      <div key={a.id} className="grid grid-cols-3 px-4 py-3 items-center">
-                        <div>
-                          <p className="text-[11px] font-extrabold text-gray-800 uppercase">{a.kasirName}</p>
+                      <div key={a.id} className="grid grid-cols-4 px-4 py-3 items-center">
+                        <div className="col-span-1">
+                          <p className="text-[11px] font-extrabold text-gray-800 uppercase truncate">{a.kasirName}</p>
                         </div>
                         <div className="text-center">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${a.shift === "PAGI" ? "bg-amber-100 text-amber-600" : "bg-indigo-100 text-indigo-600"}`}>
                             {a.shift}
                           </span>
                         </div>
+                        <div className="text-center">
+                          <p className="text-[8px] font-bold text-gray-300 uppercase">Masuk</p>
+                          <p className="text-[11px] font-extrabold text-blue-600">{a.jamMasuk}</p>
+                        </div>
                         <div className="text-right">
-                          <span className="text-[11px] font-extrabold text-primary">{a.jamMasuk}</span>
+                          <p className="text-[8px] font-bold text-gray-300 uppercase">Pulang</p>
+                          <p className="text-[11px] font-extrabold text-gray-800">{a.jamPulang || "--:--"}</p>
                         </div>
                       </div>
                     ))}
@@ -1337,11 +1342,11 @@ function BackupPage({ goBack }: { goBack: () => void }) {
       const wb = XLSX.utils.book_new();
 
       const trxData: any[][] = [["#", "Tanggal", "Jam", "Kasir", "Shift", "Kategori", "Nominal", "Admin", "Keterangan", "Pembayaran"]];
-      trx.forEach((t, i) => trxData.push([i + 1, t.tanggal || "", t.transTime || "", t.kasirName || "", t.shift || "", t.category || "", t.nominal || 0, t.admin || 0, t.keterangan || "", t.paymentMethod || "tunai"]));
+      trx.forEach((t, i) => trxData.push([i + 1, t.transDate || "", t.transTime || "", t.kasirName || "", t.shift || "", t.category || "", t.nominal || 0, t.admin || 0, t.keterangan || "", t.paymentMethod || "tunai"]));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trxData), "Transaksi");
 
       const saldoData: any[][] = [["#", "Tanggal", "Jam", "Kasir", "Jenis", "Nominal", "Keterangan"]];
-      saldo.forEach((s: any, i) => saldoData.push([i + 1, s.tanggal || "", s.jam || "", s.kasirName || "", s.jenis || "", s.nominal || 0, s.keterangan || ""]));
+      saldo.forEach((s, i) => saldoData.push([i + 1, s.saldoDate || "", s.saldoTime || "", s.kasirName || "", s.jenis || "", s.nominal || 0, s.keterangan || ""]));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(saldoData), "Saldo History");
 
       const hutangData: any[][] = [["#", "Tanggal", "Nama", "Nominal", "Keterangan", "Lunas", "Tgl Lunas", "Dibuat Oleh"]];
@@ -1352,12 +1357,12 @@ function BackupPage({ goBack }: { goBack: () => void }) {
       kontak.forEach((k, i) => kontakData.push([i + 1, k.nama || "", k.nomor || "", k.keterangan || "", k.createdBy || ""]));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kontakData), "Kontak");
 
-      const absenData: any[][] = [["#", "Tanggal", "Kasir", "Jam Masuk", "Jam Keluar", "Status"]];
-      attendance.forEach((a: any, i) => absenData.push([i + 1, a.tanggal || "", a.kasirName || "", a.jamMasuk || "", a.jamKeluar || "", a.status || ""]));
+      const absenData: any[][] = [["#", "Tanggal", "Kasir", "Shift", "Jam Masuk"]];
+      attendance.forEach((a, i) => absenData.push([i + 1, a.tanggal || "", a.kasirName || "", a.shift || "", a.jamMasuk || ""]));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(absenData), "Absensi");
 
-      const izinData: any[][] = [["#", "Tanggal", "Kasir", "Jenis", "Keterangan", "Status"]];
-      izin.forEach((iz: any, i) => izinData.push([i + 1, iz.tanggal || "", iz.kasirName || "", iz.jenis || "", iz.keterangan || "", iz.status || ""]));
+      const izinData: any[][] = [["#", "Tanggal", "Kasir", "Alasan", "Status"]];
+      izin.forEach((iz, i) => izinData.push([i + 1, iz.tanggal || "", iz.nama || "", iz.alasan || "", iz.status || ""]));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(izinData), "Izin");
 
       XLSX.writeFile(wb, `backup-alfazalink-${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -1542,8 +1547,8 @@ function SettingPage({ goBack }: { goBack: () => void }) {
     setCatLabels(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
   };
 
-  const updateBalanceColor = (key: keyof SettingsRecord["balanceColors"], val: string) => {
-    setBalanceColors(prev => ({ ...prev, [key]: val }));
+  const updateBalanceColor = (key: keyof NonNullable<SettingsRecord["balanceColors"]>, val: string) => {
+    setBalanceColors(prev => ({ ...(prev || {}), [key]: val }));
   };
 
   const catKeys: (keyof CategoryLabels)[] = ["BANK", "FLIP", "APP", "DANA", "AKS", "TARIK"];

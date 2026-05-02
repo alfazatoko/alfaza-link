@@ -132,6 +132,7 @@ export interface AttendanceRecord {
   tanggal: string;
   shift: string;
   jamMasuk: string;
+  jamPulang?: string;
   createdAt: any;
 }
 
