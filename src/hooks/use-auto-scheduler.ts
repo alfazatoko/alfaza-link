@@ -29,32 +29,44 @@ export function useAutoScheduler(isLoggedIn: boolean) {
         const currentTotalMinutes = hour * 60 + minute;
 
         // --- AUTO LOCK ---
+        // PENTING: Hanya jalankan dalam jendela 2 menit dari waktu yang ditentukan.
+        // Ini mencegah reset terjadi setiap kali app dibuka setelah jam reset lewat.
         const lockTotalMinutes = settings.autoLockHour * 60 + settings.autoLockMinute;
-        if (currentTotalMinutes >= lockTotalMinutes && settings.lastLockDate !== today) {
-          // Perform Lock
+        const isInLockWindow =
+          currentTotalMinutes >= lockTotalMinutes &&
+          currentTotalMinutes < lockTotalMinutes + 2;
+        if (isInLockWindow && settings.lastLockDate !== today) {
+          console.log(
+            `[Scheduler] Auto Lock berjalan pukul ${hour}:${String(minute).padStart(2, "0")} WIB`
+          );
           const users = await getUsers();
-          const kasirList = users.filter(u => u.role !== "owner" && u.isActive);
+          const kasirList = users.filter((u) => u.role !== "owner" && u.isActive);
           for (const k of kasirList) {
             try {
               await lockReport(k.name, today);
             } catch {}
           }
-          // Mark as done for today
           await updateSettings({ lastLockDate: today });
         }
 
         // --- AUTO RESET ---
+        // PENTING: Hanya jalankan dalam jendela 2 menit dari waktu yang ditentukan.
+        // Ini mencegah reset saldo terjadi setiap kali app dibuka setelah jam reset lewat.
         const resetTotalMinutes = settings.autoResetHour * 60 + settings.autoResetMinute;
-        if (currentTotalMinutes >= resetTotalMinutes && settings.lastResetDate !== today) {
-          // Perform Reset
+        const isInResetWindow =
+          currentTotalMinutes >= resetTotalMinutes &&
+          currentTotalMinutes < resetTotalMinutes + 2;
+        if (isInResetWindow && settings.lastResetDate !== today) {
+          console.log(
+            `[Scheduler] Auto Reset berjalan pukul ${hour}:${String(minute).padStart(2, "0")} WIB`
+          );
           const users = await getUsers();
-          const kasirList = users.filter(u => u.role !== "owner" && u.isActive);
+          const kasirList = users.filter((u) => u.role !== "owner" && u.isActive);
           for (const k of kasirList) {
             try {
               await resetBalance(k.name);
             } catch {}
           }
-          // Mark as done for today
           await updateSettings({ lastResetDate: today });
         }
       } catch (err) {
@@ -69,4 +81,3 @@ export function useAutoScheduler(isLoggedIn: boolean) {
     return () => clearInterval(interval);
   }, [isLoggedIn]);
 }
-

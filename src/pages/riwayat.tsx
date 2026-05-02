@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
-import { getTransactions, getSaldoHistory, getUsers, updateTransaction, deleteTransaction, type TransactionRecord, type SaldoHistoryRecord, type UserRecord } from "@/lib/firestore";
-import { Receipt, AlertCircle, ImageIcon, X, Lock } from "lucide-react";
+import { getTransactions, getSaldoHistory, getUsers, updateTransaction, deleteTransaction, updateSaldoHistory, deleteSaldoHistory, type TransactionRecord, type SaldoHistoryRecord, type UserRecord } from "@/lib/firestore";
+import { Receipt, AlertCircle, X, Lock, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORY_FILTERS = ["Semua", "Bank", "Flip", "App", "Dana", "Tarik", "Aks"];
@@ -25,12 +25,19 @@ export default function Riwayat() {
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
 
+  // Edit transaksi
   const [editTx, setEditTx] = useState<TransactionRecord | null>(null);
   const [editNominal, setEditNominal] = useState("");
   const [editAdmin, setEditAdmin] = useState("");
   const [editKeterangan, setEditKeterangan] = useState("");
   const [editSaving, setEditSaving] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // Edit saldo history
+  const [editSaldo, setEditSaldo] = useState<SaldoHistoryRecord | null>(null);
+  const [editSaldoNominal, setEditSaldoNominal] = useState("");
+  const [editSaldoKeterangan, setEditSaldoKeterangan] = useState("");
+  const [editSaldoSaving, setEditSaldoSaving] = useState(false);
 
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [saldoHistory, setSaldoHistory] = useState<SaldoHistoryRecord[]>([]);
@@ -44,7 +51,7 @@ export default function Riwayat() {
     try {
       const [txs, saldo, users] = await Promise.all([
         getTransactions({ kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), startDate, endDate }),
-        getSaldoHistory({ kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), startDate, endDate }),
+        getSaldoHistory({ kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), startDate: today, endDate: today }),
         getUsers(),
       ]);
       setTransactions(txs || []);
@@ -54,10 +61,11 @@ export default function Riwayat() {
       console.error("Riwayat Load Error:", err);
       toast({ title: "Gagal memuat data", variant: "destructive" });
     }
-  }, [user?.name, user?.role, kasirFilter, startDate, endDate, refreshKey]);
+  }, [user?.name, user?.role, kasirFilter, startDate, endDate, today, refreshKey]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // --- Transaksi CRUD ---
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus transaksi ini?")) return;
     try {
@@ -95,6 +103,45 @@ export default function Riwayat() {
     }
   };
 
+  // --- Saldo History CRUD (owner only, today only) ---
+  const openEditSaldo = (s: SaldoHistoryRecord) => {
+    setEditSaldo(s);
+    setEditSaldoNominal(formatThousands(String(s.nominal || 0)));
+    setEditSaldoKeterangan(s.keterangan || "");
+  };
+
+  const handleEditSaldoSave = async () => {
+    if (!editSaldo) return;
+    setEditSaldoSaving(true);
+    try {
+      await updateSaldoHistory(editSaldo.id, editSaldo.kasirName, {
+        nominal: parseInt(parseThousands(editSaldoNominal)) || editSaldo.nominal,
+        keterangan: editSaldoKeterangan,
+      });
+      toast({ title: "Saldo diperbarui" });
+      setEditSaldo(null);
+      setRefreshKey(k => k + 1);
+      window.dispatchEvent(new CustomEvent("saldo-updated"));
+    } catch {
+      toast({ title: "Gagal memperbarui saldo", variant: "destructive" });
+    } finally {
+      setEditSaldoSaving(false);
+    }
+  };
+
+  const handleDeleteSaldo = async (s: SaldoHistoryRecord) => {
+    if (!confirm(`Hapus riwayat tambah saldo ${s.jenis} ${formatRupiah(s.nominal)}?`)) return;
+    try {
+      await deleteSaldoHistory(s.id, s.kasirName);
+      toast({ title: "Riwayat saldo dihapus" });
+      setRefreshKey(k => k + 1);
+      window.dispatchEvent(new CustomEvent("saldo-updated"));
+    } catch {
+      toast({ title: "Gagal menghapus saldo", variant: "destructive" });
+    }
+  };
+
+  // Filter
   const filteredTx = useMemo(() => {
     let result = transactions;
     if (selectedCategory !== "Semua") {
@@ -112,7 +159,9 @@ export default function Riwayat() {
     return result;
   }, [transactions, selectedCategory, searchText]);
 
+  // Saldo: hanya tampil hari ini
   const filteredSaldo = saldoHistory.filter(s => {
+    if (s.saldoDate !== today) return false;
     if (selectedSaldoTab === "Semua") return true;
     if (selectedSaldoTab === "Bank") return s.jenis === "Bank";
     if (selectedSaldoTab === "Cash") return s.jenis === "Cash";
@@ -131,6 +180,8 @@ export default function Riwayat() {
   };
 
   const isNonTunai = (tx: TransactionRecord) => tx.paymentMethod && tx.paymentMethod.toLowerCase().includes("non-tunai");
+
+  const isOwner = user?.role === "owner";
 
   return (
     <div className="px-3 pt-3 pb-20">
@@ -152,7 +203,7 @@ export default function Riwayat() {
         <button onClick={() => setRefreshKey(k => k + 1)} className="bg-blue-600 text-white border-none rounded-full px-4 py-1.5 font-bold text-xs whitespace-nowrap">Tampilkan</button>
       </div>
 
-      {user?.role === "owner" && (
+      {isOwner && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           <button onClick={() => setSelectedKasir("Semua Kasir")} className={`rounded-full px-3 py-1 text-[11px] font-semibold border-[1.5px] ${selectedKasir === "Semua Kasir" ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-gray-900 border-gray-300'}`}>Semua Kasir</button>
           {kasirList.map(k => (
@@ -167,6 +218,7 @@ export default function Riwayat() {
         ))}
       </div>
 
+      {/* Tabel Transaksi */}
       <div className="bg-white rounded-[14px] overflow-hidden shadow-sm mb-3.5">
         <div className="grid gap-0.5 px-1.5 py-1.5 border-b-2 border-gray-200 text-[9px] font-bold text-gray-500" style={{ gridTemplateColumns: '20px 36px 48px 1fr 52px 1fr 18px' }}>
           <span>#</span><span>Jam</span><span>Tipe</span><span>Nominal</span><span>Admin</span><span>Ket</span><span></span>
@@ -200,8 +252,6 @@ export default function Riwayat() {
                     <div className="text-xs text-gray-500 mb-1">Pembayaran: <strong className={nt ? 'text-purple-600' : 'text-green-600'}>{nt ? "NON TUNAI" : "TUNAI"}</strong></div>
                     {ketText && <div className="text-xs text-gray-500 mb-1">Keterangan: <strong className="text-gray-700">{ketText}</strong></div>}
                     <div className="text-xs text-gray-500 mb-1">Kasir: <strong>{tx.kasirName || "-"}</strong></div>
-                    
-                    {/* Running Balance Info */}
                     <div className="grid grid-cols-2 gap-2 my-2.5 p-2.5 bg-blue-50/50 rounded-xl border border-blue-100">
                       <div>
                         <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">Sisa Saldo Bank</p>
@@ -212,19 +262,14 @@ export default function Riwayat() {
                         <p className="text-xs font-black text-orange-600">{formatRupiah(tx.saldoCashAfter || 0)}</p>
                       </div>
                     </div>
-
                     {tx.photoUrl && (
                       <div className="mb-3">
                         <p className="text-[10px] font-bold text-gray-400 mb-1 uppercase">Foto Struk:</p>
-                        <div 
-                          className="w-24 h-24 rounded-xl border border-gray-200 bg-white overflow-hidden cursor-pointer shadow-sm active:scale-95 transition"
-                          onClick={() => setPreviewImage(tx.photoUrl!)}
-                        >
+                        <div className="w-24 h-24 rounded-xl border border-gray-200 bg-white overflow-hidden cursor-pointer shadow-sm active:scale-95 transition" onClick={() => setPreviewImage(tx.photoUrl!)}>
                           <img src={tx.photoUrl} alt="Struk" className="w-full h-full object-cover" />
                         </div>
                       </div>
                     )}
-
                     <div className="flex gap-2.5">
                       {tx.transDate === today ? (
                         <>
@@ -252,36 +297,78 @@ export default function Riwayat() {
         )}
       </div>
 
-      <div className="bg-gradient-to-r from-blue-900 to-blue-600 rounded-t-[14px] px-3.5 py-2.5 text-white font-bold text-[13px]">RIWAYAT TAMBAH SALDO</div>
-      <div className="bg-white rounded-b-[14px] shadow-sm">
+      {/* Tabel Saldo History — hanya hari ini */}
+      <div className="bg-gradient-to-r from-blue-900 to-blue-600 rounded-t-[14px] px-3.5 py-2.5 flex items-center justify-between">
+        <span className="text-white font-bold text-[13px]">RIWAYAT TAMBAH SALDO</span>
+        <div className="flex items-center gap-2">
+          {isOwner && <span className="bg-amber-400 text-amber-900 text-[9px] font-black px-2 py-0.5 rounded-full">OWNER</span>}
+          <span className="text-blue-200 text-[10px] font-semibold">Hari ini · {today}</span>
+        </div>
+      </div>
+      <div className="bg-white rounded-b-[14px] shadow-sm mb-4">
         <div className="flex gap-1.5 px-2.5 py-2 border-b border-gray-200">
           {SALDO_FILTERS.map(f => (
             <button key={f} onClick={() => setSelectedSaldoTab(f)} className={`rounded-full px-2.5 py-1 text-[10px] font-semibold border-[1.5px] ${selectedSaldoTab === f ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-gray-700 border-gray-300'}`}>{f}</button>
           ))}
         </div>
 
-        <div className="grid px-2.5 py-2 bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-500" style={{ gridTemplateColumns: '28px 1fr 1fr 1fr 1fr' }}>
+        {/* Header kolom — pakai inline style agar tidak bergantung Tailwind JIT */}
+        <div
+          className="grid px-2.5 py-2 bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-500"
+          style={{ gridTemplateColumns: isOwner ? '28px 1fr 1fr 1fr 1fr 64px' : '28px 1fr 1fr 1fr 1fr' }}
+        >
           <span>#</span><span>Jam</span><span>Jenis</span><span>Nominal</span><span>Ket</span>
+          {isOwner && <span className="text-center">Aksi</span>}
         </div>
 
         {filteredSaldo.length === 0 ? (
           <div className="text-center py-5 text-gray-400 text-xs">
             <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-            Tidak ada riwayat
+            Tidak ada riwayat tambah saldo hari ini
           </div>
         ) : (
           filteredSaldo.map((s, i) => (
-            <div key={s.id} className="grid px-2.5 py-1.5 border-b border-gray-100 text-[10px]" style={{ gridTemplateColumns: '28px 1fr 1fr 1fr 1fr' }}>
+            <div
+              key={s.id}
+              className="grid px-2.5 py-2 border-b border-gray-100 text-[10px] items-center"
+              style={{ gridTemplateColumns: isOwner ? '28px 1fr 1fr 1fr 1fr 64px' : '28px 1fr 1fr 1fr 1fr' }}
+            >
               <span className="text-gray-400">{i + 1}</span>
               <span>{s.saldoTime}</span>
-              <span className="font-semibold">{s.jenis}</span>
-              <span className="font-bold">{formatRupiah(s.nominal)}</span>
-              <span className="text-gray-500">{s.keterangan || ""}</span>
+              <span className={`font-semibold ${s.jenis === "Bank" ? "text-blue-700" : s.jenis === "Cash" ? "text-emerald-700" : "text-purple-600"}`}>{s.jenis}</span>
+              <span className="font-bold text-gray-800">{formatRupiah(s.nominal)}</span>
+              <span className="text-gray-500 truncate">{s.keterangan || ""}</span>
+              {isOwner && (
+                <div className="flex gap-1 justify-center">
+                  <button
+                    onClick={() => openEditSaldo(s)}
+                    className="p-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 active:scale-90 transition"
+                    title="Edit"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteSaldo(s)}
+                    className="p-1.5 rounded-lg bg-red-50 border border-red-200 text-red-500 active:scale-90 transition"
+                    title="Hapus"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           ))
         )}
+
+        {filteredSaldo.length > 0 && (
+          <div className="border-t border-gray-100 px-3 py-2 text-[10px] text-gray-500 flex justify-between">
+            <span>{filteredSaldo.length} entri</span>
+            <span>Total: {formatRupiah(filteredSaldo.reduce((s, r) => s + (r.nominal || 0), 0))}</span>
+          </div>
+        )}
       </div>
 
+      {/* Modal Edit Transaksi */}
       {editTx && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditTx(null)}>
           <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
@@ -308,6 +395,39 @@ export default function Riwayat() {
         </div>
       )}
 
+      {/* Modal Edit Saldo History (Owner only) */}
+      {editSaldo && isOwner && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setEditSaldo(null)}>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between mb-1">
+              <h3 className="font-bold text-base">Edit Saldo {editSaldo.jenis}</h3>
+              <button onClick={() => setEditSaldo(null)}><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+            <p className="text-[11px] text-gray-400 mb-4">Kasir: <strong>{editSaldo.kasirName}</strong> · {editSaldo.saldoTime}</p>
+            <div className="mb-2">
+              <label className="text-[11px] font-semibold text-gray-500 block mb-1">Nominal</label>
+              <div className="flex items-center border-2 border-blue-200 rounded-xl px-3 h-12">
+                <span className="text-blue-600 font-bold mr-2">Rp</span>
+                <input
+                  value={editSaldoNominal}
+                  onChange={e => setEditSaldoNominal(formatThousands(e.target.value))}
+                  inputMode="numeric"
+                  className="flex-1 outline-none text-base font-bold"
+                />
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="text-[11px] font-semibold text-gray-500 block mb-1">Keterangan</label>
+              <input value={editSaldoKeterangan} onChange={e => setEditSaldoKeterangan(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <button onClick={handleEditSaldoSave} disabled={editSaldoSaving} className="w-full bg-gradient-to-r from-blue-700 to-blue-500 text-white font-bold py-3 rounded-full text-sm disabled:opacity-60">
+              {editSaldoSaving ? "Menyimpan..." : "Simpan Perubahan Saldo"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Foto */}
       {previewImage && (
         <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
           <button className="absolute top-6 right-6 text-white bg-white/20 p-2 rounded-full backdrop-blur-md">

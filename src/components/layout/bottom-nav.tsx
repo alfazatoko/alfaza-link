@@ -30,7 +30,6 @@ export function BottomNav() {
   ];
 
   const navItems = isOwnerMode ? ownerNav : kasirNav.filter(item => {
-    if (item.ownerOnly && user?.role !== "owner") return false;
     if (item.href === "/non-tunai" && user?.role === "owner") return false;
     return true;
   });

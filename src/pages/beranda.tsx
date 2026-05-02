@@ -64,10 +64,15 @@ export default function Beranda() {
     const onUpdate = () => setUpdateAvailable(true);
     window.addEventListener("pwa-update-available", onUpdate);
 
+    // Refresh saldo segera setelah tambah saldo berhasil
+    const onSaldoUpdated = () => loadBalance();
+    window.addEventListener("saldo-updated", onSaldoUpdated);
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("open-isi-saldo", openIsiSaldo);
       window.removeEventListener("pwa-update-available", onUpdate);
+      window.removeEventListener("saldo-updated", onSaldoUpdated);
     };
   }, [loadBalance]);
 
@@ -420,6 +425,7 @@ export default function Beranda() {
         kasirName={user?.name || ""}
         isOwner={user?.role === "owner"}
         mode="isi-saldo"
+        onSuccess={loadBalance}
       />
 
       <AddSaldoModal
@@ -428,6 +434,7 @@ export default function Beranda() {
         kasirName={user?.name || ""}
         isOwner={user?.role === "owner"}
         mode="penyesuaian"
+        onSuccess={loadBalance}
       />
     </div>
   );

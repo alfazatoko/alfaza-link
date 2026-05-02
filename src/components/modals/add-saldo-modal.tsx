@@ -19,9 +19,10 @@ interface AddSaldoModalProps {
   kasirName: string;
   isOwner?: boolean;
   mode?: "all" | "isi-saldo" | "penyesuaian";
+  onSuccess?: () => void;
 }
 
-export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode }: AddSaldoModalProps) {
+export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, onSuccess }: AddSaldoModalProps) {
   const [jenis, setJenis] = useState(mode === "penyesuaian" ? "Real App" : "Bank");
   const [nominalDisplay, setNominalDisplay] = useState("");
   const [keterangan, setKeterangan] = useState("");
@@ -97,6 +98,9 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode }: 
         });
         toast({ title: `Saldo ${effectiveKasir} ditambahkan` });
         queryClient.invalidateQueries();
+        // Dispatch event agar halaman beranda bisa refresh saldo langsung
+        window.dispatchEvent(new CustomEvent("saldo-updated", { detail: { kasirName: effectiveKasir } }));
+        onSuccess?.();
       }
       setNominalDisplay("");
       setKeterangan("");

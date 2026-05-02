@@ -395,12 +395,16 @@ export async function getBalance(kasirName: string): Promise<BalanceRecord> {
   const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, lastUpdateDate: today };
 
   if (!snap.exists()) {
+    console.log(`[getBalance] ${kasirName}: dokumen tidak ada di Firestore`);
     return emptyBal;
   }
   
   const bal = snap.data() as BalanceRecord;
-  // OPSI A: Reset harian jika tanggal berbeda
+  console.log(`[getBalance] ${kasirName}: lastUpdateDate=${bal.lastUpdateDate}, today=${today}, bank=${bal.bank}, cash=${bal.cash}`);
+  
+  // Reset harian jika tanggal berbeda
   if (bal.lastUpdateDate !== today) {
+    console.warn(`[getBalance] ${kasirName}: lastUpdateDate (${bal.lastUpdateDate}) != today (${today}) → saldo tampil 0`);
     return emptyBal;
   }
   
@@ -409,7 +413,8 @@ export async function getBalance(kasirName: string): Promise<BalanceRecord> {
 
 export async function resetBalance(kasirName: string): Promise<void> {
   const ref = doc(db, "balances", kasirName);
-  await setDoc(ref, { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0 });
+  const today = getWibDate();
+  await setDoc(ref, { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, lastUpdateDate: today });
 }
 
 export async function getSaldoHistory(params: {
@@ -492,6 +497,59 @@ export async function addSaldo(kasirName: string, data: {
   });
 
   return ref.id;
+}
+
+export async function updateSaldoHistory(id: string, kasirName: string, data: {
+  nominal: number;
+  keterangan?: string;
+}): Promise<void> {
+  // Ambil data lama
+  const ref = doc(db, "saldo_history", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Data tidak ditemukan");
+  const old = snap.data() as SaldoHistoryRecord;
+
+  // Hitung selisih nominal (hanya Bank/Cash yang mempengaruhi balance)
+  const diff = data.nominal - old.nominal;
+
+  // Update balance jika jenis adalah Bank atau Cash
+  if ((old.jenis === "Bank" || old.jenis === "Cash") && diff !== 0) {
+    const balRef = doc(db, "balances", kasirName);
+    const balSnap = await getDoc(balRef);
+    if (balSnap.exists()) {
+      const bal = balSnap.data() as BalanceRecord;
+      if (old.jenis === "Bank") bal.bank += diff;
+      if (old.jenis === "Cash") bal.cash += diff;
+      await updateDoc(balRef, bal as any);
+    }
+  }
+
+  // Update history record
+  await updateDoc(ref, {
+    nominal: data.nominal,
+    keterangan: data.keterangan || old.keterangan,
+  } as any);
+}
+
+export async function deleteSaldoHistory(id: string, kasirName: string): Promise<void> {
+  const ref = doc(db, "saldo_history", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Data tidak ditemukan");
+  const old = snap.data() as SaldoHistoryRecord;
+
+  // Balikkan efek ke balance (hanya Bank/Cash)
+  if (old.jenis === "Bank" || old.jenis === "Cash") {
+    const balRef = doc(db, "balances", kasirName);
+    const balSnap = await getDoc(balRef);
+    if (balSnap.exists()) {
+      const bal = balSnap.data() as BalanceRecord;
+      if (old.jenis === "Bank") bal.bank -= old.nominal;
+      if (old.jenis === "Cash") bal.cash -= old.nominal;
+      await updateDoc(balRef, bal as any);
+    }
+  }
+
+  await deleteDoc(ref);
 }
 
 export async function addSaldoHistoryOnly(kasirName: string, data: {
