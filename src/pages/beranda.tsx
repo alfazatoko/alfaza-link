@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/header";
 import { AddSaldoModal } from "@/components/modals/add-saldo-modal";
 import { getBalance, createTransaction, getSettings, type BalanceRecord, type SettingsRecord } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
-import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Lock, Save, Settings, SlidersHorizontal, SmartphoneNfc, NotebookPen, ListPlus, Receipt, X, Home, FileText, Ticket, CalendarDays } from "lucide-react";
+import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Lock, Save, Settings, SlidersHorizontal, SmartphoneNfc, NotebookPen, ListPlus, Receipt, X, Home, FileText, Ticket, CalendarDays, CalendarCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_QUOTES = [
@@ -258,11 +258,11 @@ export default function Beranda() {
           <span className="text-[8px] font-bold text-[#d35400] uppercase tracking-wide">Catatan</span>
         </button>
         <button 
-          onClick={() => setLocation("/nota")} 
+          onClick={() => setLocation("/absen")} 
           className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
         >
-          <Receipt className="w-5 h-5 text-[#b71c1c] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[8px] font-bold text-[#b71c1c] uppercase tracking-wide">Nota</span>
+          <CalendarCheck className="w-5 h-5 text-[#b71c1c] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
+          <span className="text-[8px] font-bold text-[#b71c1c] uppercase tracking-wide">Absen</span>
         </button>
         <button 
           onClick={() => setShowLainnyaMenu(!showLainnyaMenu)} 

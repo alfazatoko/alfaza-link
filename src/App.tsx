@@ -19,6 +19,7 @@ import Nota from "@/pages/nota";
 import Lainnya from "@/pages/lainnya";
 import Kalender from "@/pages/kalender";
 import StokVoucher from "@/pages/stok-voucher";
+import Absen from "@/pages/absen";
 import { useEffect, lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -97,6 +98,9 @@ function Router() {
         </Route>
         <Route path="/stok-voucher">
           <ProtectedRoute component={StokVoucher} />
+        </Route>
+        <Route path="/absen">
+          <ProtectedRoute component={Absen} />
         </Route>
         <Route>
           <NotFound />

@@ -238,6 +238,11 @@ function KasirPage({ goBack }: { goBack: () => void }) {
                       {showPins[u.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                     </button>
                   </span>
+                  {u.lastLogin && (
+                    <span className="text-[10px] text-blue-500 font-medium">
+                      Terakhir: {u.lastLogin} {u.lastLoginTime?.slice(0, 5)}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex gap-1.5">

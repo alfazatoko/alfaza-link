@@ -11,6 +11,8 @@ export interface UserRecord {
   role: string;
   pin: string;
   isActive: boolean;
+  lastLogin?: string;
+  lastLoginTime?: string;
 }
 
 export interface CategoryLabels {
@@ -65,6 +67,7 @@ export interface TransactionRecord {
   keterangan: string;
   transDate: string;
   transTime: string;
+  shift: string;
   paymentMethod: string;
   nominalTunai?: number;
   adminTunai?: number;
@@ -769,33 +772,60 @@ export async function loginUser(name: string, pin?: string, shift?: string, devi
     }
   }
 
-  if (user.role !== "owner" && shift) {
-    const today = getWibDate();
-    const now = new Date();
-    const jamMasuk = deviceTime || now.toTimeString().substring(0, 5);
+  let finalAbsenTime = "";
+  const today = getWibDate();
+  const now = new Date();
+  const currentTime = deviceTime || now.toTimeString().substring(0, 5);
 
-    const allAttendance = await getDocs(collection(db, "attendance"));
-    const alreadyExists = allAttendance.docs.some(d => {
-      const data = d.data();
-      return data.kasirName === name && data.tanggal === today && data.shift === shift;
-    });
-    if (!alreadyExists) {
+  try {
+    // Fetch all attendance for this user to avoid composite index requirements
+    const q = query(
+      collection(db, "attendance"),
+      where("kasirName", "==", name)
+    );
+    
+    const snap = await getDocs(q);
+    // Find the first attendance record for today (regardless of shift)
+    const existing = snap.docs
+      .map(d => d.data())
+      .filter(d => d.tanggal === today)
+      .sort((a, b) => (a.jamMasuk || "").localeCompare(b.jamMasuk || ""))[0];
+
+    if (!existing) {
+      // First time today
       await createAttendance({
         kasirName: name,
         tanggal: today,
-        shift,
-        jamMasuk,
+        shift: shift || "NORMAL",
+        jamMasuk: currentTime,
       });
+      finalAbsenTime = currentTime;
+      console.log(`[Attendance] First login today: ${currentTime}`);
+    } else {
+      // Already exists today, use the very first one
+      finalAbsenTime = existing.jamMasuk;
+      console.log(`[Attendance] Already logged in today at: ${finalAbsenTime}`);
     }
+  } catch (err) {
+    console.error("[Attendance] Error checking/creating:", err);
+    finalAbsenTime = currentTime;
   }
 
-  const absenTime = deviceTime || new Date().toTimeString().substring(0, 5);
+  // Update last login in user document
+  const userRef = doc(db, "users", user.id);
+  const lastLoginDate = getWibDate();
+  const lastLoginTime = now.toTimeString().substring(0, 8);
+  
+  await updateDoc(userRef, {
+    lastLogin: lastLoginDate,
+    lastLoginTime: lastLoginTime
+  }).catch(err => console.error("Error updating last login:", err));
 
   return {
     success: true,
-    user,
+    user: { ...user, lastLogin: lastLoginDate, lastLoginTime: lastLoginTime },
     role: user.role,
-    absenTime,
+    absenTime: finalAbsenTime,
   };
 }
 

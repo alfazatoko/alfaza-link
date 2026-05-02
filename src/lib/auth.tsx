@@ -15,8 +15,7 @@ interface AuthContextType {
   user: UserRecord | null;
   shift: string | null;
   loginTime: string | null;
-  absenTime: string | null;
-  login: (user: UserRecord, shift: string, absenTime?: string) => void;
+  login: (user: UserRecord, shift: string, serverAbsenTime?: string) => void;
   logout: () => void;
   firebaseLogin: (email: string, password: string) => Promise<void>;
   firebaseRegister: (email: string, password: string) => Promise<void>;
@@ -34,7 +33,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
   const [shift, setShift] = useState<string | null>(() => localStorage.getItem("alfaza_shift"));
   const [loginTime, setLoginTime] = useState<string | null>(() => localStorage.getItem("alfaza_login_time"));
-  const [absenTime, setAbsenTime] = useState<string | null>(() => localStorage.getItem("alfaza_absen_time"));
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
@@ -44,20 +42,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setShift(null);
         setLoginTime(null);
-        setAbsenTime(null);
         localStorage.removeItem("alfaza_user");
         localStorage.removeItem("alfaza_shift");
         localStorage.removeItem("alfaza_login_time");
-        localStorage.removeItem("alfaza_absen_time");
       } else {
         const storedUser = localStorage.getItem("alfaza_user");
         const storedShift = localStorage.getItem("alfaza_shift");
         const storedLoginTime = localStorage.getItem("alfaza_login_time");
-        const storedAbsenTime = localStorage.getItem("alfaza_absen_time");
         if (storedUser) setUser(JSON.parse(storedUser));
         if (storedShift) setShift(storedShift);
         if (storedLoginTime) setLoginTime(storedLoginTime);
-        if (storedAbsenTime) setAbsenTime(storedAbsenTime);
       }
     });
     return () => unsubscribe();
@@ -68,28 +62,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const h = now.getHours().toString().padStart(2, "0");
     const m = now.getMinutes().toString().padStart(2, "0");
     const s = now.getSeconds().toString().padStart(2, "0");
-    const timeStr = `${h}.${m}.${s}`;
+    const timeStr = `${h}:${m}:${s}`;
     setUser(newUser);
     setShift(newShift);
     setLoginTime(timeStr);
     localStorage.setItem("alfaza_user", JSON.stringify(newUser));
     localStorage.setItem("alfaza_shift", newShift);
     localStorage.setItem("alfaza_login_time", timeStr);
-
-    const absen = serverAbsenTime || timeStr;
-    setAbsenTime(absen);
-    localStorage.setItem("alfaza_absen_time", absen);
   };
 
   const logout = () => {
     setUser(null);
     setShift(null);
     setLoginTime(null);
-    setAbsenTime(null);
     localStorage.removeItem("alfaza_user");
     localStorage.removeItem("alfaza_shift");
     localStorage.removeItem("alfaza_login_time");
-    localStorage.removeItem("alfaza_absen_time");
   };
 
   const firebaseLogin = async (email: string, password: string) => {
@@ -113,7 +101,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         shift,
         loginTime,
-        absenTime,
         login,
         logout,
         firebaseLogin,

@@ -2,20 +2,41 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import { getSettings, type SettingsRecord } from "@/lib/firestore";
+import { getSettings, getAttendance, type SettingsRecord } from "@/lib/firestore";
+import { getWibDate } from "@/lib/utils";
 import { User, Clock, CalendarDays, Sun, Moon, Fingerprint, Monitor, Tablet, Smartphone, Cloud, Leaf, Sunset } from "lucide-react";
 import { useDisplayMode } from "@/hooks/use-display-mode";
 
 export function Header() {
-  const { user, shift, loginTime, absenTime } = useAuth();
+  const { user, loginTime } = useAuth();
   const [clock, setClock] = useState("");
-  const { mode, setMode, theme, toggleTheme, currentPrimaryColor } = useDisplayMode();
-
+  const [realAbsenTime, setRealAbsenTime] = useState<string | null>(null);
+  const { mode, setMode, theme, toggleTheme } = useDisplayMode();
   const [settings, setSettings] = useState<SettingsRecord | null>(null);
+
+  const loadRealAbsen = async () => {
+    if (!user?.name) return;
+    try {
+      const today = getWibDate();
+      const history = await getAttendance({ kasirName: user.name });
+      const todayEntry = history.find(a => a.tanggal === today);
+      if (todayEntry) {
+        setRealAbsenTime(todayEntry.jamMasuk);
+      } else {
+        setRealAbsenTime(null);
+      }
+    } catch (err) {
+      console.error("Header load attendance error:", err);
+    }
+  };
 
   useEffect(() => {
     getSettings().then(setSettings).catch(() => {});
-  }, []);
+    loadRealAbsen();
+
+    window.addEventListener("absen-updated", loadRealAbsen);
+    return () => window.removeEventListener("absen-updated", loadRealAbsen);
+  }, [user?.name]);
 
   useEffect(() => {
     const tick = () => {
@@ -112,7 +133,7 @@ export function Header() {
           </div>
           <div className="ml-auto bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
             <Fingerprint className="w-3 h-3" />
-            Absen: {absenTime || "--:--"}
+            Absen: {realAbsenTime || "--:--"}
           </div>
         </div>
 
