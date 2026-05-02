@@ -7,7 +7,7 @@ import { CreditCard, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function NonTunai() {
-  const { user } = useAuth();
+  const { user, shift } = useAuth();
   const [nominalDisplay, setNominalDisplay] = useState("");
   const [adminDisplay, setAdminDisplay] = useState("");
   const [keterangan, setKeterangan] = useState("");
@@ -43,6 +43,7 @@ export default function NonTunai() {
         keterangan,
         transDate: getWibDate(),
         transTime: now.toTimeString().substring(0, 5),
+        shift: shift || "NORMAL",
         paymentMethod: "NON-TUNAI",
       });
       setSaved(true);

@@ -24,7 +24,7 @@ const CATEGORIES = [
 ];
 
 export default function Beranda() {
-  const { user } = useAuth();
+  const { user, shift } = useAuth();
   const [, setLocation] = useLocation();
   const [isSaldoModalOpen, setIsSaldoModalOpen] = useState(false);
   const [category, setCategory] = useState("BANK");
@@ -105,6 +105,7 @@ export default function Beranda() {
         transDate: dateStr,
         transTime: timeStr,
         paymentMethod: "tunai",
+        shift: shift || "NORMAL",
         nominal: n,
         admin: a,
         nominalTunai: n,

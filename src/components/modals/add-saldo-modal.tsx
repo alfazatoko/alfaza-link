@@ -191,24 +191,22 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
               placeholder={getPlaceholder()}
               value={nominalDisplay}
               onChange={(e) => setNominalDisplay(formatThousands(e.target.value))}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); isNoteOnly ? handleSubmit() : ketRef.current?.focus(); } }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ketRef.current?.focus(); } }}
               className="flex-1 bg-transparent outline-none text-xl font-bold text-gray-800 placeholder:text-gray-400 placeholder:font-normal placeholder:text-base"
             />
           </div>
 
-          {!isNoteOnly && (
-            <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 h-11 bg-gray-50/50">
-              <span className="text-blue-400 text-sm">📝</span>
-              <input
-                ref={ketRef}
-                placeholder="Keterangan (opsional)"
-                value={keterangan}
-                onChange={(e) => setKeterangan(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSubmit(); } }}
-                className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder:text-gray-400"
-              />
-            </div>
-          )}
+          <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 h-11 bg-gray-50/50">
+            <span className="text-blue-400 text-sm">📝</span>
+            <input
+              ref={ketRef}
+              placeholder="Keterangan (opsional)"
+              value={keterangan}
+              onChange={(e) => setKeterangan(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSubmit(); } }}
+              className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder:text-gray-400"
+            />
+          </div>
 
           <button
             onClick={handleSubmit}
