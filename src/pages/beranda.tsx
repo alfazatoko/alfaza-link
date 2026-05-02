@@ -201,13 +201,13 @@ export default function Beranda() {
             <p className="text-[10px] font-bold text-gray-800/80 mb-1 flex items-center gap-1.5 uppercase tracking-wide">
               <Landmark className="w-3.5 h-3.5" /> Saldo Bank
             </p>
-            <h3 className="text-2xl font-black tracking-tight">{formatRupiah(balance?.bank || 0)}</h3>
+            <h3 className="text-xl font-black tracking-tighter whitespace-nowrap">{formatRupiah(balance?.bank || 0)}</h3>
           </div>
           <div className="p-2 pl-4 border-l border-black/10">
             <p className="text-[10px] font-bold text-gray-800/80 mb-1 flex items-center gap-1.5 uppercase tracking-wide">
               <Wallet className="w-3.5 h-3.5" /> Saldo Cash
             </p>
-            <h3 className="text-2xl font-black tracking-tight">{formatRupiah(balance?.cash || 0)}</h3>
+            <h3 className="text-xl font-black tracking-tighter whitespace-nowrap">{formatRupiah(balance?.cash || 0)}</h3>
           </div>
         </div>
 
