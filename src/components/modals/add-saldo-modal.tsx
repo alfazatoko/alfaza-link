@@ -9,8 +9,7 @@ import { Building2, Wallet, Smartphone, Landmark, User } from "lucide-react";
 const JENIS_TABS = [
   { id: "Bank", label: "Bank", icon: Building2, color: "bg-primary" },
   { id: "Cash", label: "Cash", icon: Wallet, color: "bg-emerald-600" },
-  { id: "Real App", label: "Real App", icon: Smartphone, color: "bg-purple-600" },
-  { id: "Sisa Saldo", label: "Sisa Saldo", icon: Landmark, color: "bg-amber-600" },
+  { id: "Real App", label: "+ Saldo real aplikasi", icon: Smartphone, color: "bg-purple-600" },
 ];
 
 interface AddSaldoModalProps {
@@ -34,7 +33,7 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
 
   const filteredTabs = JENIS_TABS.filter(tab => {
     if (mode === "isi-saldo") return tab.id === "Bank" || tab.id === "Cash";
-    if (mode === "penyesuaian") return tab.id === "Real App" || tab.id === "Sisa Saldo";
+    if (mode === "penyesuaian") return tab.id === "Real App";
     return true;
   });
 
@@ -48,7 +47,7 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
 
   const today = getWibDate();
 
-  const isNoteOnly = jenis === "Real App" || jenis === "Sisa Saldo";
+  const isNoteOnly = jenis === "Real App";
 
   useEffect(() => {
     if (open && isOwner) {
@@ -78,13 +77,13 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
 
     setSaving(true);
     try {
-      if (jenis === "Sisa Saldo" || jenis === "Real App") {
-        const field = jenis === "Sisa Saldo" ? "sisaSaldoBank" : "saldoRealApp";
-        const label = jenis === "Sisa Saldo" ? "Sisa Saldo Bank" : "Saldo Real App";
+      if (jenis === "Real App") {
+        const field = "saldoRealApp";
+        const label = "Saldo Real App";
         const result = await updateDailyNote(effectiveKasir, today, field as any, n);
-        const newVal = field === "sisaSaldoBank" ? result.sisaSaldoBank : result.saldoRealApp;
+        const newVal = result.saldoRealApp;
         await addSaldoHistoryOnly(effectiveKasir, {
-          jenis: jenis === "Sisa Saldo" ? "Sisa Saldo" : "Real App",
+          jenis: "Real App",
           nominal: n,
           keterangan: keterangan || label,
         });
@@ -113,20 +112,17 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
   };
 
   const getPlaceholder = () => {
-    if (jenis === "Sisa Saldo") return "Sisa Saldo Bank";
     if (jenis === "Real App") return "Nominal Real App";
     return "Nominal Saldo";
   };
 
   const getButtonText = () => {
     if (saving) return "MEMPROSES...";
-    if (jenis === "Sisa Saldo") return "SIMPAN SISA SALDO";
     if (jenis === "Real App") return "SIMPAN REAL APP";
     return "TAMBAH SALDO";
   };
 
   const getInfoText = () => {
-    if (jenis === "Sisa Saldo") return "Catat sisa saldo bank (catatan manual). Nilai akan diakumulasi dan tampil di laporan.";
     if (jenis === "Real App") return "Catat saldo real app (catatan manual). Nilai akan diakumulasi dan tampil di laporan.";
     return "";
   };
@@ -177,8 +173,8 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
           </div>
 
           {isNoteOnly && (
-            <div className={`${jenis === "Sisa Saldo" ? "bg-amber-50 border-amber-200" : "bg-purple-50 border-purple-200"} border rounded-xl px-3 py-2`}>
-              <p className={`text-[11px] ${jenis === "Sisa Saldo" ? "text-amber-700" : "text-purple-700"} font-semibold`}>{getInfoText()}</p>
+            <div className="bg-purple-50 border-purple-200 border rounded-xl px-3 py-2">
+              <p className="text-[11px] text-purple-700 font-semibold">{getInfoText()}</p>
             </div>
           )}
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import { getSettings, getAttendance, type SettingsRecord } from "@/lib/firestore";
+import { getSettings, getTodayAttendance, type SettingsRecord } from "@/lib/firestore";
 import { getWibDate } from "@/lib/utils";
 import { User, Clock, CalendarDays, Sun, Moon, Fingerprint, Monitor, Tablet, Smartphone, Cloud, Leaf, Sunset } from "lucide-react";
 import { useDisplayMode } from "@/hooks/use-display-mode";
@@ -17,9 +17,7 @@ export function Header() {
   const loadRealAbsen = async () => {
     if (!user?.name) return;
     try {
-      const today = getWibDate();
-      const history = await getAttendance({ kasirName: user.name });
-      const todayEntry = history.find(a => a.tanggal === today);
+      const todayEntry = await getTodayAttendance(user.name);
       if (todayEntry) {
         setRealAbsenTime(todayEntry.jamMasuk);
       } else {

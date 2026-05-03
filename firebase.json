@@ -1,7 +1,5 @@
 {
   "hosting": {
-    "site": "alfaza-kasir",
-
     "public": "dist",
     "ignore": [
       "firebase.json",

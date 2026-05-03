@@ -3,12 +3,13 @@ import { getFirestore } from "firebase/firestore/lite";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAWLJbjFCpEsxNY8l6a-9cCDBR9E4vG-Ww",
-  authDomain: "alfazalink-ecb76.firebaseapp.com",
-  projectId: "alfazalink-ecb76",
-  storageBucket: "alfazalink-ecb76.firebasestorage.app",
-  messagingSenderId: "358049561649",
-  appId: "1:358049561649:web:6334d4f0ca22a4ef452910",
+  apiKey: "AIzaSyCaEk_2oZkqQE49XzyEjMf1W0ohko74bbY",
+  authDomain: "alfazatrend.firebaseapp.com",
+  databaseURL: "https://alfazatrend-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "alfazatrend",
+  storageBucket: "alfazatrend.firebasestorage.app",
+  messagingSenderId: "387772626852",
+  appId: "1:387772626852:web:a7e60cb0eec6e96fb6b331"
 };
 
 const app = initializeApp(firebaseConfig);

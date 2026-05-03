@@ -3,12 +3,12 @@ import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import {
   getTransactions, getSaldoHistory, getDailySnapshot, getDailyNotes,
-  lockReport, resetBalance, getUsers, getStokVoucherByRange,
+  lockReport, getUsers, getStokVoucherByRange,
   type TransactionRecord, type SaldoHistoryRecord, type DailyNoteRecord, type UserRecord, type StokVoucherRecord
 } from "@/lib/firestore";
 import { formatRupiah, getWibDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, Share2, Loader2, RotateCcw, ChevronDown } from "lucide-react";
+import { Lock, Download, Share2, Loader2, ChevronDown } from "lucide-react";
 
 export default function Laporan() {
   const { user, shift } = useAuth();
@@ -28,7 +28,6 @@ export default function Laporan() {
   const [voucherData, setVoucherData] = useState<StokVoucherRecord[]>([]);
   const [saldoHistory, setSaldoHistory] = useState<SaldoHistoryRecord[]>([]);
   const [isLocked, setIsLocked] = useState(false);
-  const [resetting, setResetting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [locking, setLocking] = useState(false);
   const [dailyNotes, setDailyNotes] = useState<DailyNoteRecord>({ sisaSaldoBank: 0, saldoRealApp: 0 });
@@ -121,7 +120,8 @@ export default function Laporan() {
   const danaTx = transactions.filter(t => t.category === "DANA");
   const tarikTx = transactions.filter(t => t.category === "TARIK TUNAI");
   const aksTx = transactions.filter(t => t.category === "AKSESORIS");
-  const nonTunaiTx = transactions.filter(t => (t.paymentMethod || "").toLowerCase().includes("non-tunai") || t.category === "NON TUNAI");
+  const nonTunaiTx = transactions.filter(t => t.category === "NON TUNAI" || ((t.paymentMethod || "").toLowerCase().includes("non-tunai") && t.category !== "CLOSING"));
+  const closingTx = transactions.filter(t => t.category === "CLOSING");
 
   const sumNominal = (list: TransactionRecord[]) => list.reduce((s, t) => s + (t.nominal || 0), 0);
   const sumAdmin = (list: TransactionRecord[]) => list.reduce((s, t) => s + (t.admin || 0), 0);
@@ -132,8 +132,10 @@ export default function Laporan() {
   const totalDana = sumNominal(danaTx);
   const totalTarik = sumNominal(tarikTx);
   const totalAks = sumNominal(aksTx);
-  const totalAdmin = sumAdmin(transactions);
+  const totalAdmin = transactions.reduce((s, t) => s + (!t.adminNonTunai ? (t.admin || 0) : 0), 0);
+  const totalAdminNonTunai = transactions.reduce((s, t) => s + (t.adminNonTunai ? (t.admin || 0) : 0), 0);
   const totalNonTunai = sumNominal(nonTunaiTx);
+  const totalClosing = sumNominal(closingTx);
 
   // Voucher Calculations
   let totalVoucherQty = 0;
@@ -165,7 +167,7 @@ export default function Laporan() {
   const totalPenjualan = totalBank + totalFlip + totalApp + totalDana + totalVoucherTunaiUang;
   const sisaCashPenjualan = totalPenjualan - totalTarik;
   const sisaCashTotal = sisaCashPenjualan + totalAdmin + totalAks;
-  const totalNonTunaiDisplay = totalNonTunai + totalVoucherNonTunaiUang;
+  const totalNonTunaiDisplay = totalNonTunai + totalClosing + totalVoucherNonTunaiUang;
 
   const saldoBankHistory = saldoHistory.filter(s => s.jenis === "Bank");
   const totalIsiSaldoBank = saldoBankHistory.reduce((s, h) => s + h.nominal, 0);
@@ -182,7 +184,8 @@ export default function Laporan() {
   const saldoAkhirBank = lastRecord?.saldoBankAfter ?? 0;
   const saldoAkhirCash = lastRecord?.saldoCashAfter ?? 0;
 
-  const sisaSaldoBank = dailyNotes.sisaSaldoBank || 0;
+  // Gunakan saldoAkhirBank otomatis dari transaksi terakhir, bukan dari catatan manual lagi
+  const sisaSaldoBank = saldoAkhirBank;
   const saldoRealApp = dailyNotes.saldoRealApp || 0;
   const selisih = saldoRealApp - sisaSaldoBank;
 
@@ -195,18 +198,6 @@ export default function Laporan() {
     { label: "ISI CASH", count: saldoCashHistory.length, total: totalIsiSaldoCash },
   ].filter(c => c.count > 0);
 
-  const handleResetSaldo = async () => {
-    if (!confirm("Reset saldo kasir ini ke Rp 0? Tindakan tidak bisa dibatalkan.")) return;
-    setResetting(true);
-    try {
-      await resetBalance(user!.name);
-      toast({ title: "Saldo berhasil direset ke Rp 0" });
-    } catch {
-      toast({ title: "Gagal reset saldo", variant: "destructive" });
-    } finally {
-      setResetting(false);
-    }
-  };
 
   const handleLock = async () => {
     if (!confirm("Kunci laporan hari ini? Data tidak bisa diubah lagi.")) return;
@@ -241,15 +232,17 @@ export default function Laporan() {
       wsData.push(["Tarik Tunai", totalTarik]);
       wsData.push(["Sisa Cash Penjualan", sisaCashPenjualan]);
       wsData.push(["Admin", totalAdmin]);
+      wsData.push(["Admin Non Tunai", totalAdminNonTunai]);
       wsData.push(["Aksesoris", totalAks]);
       wsData.push(["Total Voucher", totalVoucherTunaiUang]);
       wsData.push(["Non Tunai", totalNonTunai]);
+      if (totalClosing > 0) wsData.push(["Transaksi Closing", totalClosing]);
       wsData.push(["Non Tunai Voucher", totalVoucherNonTunaiUang]);
       wsData.push(["Sisa Cash Total", sisaCashTotal]);
       wsData.push([]);
       wsData.push(["Saldo & Selisih"]);
       wsData.push(["Sisa Saldo Bank (Catatan)", sisaSaldoBank]);
-      wsData.push(["Saldo Real App", saldoRealApp]);
+      wsData.push(["Saldo Real Aplikasi", saldoRealApp]);
       wsData.push(["Selisih", selisih]);
       wsData.push([]);
       wsData.push(["🏛️ SALDO AKHIR PERIODE (LEDGER)"]);
@@ -348,6 +341,7 @@ export default function Laporan() {
     if (aksTx.length > 0) row(`Aksesoris (${aksTx.length}x)`, formatRupiah(totalAks), { leftColor: [200, 50, 100], rightColor: [200, 50, 100] });
     if (totalVoucherTunaiQty > 0) row(`Total Voucher (${totalVoucherTunaiQty}x)`, formatRupiah(totalVoucherTunaiUang), { leftColor: [16, 100, 200], rightColor: [16, 100, 200] });
     row("Non Tunai", formatRupiah(totalNonTunai), { leftColor: [100, 50, 200], rightColor: [100, 50, 200] });
+    if (totalClosing > 0) row(`Transaksi Closing (${closingTx.length}x)`, formatRupiah(totalClosing), { leftColor: [140, 50, 180], rightColor: [140, 50, 180] });
     if (totalVoucherNonTunaiQty > 0) row(`Non Tunai Voucher (${totalVoucherNonTunaiQty}x)`, formatRupiah(totalVoucherNonTunaiUang), { leftColor: [100, 50, 200], rightColor: [100, 50, 200] });
     y += 2;
 
@@ -360,7 +354,7 @@ export default function Laporan() {
 
     sectionHeader("Saldo & Selisih", 46, 140, 67);
     row("Sisa Saldo Bank (Catatan)", formatRupiah(sisaSaldoBank), { leftColor: [30, 30, 200], rightColor: [30, 30, 200] });
-    row("Saldo Real App", formatRupiah(saldoRealApp), { leftColor: [200, 30, 30], rightColor: [200, 30, 30] });
+    row("Saldo Real Aplikasi", formatRupiah(saldoRealApp), { leftColor: [200, 30, 30], rightColor: [200, 30, 30] });
     row("Selisih", formatRupiah(selisih), { leftColor: selisih >= 0 ? [16, 130, 90] : [220, 50, 50], rightColor: selisih >= 0 ? [16, 130, 90] : [220, 50, 50], bold: true });
     y += 4;
 
@@ -396,7 +390,7 @@ export default function Laporan() {
         pdf.text(String(idx + 1), colX[0] + 2, y + 4.3);
         pdf.text(tx.category || "-", colX[1] + 2, y + 4.3);
         pdf.text(formatRupiah(tx.nominal || 0), colX[2] + 2, y + 4.3);
-        pdf.text(formatRupiah(tx.admin || 0), colX[3] + 2, y + 4.3);
+        pdf.text(formatRupiah(tx.admin || 0) + (tx.adminNonTunai ? " (NT)" : ""), colX[3] + 2, y + 4.3);
         const ket = (tx.keterangan || "-").substring(0, 30);
         pdf.text(ket, colX[4] + 2, y + 4.3);
         y += 6.5;
@@ -500,13 +494,13 @@ export default function Laporan() {
       </div>
 
       {/* GRUP 1: Rincian + Total Penjualan + Total Uang Cash */}
-      <div ref={reportRef} className="rounded-2xl border-2 border-gray-900 overflow-hidden mb-3">
+      <div ref={reportRef} className="rounded-2xl border border-black overflow-hidden mb-3">
         {categoryItems.length > 0 && (
           <>
             <div className="bg-gradient-to-r from-blue-700 to-blue-500 px-4 py-2.5">
               <h3 className="text-white font-bold text-sm flex items-center gap-1.5">📊 Rincian Kategori</h3>
             </div>
-            <div className="px-4 py-3 bg-white space-y-2 border-b-2 border-gray-900">
+            <div className="px-4 py-3 bg-white space-y-2 border-b border-black">
               {categoryItems.map(c => (
                 <div key={c.label} className="flex justify-between items-center">
                   <span className="text-sm font-bold text-gray-800">{c.label} <span className="text-gray-400 font-normal">({c.count}x)</span></span>
@@ -521,7 +515,7 @@ export default function Laporan() {
           <h3 className="text-white font-bold text-sm flex items-center gap-1.5">📈 TOTAL PENJUALAN</h3>
           <span className="text-white font-extrabold text-base">{formatRupiah(totalPenjualan)}</span>
         </div>
-        <div className="bg-white px-4 space-y-0 border-b-2 border-gray-900">
+        <div className="bg-white px-4 space-y-0">
           {tarikTx.length > 0 && (
             <div className="flex justify-between items-center py-2 border-b border-gray-200">
               <span className="text-sm text-gray-700 flex items-center gap-1">💸 <strong className="text-emerald-700">Tarik Tunai</strong><span className="text-[10px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full font-bold ml-1">{tarikTx.length}x</span></span>
@@ -543,19 +537,9 @@ export default function Laporan() {
             </div>
           )}
           {totalVoucherTunaiQty > 0 && (
-            <div className="flex justify-between items-center py-2 border-b border-gray-200">
+            <div className="flex justify-between items-center py-2">
               <span className="text-sm text-gray-700 flex items-center gap-1">🎟️ <strong className="text-blue-600">TOTAL VOUCHER</strong><span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold ml-1">{totalVoucherTunaiQty}x</span></span>
               <span className="text-sm font-bold text-blue-600">{formatRupiah(totalVoucherTunaiUang)}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center py-2 border-b border-gray-200">
-            <span className="text-sm text-gray-700 flex items-center gap-1">🏷️ <strong className="text-purple-600">Non Tunai</strong></span>
-            <span className="text-sm font-bold text-purple-600">{formatRupiah(totalNonTunai)}</span>
-          </div>
-          {totalVoucherNonTunaiQty > 0 && (
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-gray-700 flex items-center gap-1">💳 <strong className="text-purple-700">NON TUNAI VOUCHER</strong><span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold ml-1">{totalVoucherNonTunaiQty}x</span></span>
-              <span className="text-sm font-bold text-purple-700">{formatRupiah(totalVoucherNonTunaiUang)}</span>
             </div>
           )}
         </div>
@@ -565,41 +549,54 @@ export default function Laporan() {
             <h3 className="text-gray-900 font-extrabold text-sm flex items-center gap-1.5">💰 TOTAL UANG CASH</h3>
             <span className="text-gray-900 font-extrabold text-xl">{formatRupiah(sisaCashTotal)}</span>
           </div>
-          <p className="text-[10px] text-gray-800">Sisa Cash: {formatRupiah(sisaCashPenjualan)} + Admin: {formatRupiah(totalAdmin)} + Aks: {formatRupiah(totalAks)}</p>
-          <p className="text-[10px] text-gray-800">Total Transaksi : {transactions.length} &nbsp;&nbsp;&nbsp;&nbsp; Total vc laku : {totalVoucherQty}</p>
+          <p className="text-[10px] text-black font-bold mt-1">
+            Sisa Cash: {formatRupiah(sisaCashPenjualan)} + Admin: {formatRupiah(totalAdmin)} + Aks: {formatRupiah(totalAks)} - TRX: {transactions.length} - VC: {totalVoucherQty}
+          </p>
+        </div>
+
+        {/* NON-TUNAI SECTION */}
+        <div className="bg-purple-50/30 px-4 space-y-0 border-t border-black">
+          <div className="flex justify-between items-center py-2 border-b border-gray-200/60">
+            <span className="text-sm text-gray-700 flex items-center gap-1">🏷️ <strong className="text-purple-600">Non Tunai</strong></span>
+            <span className="text-sm font-bold text-purple-600">{formatRupiah(totalNonTunai)}</span>
+          </div>
+          {closingTx.length > 0 && (
+            <div className="flex justify-between items-center py-2 border-b border-gray-200/60">
+              <span className="text-sm text-gray-700 flex items-center gap-1">🔄 <strong className="text-purple-600">Transaksi Closing</strong><span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold ml-1">{closingTx.length}x</span></span>
+              <span className="text-sm font-bold text-purple-600">{formatRupiah(totalClosing)}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center py-2 border-b border-gray-200/60">
+            <span className="text-sm text-gray-700 flex items-center gap-1">📱 <strong className="text-purple-600">Admin Non Tunai</strong></span>
+            <span className="text-sm font-bold text-purple-600">{formatRupiah(totalAdminNonTunai)}</span>
+          </div>
+          {totalVoucherNonTunaiQty > 0 && (
+            <div className="flex justify-between items-center py-2">
+              <span className="text-sm text-gray-700 flex items-center gap-1">💳 <strong className="text-purple-700">Voucher Non Tunai</strong><span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold ml-1">{totalVoucherNonTunaiQty}x</span></span>
+              <span className="text-sm font-bold text-purple-700">{formatRupiah(totalVoucherNonTunaiUang)}</span>
+            </div>
+          )}
+        </div>
+        <div className="bg-gradient-to-r from-purple-600 to-purple-400 px-4 py-2 flex justify-between items-center border-t border-purple-300">
+          <h3 className="text-white font-bold text-sm flex items-center gap-1.5">💳 TOTAL NON TUNAI</h3>
+          <span className="text-white font-extrabold text-base">{formatRupiah(totalNonTunaiDisplay + totalAdminNonTunai)}</span>
         </div>
       </div>
 
-      {/* JURNAL PENYESUAIAN */}
-      <div className="bg-white rounded-2xl border-2 border-gray-900 overflow-hidden mb-3 p-4">
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-xs font-bold text-gray-500 uppercase">Status Saldo Akhir</span>
-          <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">OTOMATIS</span>
-        </div>
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
-            <p className="text-[9px] font-bold text-blue-400 uppercase mb-0.5">Bank Akhir</p>
-            <p className="text-sm font-black text-blue-700">{formatRupiah(saldoAkhirBank)}</p>
-          </div>
-          <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
-            <p className="text-[9px] font-bold text-orange-400 uppercase mb-0.5">Cash Akhir</p>
-            <p className="text-sm font-black text-orange-600">{formatRupiah(saldoAkhirCash)}</p>
-          </div>
-        </div>
-      </div>
+
 
       {/* GRUP 2: Jurnal Penyesuaian + Saldo & Selisih */}
-      <div className="rounded-2xl border-2 border-gray-900 overflow-hidden mb-4">
+      <div className="rounded-2xl border border-black overflow-hidden mb-4">
         <div 
-          className="bg-gradient-to-r from-purple-700 to-purple-500 px-4 py-2.5 flex justify-between items-center cursor-pointer active:opacity-80 transition-all"
+          className="bg-gradient-to-r from-indigo-700 to-indigo-500 px-4 py-2.5 flex justify-between items-center cursor-pointer active:opacity-80 transition-all"
           onClick={() => setShowJurnal(!showJurnal)}
         >
           <h3 className="text-white font-bold text-sm flex items-center gap-1.5">📒 Jurnal Penyesuaian Saldo Catatan VS Saldo Bank</h3>
           <ChevronDown className={`w-4 h-4 text-white transition-transform duration-300 ${showJurnal ? 'rotate-180' : ''}`} />
         </div>
         {showJurnal && (
-          <div className="bg-white px-4 space-y-0 border-b-2 border-gray-900">
-            <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
+          <div className="bg-white px-4 space-y-0 border-b border-black">
+            <div className="flex justify-between items-center py-2 border-b border-black">
               <span className="text-sm text-gray-700">💳 <strong>Total Tambah/Isi Saldo Bank</strong></span>
               <span className="text-sm font-extrabold text-blue-700">{formatRupiah(totalIsiSaldoBank)}</span>
             </div>
@@ -607,11 +604,11 @@ export default function Laporan() {
               <span className="text-sm text-gray-700">Sisa Saldo Bank (Catatan)</span>
               <span className="text-sm font-bold text-gray-800">{formatRupiah(sisaSaldoBank)}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
+            <div className="flex justify-between items-center py-2 border-b border-black">
               <span className="text-sm text-gray-700">Total Penjualan</span>
               <span className="text-sm font-bold text-gray-800">{formatRupiah(totalPenjualan)}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
+            <div className="flex justify-between items-center py-2 border-b border-black">
               <span className="text-sm font-bold text-gray-900">Total</span>
               <span className="text-sm font-extrabold text-gray-900">{formatRupiah(sisaSaldoBank + totalPenjualan)}</span>
             </div>
@@ -623,7 +620,7 @@ export default function Laporan() {
         )}
 
         <div 
-          className="bg-gradient-to-r from-green-700 to-green-500 px-4 py-2.5 flex justify-between items-center cursor-pointer active:opacity-80 transition-all border-t-2 border-gray-900"
+          className="bg-gradient-to-r from-green-700 to-green-500 px-4 py-2.5 flex justify-between items-center cursor-pointer active:opacity-80 transition-all border-t border-black"
           onClick={() => setShowSelisih(!showSelisih)}
         >
           <h3 className="text-white font-bold text-sm flex items-center gap-1.5">🏦 Saldo & Selisih</h3>
@@ -631,12 +628,12 @@ export default function Laporan() {
         </div>
         {showSelisih && (
           <div className="bg-white px-4 space-y-0">
-            <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
+            <div className="flex justify-between items-center py-2 border-b border-black">
               <span className="text-sm text-gray-700 flex items-center gap-1">🏛️ <strong>Sisa Saldo Bank (Catatan)</strong></span>
               <span className="text-sm font-extrabold text-blue-700">{formatRupiah(sisaSaldoBank)}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b-2 border-gray-900">
-              <span className="text-sm text-gray-700 flex items-center gap-1">📱 <strong>Saldo Real App</strong></span>
+            <div className="flex justify-between items-center py-2 border-b border-black">
+              <span className="text-sm text-gray-700 flex items-center gap-1">📱 <strong>Saldo Real Aplikasi</strong></span>
               <span className="text-sm font-extrabold text-red-600">{formatRupiah(saldoRealApp)}</span>
             </div>
             <div className="flex justify-between items-center py-2">
@@ -661,17 +658,7 @@ export default function Laporan() {
           </button>
         </div>
 
-        {/* Tombol Reset Saldo Manual - Hanya muncul jika hari ini dan mode harian */}
-        {viewMode === "day" && date === today && !isOwner && (
-          <button 
-            onClick={handleResetSaldo} 
-            disabled={resetting}
-            className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-500 py-3 rounded-2xl font-bold text-xs border border-gray-200 active:scale-95 transition disabled:opacity-50"
-          >
-            {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-            RESET SALDO MANUAL
-          </button>
-        )}
+
       </div>
     </div>
   );

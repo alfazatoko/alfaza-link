@@ -28,12 +28,7 @@ export interface SettingsRecord {
   shopName: string;
   logoUrl: string;
   profilePhotoUrl: string;
-  autoLockHour: number;
-  autoLockMinute: number;
-  autoResetHour: number;
-  autoResetMinute: number;
-  autoUnlockHour: number;
-  autoUnlockMinute: number;
+
   mutiaraQuotes: string;
   runningText: string;
   pinEnabled: boolean;
@@ -77,6 +72,9 @@ export interface TransactionRecord {
   photoUrl?: string;
   saldoBankAfter?: number;
   saldoCashAfter?: number;
+  isEdited?: boolean;
+  originalNominal?: number;
+  originalAdmin?: number;
 }
 
 export interface SaldoHistoryRecord {
@@ -102,6 +100,7 @@ export interface BalanceRecord {
   cashNonTunai: number;
   tarikNonTunai: number;
   aksNonTunai: number;
+  adminNonTunaiTotal: number;
   lastUpdateDate?: string;
 }
 
@@ -182,12 +181,7 @@ export async function getSettings(): Promise<SettingsRecord> {
         shopName: "ALFAZA LINK",
         logoUrl: "",
         profilePhotoUrl: "",
-        autoLockHour: 1,
-        autoLockMinute: 0,
-        autoResetHour: 2,
-        autoResetMinute: 0,
-        autoUnlockHour: 8,
-        autoUnlockMinute: 0,
+
         mutiaraQuotes: "Kesuksesan berawal dari kedisiplinan dan kejujuran.",
         runningText: "Selamat Datang di Alfaza Link",
         pinEnabled: false,
@@ -213,12 +207,7 @@ export async function getSettings(): Promise<SettingsRecord> {
       shopName: "ALFAZA LINK",
       logoUrl: "",
       profilePhotoUrl: "",
-      autoLockHour: 1,
-      autoLockMinute: 0,
-      autoResetHour: 2,
-      autoResetMinute: 0,
-      autoUnlockHour: 8,
-      autoUnlockMinute: 0,
+
       mutiaraQuotes: "Kesuksesan berawal dari kedisiplinan dan kejujuran.",
       runningText: "Selamat Datang di Alfaza Link",
       pinEnabled: false,
@@ -315,7 +304,7 @@ async function updateBalance(kasirName: string, tx: Omit<TransactionRecord, "id"
   const snap = await getDoc(ref);
   const today = getWibDate();
   
-  const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, lastUpdateDate: today };
+  const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, adminNonTunaiTotal: 0, lastUpdateDate: today };
   let bal: BalanceRecord;
 
   if (snap.exists()) {
@@ -343,8 +332,11 @@ async function updateBalance(kasirName: string, tx: Omit<TransactionRecord, "id"
     bal.aks += nominal;
   }
 
-  if (!(tx.category === "NON TUNAI" || isNonTunai)) {
+  if (!(tx.category === "NON TUNAI" || isNonTunai || tx.adminNonTunai)) {
     bal.adminTotal += admin;
+  }
+  if (tx.adminNonTunai) {
+    bal.adminNonTunaiTotal = (bal.adminNonTunaiTotal || 0) + admin;
   }
 
   bal.lastUpdateDate = today;
@@ -384,8 +376,11 @@ async function reverseBalance(kasirName: string, tx: TransactionRecord) {
     bal.aks -= nominal;
   }
 
-  if (!(tx.category === "NON TUNai" || isNonTunai)) {
+  if (!(tx.category === "NON TUNAI" || isNonTunai || tx.adminNonTunai)) {
     bal.adminTotal -= admin;
+  }
+  if (tx.adminNonTunai) {
+    bal.adminNonTunaiTotal = (bal.adminNonTunaiTotal || 0) - admin;
   }
 
   await updateDoc(ref, bal as any);
@@ -396,7 +391,7 @@ export async function getBalance(kasirName: string): Promise<BalanceRecord> {
   const snap = await getDoc(ref);
   const today = getWibDate();
 
-  const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, lastUpdateDate: today };
+  const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, adminNonTunaiTotal: 0, lastUpdateDate: today };
 
   if (!snap.exists()) {
     console.log(`[getBalance] ${kasirName}: dokumen tidak ada di Firestore`);
@@ -418,7 +413,7 @@ export async function getBalance(kasirName: string): Promise<BalanceRecord> {
 export async function resetBalance(kasirName: string): Promise<void> {
   const ref = doc(db, "balances", kasirName);
   const today = getWibDate();
-  await setDoc(ref, { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, lastUpdateDate: today });
+  await setDoc(ref, { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, adminNonTunaiTotal: 0, lastUpdateDate: today });
 }
 
 export async function getSaldoHistory(params: {
@@ -619,17 +614,36 @@ export async function getAttendance(params: {
   kasirName?: string;
   month?: string;
 }): Promise<AttendanceRecord[]> {
-  const snap = await getDocs(collection(db, "attendance"));
+  let q = query(collection(db, "attendance"));
+  
+  if (params.month) {
+    // params.month is YYYY-MM
+    const startStr = `${params.month}-01`;
+    const endStr = `${params.month}-31`; 
+    q = query(q, where("tanggal", ">=", startStr), where("tanggal", "<=", endStr));
+  }
+
+  const snap = await getDocs(q);
   let results = snap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord));
 
   if (params.kasirName) {
     results = results.filter(a => a.kasirName === params.kasirName);
   }
-  if (params.month) {
-    results = results.filter(a => a.tanggal.startsWith(params.month!));
-  }
+
   results.sort((a, b) => (b.tanggal || "").localeCompare(a.tanggal || ""));
   return results;
+}
+
+export async function getTodayAttendance(kasirName: string): Promise<AttendanceRecord | null> {
+  const today = getWibDate();
+  const q = query(collection(db, "attendance"), where("tanggal", "==", today));
+  const snap = await getDocs(q);
+  const existing = snap.docs
+    .map(d => ({ id: d.id, ...d.data() } as AttendanceRecord))
+    .filter(a => a.kasirName === kasirName)
+    .sort((a, b) => (a.jamMasuk || "").localeCompare(b.jamMasuk || ""));
+  
+  return existing[0] || null;
 }
 
 export async function createAttendance(data: Omit<AttendanceRecord, "id" | "createdAt">): Promise<string> {
@@ -644,15 +658,21 @@ export async function getIzinList(params?: {
   month?: string;
   nama?: string;
 }): Promise<IzinRecord[]> {
-  const snap = await getDocs(collection(db, "izin"));
+  let q = query(collection(db, "izin"));
+  
+  if (params?.month) {
+    const startStr = `${params.month}-01`;
+    const endStr = `${params.month}-31`; 
+    q = query(q, where("tanggal", ">=", startStr), where("tanggal", "<=", endStr));
+  }
+
+  const snap = await getDocs(q);
   let results = snap.docs.map(d => ({ id: d.id, ...d.data() } as IzinRecord));
 
-  if (params?.month) {
-    results = results.filter(i => i.tanggal.startsWith(params.month!));
-  }
   if (params?.nama && params.nama !== "Semua") {
     results = results.filter(i => i.nama === params.nama);
   }
+  
   results.sort((a, b) => (b.tanggal || "").localeCompare(a.tanggal || ""));
   return results;
 }
@@ -779,17 +799,18 @@ export async function loginUser(name: string, pin?: string, shift?: string, devi
   const currentTime = deviceTime || now.toTimeString().substring(0, 5);
 
   try {
-    // Fetch all attendance for this user to avoid composite index requirements
+    // Fetch only today's attendance for the whole shop, instead of all history for this user
+    // This is much smaller (e.g. 3-5 docs) compared to a user's lifetime attendance
     const q = query(
       collection(db, "attendance"),
-      where("kasirName", "==", name)
+      where("tanggal", "==", today)
     );
     
     const snap = await getDocs(q);
-    // Find the first attendance record for today (regardless of shift)
+    // Find the first attendance record for today and this user
     const existing = snap.docs
       .map(d => d.data())
-      .filter(d => d.tanggal === today)
+      .filter(d => d.kasirName === name)
       .sort((a, b) => (a.jamMasuk || "").localeCompare(b.jamMasuk || ""))[0];
 
     if (!existing) {

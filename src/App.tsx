@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { DisplayModeProvider, useDisplayMode, getMaxWidth } from "@/hooks/use-display-mode";
-import { useAutoScheduler } from "@/hooks/use-auto-scheduler";
+
 import { BottomNav } from "@/components/layout/bottom-nav";
 import NotFound from "@/pages/not-found";
 
@@ -58,7 +58,7 @@ function Router() {
   const { mode, theme } = useDisplayMode();
   const { user } = useAuth();
   const maxW = getMaxWidth(mode);
-  useAutoScheduler(!!user);
+
 
   const shadowClass = theme === "light" ? "shadow-[0_0_40px_rgba(0,0,0,0.05)]" : "shadow-none";
 

@@ -30,6 +30,7 @@ export default function Beranda() {
   const [category, setCategory] = useState("BANK");
   const [nominalDisplay, setNominalDisplay] = useState("");
   const [adminDisplay, setAdminDisplay] = useState("");
+  const [isAdminNonTunai, setIsAdminNonTunai] = useState(false);
   const [keterangan, setKeterangan] = useState("");
   const [balance, setBalance] = useState<BalanceRecord | null>(null);
   const [shopSettings, setShopSettings] = useState<SettingsRecord | null>(null);
@@ -59,7 +60,8 @@ export default function Beranda() {
     const openIsiSaldo = () => setIsSaldoModalOpen(true);
     window.addEventListener("open-isi-saldo", openIsiSaldo);
 
-    const interval = setInterval(loadBalance, 5000);
+    // MENGUBAH REFRESH OTOMATIS MENJADI 1 MENIT (Sebelumnya 5 detik, bikin kuota cepat habis!)
+    const interval = setInterval(loadBalance, 60000);
 
     const onUpdate = () => setUpdateAvailable(true);
     window.addEventListener("pwa-update-available", onUpdate);
@@ -108,21 +110,23 @@ export default function Beranda() {
         shift: shift || "NORMAL",
         nominal: n,
         admin: a,
+        adminNonTunai: isAdminNonTunai,
         nominalTunai: n,
         adminTunai: a,
       });
       toast({ title: "Transaksi berhasil disimpan" });
       setNominalDisplay("");
       setAdminDisplay("");
+      setIsAdminNonTunai(false);
       setKeterangan("");
-      nominalRef.current?.focus();
+      ketRef.current?.focus();
       await loadBalance();
     } catch (err: any) {
       toast({ title: "Gagal menyimpan transaksi", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
-  }, [user, nominalDisplay, adminDisplay, category, keterangan, toast, loadBalance]);
+  }, [user, nominalDisplay, adminDisplay, isAdminNonTunai, category, keterangan, toast, loadBalance]);
 
   const handleUpdate = useCallback(() => {
     if (confirm("Perbarui aplikasi ke versi terbaru? Halaman akan dimuat ulang.")) {
@@ -230,7 +234,12 @@ export default function Beranda() {
             <span className="text-[8px] font-bold text-gray-700/80 uppercase flex items-center gap-1 mb-1">
               <RefreshCw className="w-2.5 h-2.5" /> Admin
             </span>
-            <span className="text-xs font-black">{formatRupiah(balance?.adminTotal || 0)}</span>
+            <span className="text-xs font-black">
+              {formatRupiah(balance?.adminTotal || 0)}
+              {balance?.adminNonTunaiTotal ? (
+                <> / <span className="text-purple-700">{(balance.adminNonTunaiTotal).toLocaleString('id-ID')}</span></>
+              ) : null}
+            </span>
           </div>
         </div>
       </div>
@@ -359,6 +368,17 @@ export default function Beranda() {
 
       <div className="bg-card rounded-2xl p-4 shadow-sm border border-border mt-3">
         <div className="space-y-3 mb-4">
+          <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-11 bg-muted/30">
+            <span className="text-blue-400 text-sm">📝</span>
+            <input
+              ref={ketRef}
+              placeholder="Keterangan"
+              value={keterangan}
+              onChange={(e) => setKeterangan(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); nominalRef.current?.focus(); } }}
+              className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
           <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-12 bg-muted/30">
             <span className="text-primary font-bold text-sm">Rp</span>
             <input
@@ -372,29 +392,29 @@ export default function Beranda() {
               className="flex-1 bg-transparent outline-none text-base font-bold text-foreground placeholder:text-muted-foreground placeholder:font-normal"
             />
           </div>
-          <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-11 bg-muted/30">
-            <span className="text-amber-500 font-bold text-sm">%</span>
-            <input
-              ref={adminRef}
-              type="text"
-              inputMode="numeric"
-              placeholder="Admin"
-              value={adminDisplay}
-              onChange={(e) => setAdminDisplay(formatThousands(e.target.value))}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ketRef.current?.focus(); } }}
-              className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
-          <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-11 bg-muted/30">
-            <span className="text-blue-400 text-sm">📝</span>
-            <input
-              ref={ketRef}
-              placeholder="Keterangan"
-              value={keterangan}
-              onChange={(e) => setKeterangan(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleProses(); } }}
-              className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
-            />
+          <div className="flex items-center justify-between border border-border rounded-xl pr-3 h-11 bg-muted/30">
+            <div className="flex items-center gap-2 px-3 flex-1 h-full">
+              <span className="text-amber-500 font-bold text-sm">Rp</span>
+              <input
+                ref={adminRef}
+                type="text"
+                inputMode="numeric"
+                placeholder="Admin"
+                value={adminDisplay}
+                onChange={(e) => setAdminDisplay(formatThousands(e.target.value))}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleProses(); } }}
+                className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground w-full h-full"
+              />
+            </div>
+            <label className="flex items-center gap-1.5 border-l border-border pl-3 cursor-pointer h-full">
+              <input 
+                type="checkbox" 
+                checked={isAdminNonTunai}
+                onChange={e => setIsAdminNonTunai(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+              />
+              <span className="text-[10px] font-bold text-purple-600 uppercase">Non Tunai</span>
+            </label>
           </div>
         </div>
 

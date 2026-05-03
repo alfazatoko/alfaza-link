@@ -7,6 +7,9 @@
       "hosting": {
         "app-kasir": [
           "alfaza-kasir"
+        ],
+        "app-trend": [
+          "alfaza-trend"
         ]
       }
     }

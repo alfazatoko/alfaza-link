@@ -1427,8 +1427,7 @@ function SettingPage({ goBack }: { goBack: () => void }) {
   const [pinEnabled, setPinEnabled] = useState(false);
   const [quotes, setQuotes] = useState("");
   const [runningText, setRunningText] = useState("");
-  const [autoResetHour, setAutoResetHour] = useState(2);
-  const [autoResetMinute, setAutoResetMinute] = useState(0);
+
   const [saving, setSaving] = useState(false);
   
   const [localThemeColors, setLocalThemeColors] = useState(themeColors);
@@ -1484,8 +1483,7 @@ function SettingPage({ goBack }: { goBack: () => void }) {
       setPinEnabled(s.pinEnabled || false);
       setQuotes(s.mutiaraQuotes || "");
       setRunningText(s.runningText || "");
-      setAutoResetHour(s.autoResetHour ?? 2);
-      setAutoResetMinute(s.autoResetMinute ?? 0);
+
       if (s.categoryLabels) setCatLabels(s.categoryLabels);
       if (s.themeColors) {
         setLocalThemeColors(prev => ({ ...prev, ...s.themeColors }));
@@ -1506,8 +1504,7 @@ function SettingPage({ goBack }: { goBack: () => void }) {
         pinEnabled,
         mutiaraQuotes: quotes,
         runningText,
-        autoResetHour,
-        autoResetMinute,
+
         categoryLabels: catLabels,
         themeColors: localThemeColors,
         balanceColors,
@@ -1719,20 +1716,7 @@ function SettingPage({ goBack }: { goBack: () => void }) {
               </div>
             </div>
             
-            <div className="pt-2 border-t border-gray-50 dark:border-slate-800">
-              <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-2 flex items-center gap-2">
-                <RefreshCw className="w-3.5 h-3.5 text-green-500" /> Jam Reset Otomatis
-              </label>
-              <div className="flex items-center gap-2">
-                <select value={autoResetHour} onChange={e => setAutoResetHour(parseInt(e.target.value))} className="flex-1 border border-gray-100 dark:border-slate-800 rounded-xl px-3 py-2 text-xs bg-gray-50 dark:bg-slate-800/50 outline-none font-bold text-center">
-                  {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2, '0')}</option>)}
-                </select>
-                <span className="font-bold">:</span>
-                <select value={autoResetMinute} onChange={e => setAutoResetMinute(parseInt(e.target.value))} className="flex-1 border border-gray-100 dark:border-slate-800 rounded-xl px-3 py-2 text-xs bg-gray-50 dark:bg-slate-800/50 outline-none font-bold text-center">
-                  {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2, '0')}</option>)}
-                </select>
-              </div>
-            </div>
+
 
             <div className="pt-2 border-t border-gray-50 dark:border-slate-800">
               <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1.5 flex items-center gap-2">

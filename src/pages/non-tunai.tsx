@@ -11,6 +11,7 @@ export default function NonTunai() {
   const [nominalDisplay, setNominalDisplay] = useState("");
   const [adminDisplay, setAdminDisplay] = useState("");
   const [keterangan, setKeterangan] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("NON TUNAI");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -33,7 +34,7 @@ export default function NonTunai() {
       const now = new Date();
       await createTransaction({
         kasirName: user.name,
-        category: "NON TUNAI",
+        category: selectedCategory,
         nominal: n,
         nominalTunai: 0,
         nominalNonTunai: n,
@@ -78,6 +79,21 @@ export default function NonTunai() {
         )}
 
         <div className="bg-white rounded-3xl p-5 shadow-md border border-purple-100 mb-5">
+          <div className="flex bg-purple-50 p-1 rounded-xl mb-5 border border-purple-100">
+            <button
+              onClick={() => setSelectedCategory("NON TUNAI")}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${selectedCategory === "NON TUNAI" ? "bg-purple-500 text-white shadow-sm" : "text-purple-600 hover:bg-purple-100"}`}
+            >
+              NON TUNAI
+            </button>
+            <button
+              onClick={() => setSelectedCategory("CLOSING")}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${selectedCategory === "CLOSING" ? "bg-purple-500 text-white shadow-sm" : "text-purple-600 hover:bg-purple-100"}`}
+            >
+              TRANSAKSI CLOSING
+            </button>
+          </div>
+
           <div className="space-y-4 mb-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center shrink-0">

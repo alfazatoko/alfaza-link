@@ -140,7 +140,7 @@ export default function Absen() {
                 className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-orange-50 border-2 border-orange-100 text-orange-700 active:scale-95 transition-all disabled:opacity-50"
               >
                 <LogIn className="w-6 h-6" />
-                <span className="text-xs font-bold uppercase">Shift Pagi</span>
+                <span className="text-xs font-bold uppercase">Absen Pagi</span>
               </button>
               <button 
                 onClick={() => handleClockIn("SIANG")}
@@ -148,7 +148,7 @@ export default function Absen() {
                 className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-indigo-50 border-2 border-indigo-100 text-indigo-700 active:scale-95 transition-all disabled:opacity-50"
               >
                 <LogIn className="w-6 h-6" />
-                <span className="text-xs font-bold uppercase">Shift Siang</span>
+                <span className="text-xs font-bold uppercase">Absen Siang</span>
               </button>
               <button 
                 onClick={() => handleClockIn("FULL")}
@@ -156,7 +156,7 @@ export default function Absen() {
                 className="col-span-2 flex items-center justify-center gap-3 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-100 text-emerald-700 active:scale-95 transition-all disabled:opacity-50"
               >
                 <LogIn className="w-6 h-6" />
-                <span className="text-xs font-bold uppercase">Full Day</span>
+                <span className="text-xs font-bold uppercase">Absen Full Day</span>
               </button>
             </div>
           </div>

@@ -6,11 +6,11 @@ import { getTransactions, getSaldoHistory, getUsers, updateTransaction, deleteTr
 import { Receipt, AlertCircle, X, Lock, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const CATEGORY_FILTERS = ["Semua", "Bank", "Flip", "App", "Dana", "Tarik", "Aks"];
+const CATEGORY_FILTERS = ["20 Riwayat Terakhir", "Semua", "Bank", "Flip", "App", "Dana", "Tarik", "Aks"];
 const CATEGORY_MAP: Record<string, string> = {
   Bank: "BANK", Flip: "FLIP", App: "APP PULSA", Dana: "DANA", Tarik: "TARIK TUNAI", Aks: "AKSESORIS",
 };
-const SALDO_FILTERS = ["Semua", "Bank", "Cash", "Saldo Real", "Sisa Saldo"];
+const SALDO_FILTERS = ["Semua", "Bank", "Cash", "Saldo Real"];
 
 export default function Riwayat() {
   const { user } = useAuth();
@@ -20,7 +20,7 @@ export default function Riwayat() {
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [selectedKasir, setSelectedKasir] = useState("Semua Kasir");
-  const [selectedCategory, setSelectedCategory] = useState("Semua");
+  const [selectedCategory, setSelectedCategory] = useState("20 Riwayat Terakhir");
   const [selectedSaldoTab, setSelectedSaldoTab] = useState("Semua");
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
@@ -87,11 +87,21 @@ export default function Riwayat() {
   const handleEditSave = async () => {
     if (!editTx) return;
     setEditSaving(true);
+    
+    const parsedNominal = parseInt(parseThousands(editNominal));
+    const finalNominal = isNaN(parsedNominal) ? editTx.nominal : parsedNominal;
+    
+    const parsedAdmin = parseInt(parseThousands(editAdmin));
+    const finalAdmin = isNaN(parsedAdmin) ? 0 : parsedAdmin;
+
     try {
       await updateTransaction(editTx.id, {
-        nominal: parseInt(parseThousands(editNominal)) || editTx.nominal,
-        admin: parseInt(parseThousands(editAdmin)) || 0,
+        nominal: finalNominal,
+        admin: finalAdmin,
         keterangan: editKeterangan,
+        isEdited: true,
+        originalNominal: editTx.isEdited ? editTx.originalNominal : editTx.nominal,
+        originalAdmin: editTx.isEdited ? editTx.originalAdmin : editTx.admin,
       });
       toast({ title: "Diperbarui" });
       setEditTx(null);
@@ -144,10 +154,14 @@ export default function Riwayat() {
   // Filter
   const filteredTx = useMemo(() => {
     let result = transactions;
-    if (selectedCategory !== "Semua") {
+    
+    // Filter Category
+    if (selectedCategory !== "Semua" && selectedCategory !== "20 Riwayat Terakhir") {
       const mapped = CATEGORY_MAP[selectedCategory];
       if (mapped) result = result.filter(tx => tx.category === mapped);
     }
+    
+    // Filter Search
     if (searchText.trim()) {
       const q = searchText.toLowerCase().trim();
       result = result.filter(tx =>
@@ -156,6 +170,12 @@ export default function Riwayat() {
         (tx.kasirName || "").toLowerCase().includes(q)
       );
     }
+    
+    // Slice if 20 Riwayat Terakhir
+    if (selectedCategory === "20 Riwayat Terakhir") {
+      return result.slice(0, 20);
+    }
+    
     return result;
   }, [transactions, selectedCategory, searchText]);
 
@@ -166,7 +186,6 @@ export default function Riwayat() {
     if (selectedSaldoTab === "Bank") return s.jenis === "Bank";
     if (selectedSaldoTab === "Cash") return s.jenis === "Cash";
     if (selectedSaldoTab === "Saldo Real") return s.jenis === "Real App";
-    if (selectedSaldoTab === "Sisa Saldo") return s.jenis === "Sisa Saldo";
     return true;
   });
 
@@ -212,10 +231,16 @@ export default function Riwayat() {
         </div>
       )}
 
-      <div className="grid grid-cols-7 gap-1.5 mb-3">
-        {CATEGORY_FILTERS.map(c => (
-          <button key={c} onClick={() => setSelectedCategory(c)} className={`rounded-full py-1.5 text-xs font-semibold border-[1.5px] text-center ${selectedCategory === c ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-900 border-gray-300'}`}>{c}</button>
-        ))}
+      <div className="mb-3">
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="w-full bg-white border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold text-gray-700 outline-none focus:border-blue-500 transition-colors"
+        >
+          {CATEGORY_FILTERS.map(c => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
 
       {/* Tabel Transaksi */}
@@ -241,47 +266,67 @@ export default function Riwayat() {
                   <span>{(tx.transTime || "").slice(0, 5)}</span>
                   <span className={`font-bold truncate ${nt ? 'text-purple-600' : 'text-blue-900'}`}>{getShortCategory(tx.category)}</span>
                   <span className={`font-bold truncate ${nt ? 'text-purple-600' : 'text-blue-600'}`}>{formatRupiah(tx.nominal)}</span>
-                  <span className="truncate">{formatRupiah(tx.admin || 0)}</span>
+                  <span className={`truncate font-semibold ${tx.adminNonTunai ? 'text-purple-600' : 'text-gray-900'}`}>{formatRupiah(tx.admin || 0)}</span>
                   <span className="text-gray-500 truncate">{nt ? "💳 " : ""}{ketText}</span>
                   <span className="text-gray-400 text-[10px] text-center">{isExpanded ? "▲" : "▼"}</span>
                 </div>
 
                 {isExpanded && (
-                  <div className="px-3.5 py-2 pb-3 bg-gray-50 border-b border-gray-200">
-                    <div className="text-xs text-gray-500 mb-1">Tanggal: <strong>{tx.transDate}</strong></div>
-                    <div className="text-xs text-gray-500 mb-1">Pembayaran: <strong className={nt ? 'text-purple-600' : 'text-green-600'}>{nt ? "NON TUNAI" : "TUNAI"}</strong></div>
-                    {ketText && <div className="text-xs text-gray-500 mb-1">Keterangan: <strong className="text-gray-700">{ketText}</strong></div>}
-                    <div className="text-xs text-gray-500 mb-1">Kasir: <strong>{tx.kasirName || "-"}</strong></div>
-                    <div className="grid grid-cols-2 gap-2 my-2.5 p-2.5 bg-blue-50/50 rounded-xl border border-blue-100">
-                      <div>
-                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">Sisa Saldo Bank</p>
-                        <p className="text-xs font-black text-blue-700">{formatRupiah(tx.saldoBankAfter || 0)}</p>
+                  <div className="px-3.5 py-2.5 bg-slate-50 border-b border-gray-200">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex gap-2 text-[10px] text-gray-500 font-medium">
+                        <span>📅 {tx.transDate}</span>
+                        <span className="text-gray-300">|</span>
+                        <span>👤 {tx.kasirName || "-"}</span>
                       </div>
-                      <div className="pl-2 border-l border-blue-100">
-                        <p className="text-[9px] font-bold text-orange-400 uppercase tracking-wider mb-0.5">Sisa Saldo Cash</p>
-                        <p className="text-xs font-black text-orange-600">{formatRupiah(tx.saldoCashAfter || 0)}</p>
+                      <div className={`text-[9px] font-black px-2 py-0.5 rounded-full ${nt ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
+                        {nt ? "NON TUNAI" : "TUNAI"}
+                      </div>
+                    </div>
+
+                    {ketText && (
+                      <div className="text-[11px] text-gray-700 mb-2 bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 flex gap-2 items-start">
+                        <span>📝</span> <span>{ketText}</span>
+                      </div>
+                    )}
+
+                    {tx.isEdited && (
+                      <div className="text-[10px] text-orange-600 font-bold mb-2 flex items-center gap-1.5 bg-orange-50 w-full px-2.5 py-1.5 rounded-lg border border-orange-200">
+                        <span>👁️</span> Data Awal: Nominal {formatRupiah(tx.originalNominal || 0)}, Admin {formatRupiah(tx.originalAdmin || 0)}
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center bg-blue-50/50 rounded-xl border border-black p-2.5">
+                      <div className="flex gap-4 text-[10px]">
+                        <div>
+                          <p className="font-bold text-blue-400 uppercase mb-0.5">Saldo Bank</p>
+                          <p className="font-black text-blue-700">{formatRupiah(tx.saldoBankAfter || 0)}</p>
+                        </div>
+                        <div className="pl-4 border-l border-blue-100">
+                          <p className="font-bold text-orange-400 uppercase mb-0.5">Saldo Cash</p>
+                          <p className="font-black text-orange-600">{formatRupiah(tx.saldoCashAfter || 0)}</p>
+                        </div>
+                      </div>
+                      <div>
+                        {tx.transDate === today ? (
+                          <button onClick={e => { e.stopPropagation(); openEdit(tx); }} className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-[11px] font-bold text-gray-700 hover:bg-gray-50 flex items-center gap-1 shadow-sm transition-all active:scale-95">
+                            <Pencil className="w-3 h-3" /> Edit
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1.5 rounded-lg">
+                            <Lock className="w-3 h-3" /> Terkunci
+                          </div>
+                        )}
                       </div>
                     </div>
                     {tx.photoUrl && (
-                      <div className="mb-3">
-                        <p className="text-[10px] font-bold text-gray-400 mb-1 uppercase">Foto Struk:</p>
-                        <div className="w-24 h-24 rounded-xl border border-gray-200 bg-white overflow-hidden cursor-pointer shadow-sm active:scale-95 transition" onClick={() => setPreviewImage(tx.photoUrl!)}>
+                      <div className="mt-2.5">
+                        <p className="text-[9px] font-bold text-gray-400 mb-1 uppercase">Foto Struk:</p>
+                        <div className="w-16 h-16 rounded-lg border border-gray-200 bg-white overflow-hidden cursor-pointer shadow-sm active:scale-95 transition" onClick={() => setPreviewImage(tx.photoUrl!)}>
                           <img src={tx.photoUrl} alt="Struk" className="w-full h-full object-cover" />
                         </div>
                       </div>
                     )}
-                    <div className="flex gap-2.5">
-                      {tx.transDate === today ? (
-                        <>
-                          <button onClick={e => { e.stopPropagation(); openEdit(tx); }} className="bg-blue-50 border border-blue-200 rounded-[10px] px-4 py-1.5 text-[13px] font-bold text-blue-600 flex items-center gap-1">✏️ Edit</button>
-                          <button onClick={e => { e.stopPropagation(); handleDelete(tx.id); }} className="bg-red-50 border border-red-200 rounded-[10px] px-4 py-1.5 text-[13px] font-bold text-red-600 flex items-center gap-1">🗑️ Hapus</button>
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-400 bg-gray-100 px-3 py-1.5 rounded-lg">
-                          <Lock className="w-3 h-3" /> Transaksi Terkunci (Masa Lalu)
-                        </div>
-                      )}
-                    </div>
                   </div>
                 )}
               </div>
@@ -290,9 +335,22 @@ export default function Riwayat() {
         )}
 
         {filteredTx.length > 0 && (
-          <div className="border-t border-gray-100 px-3 py-2 text-[10px] text-gray-500 flex justify-between">
-            <span>{filteredTx.length} transaksi</span>
-            <span>Total: {formatRupiah(filteredTx.reduce((sum, tx) => sum + (tx.nominal || 0), 0))}</span>
+          <div className="border-t border-gray-200 px-3 py-3 text-[11px] bg-gray-50/50">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-bold text-gray-700">{filteredTx.length} transaksi</span>
+              <div className="flex items-center gap-2.5">
+                <span className="font-bold text-gray-800">Total: {formatRupiah(filteredTx.reduce((sum, tx) => sum + (tx.nominal || 0), 0))}</span>
+                <span className="text-gray-500 font-medium border-l border-gray-300 pl-2.5">
+                  Admin: {formatRupiah(filteredTx.reduce((sum, tx) => sum + (!tx.adminNonTunai ? (tx.admin || 0) : 0), 0))}
+                  {filteredTx.reduce((sum, tx) => sum + (tx.adminNonTunai ? (tx.admin || 0) : 0), 0) > 0 && (
+                    <> / <span className="text-purple-600">{(filteredTx.reduce((sum, tx) => sum + (tx.adminNonTunai ? (tx.admin || 0) : 0), 0)).toLocaleString('id-ID')}</span></>
+                  )}
+                </span>
+              </div>
+            </div>
+            <div className="text-right text-blue-700 font-bold border-t border-gray-200 border-dashed pt-2 mt-1 flex justify-end gap-1 items-center">
+              🏛️ <span>Sisa Saldo Bank (Catatan) : {formatRupiah(transactions[0]?.saldoBankAfter || 0)}</span>
+            </div>
           </div>
         )}
       </div>
