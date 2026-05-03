@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 import { getWibDate } from "@/lib/utils";
 import { Clock, MapPin, Camera, CheckCircle2, History, Timer, LogOut, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore/lite";
+import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
 
 export default function Absen() {
   const { user } = useAuth();

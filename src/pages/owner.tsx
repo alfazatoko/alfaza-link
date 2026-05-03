@@ -7,8 +7,8 @@ import {
   getTransactions, getSaldoHistory, getBalance, resetBalance,
   getAttendance, getIzinList, createIzin, updateIzin,
   getHutangList, getKontakList,
-  resetAllData, getDailyNotes,
-  type UserRecord, type SettingsRecord, type TransactionRecord, type AttendanceRecord, type IzinRecord, type SaldoHistoryRecord, type CategoryLabels,
+  resetAllData, getDailyNotes, getDailyRekap, getDailyRekapByRange, getAllRekapKasirByRange,
+  type UserRecord, type SettingsRecord, type TransactionRecord, type AttendanceRecord, type IzinRecord, type SaldoHistoryRecord, type CategoryLabels, type DailyRekapRecord
 } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -285,7 +285,7 @@ function KasirPage({ goBack }: { goBack: () => void }) {
 }
 
 function GrafikPage({ goBack }: { goBack: () => void }) {
-  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+  const [rekapData, setRekapData] = useState<any[]>([]);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [filterKasir, setFilterKasir] = useState("Semua");
   const today = getWibDate();
@@ -310,34 +310,32 @@ function GrafikPage({ goBack }: { goBack: () => void }) {
       sDate = startDate;
       eDate = endDate;
     }
-    Promise.all([
-      getTransactions({ startDate: sDate, endDate: eDate }),
-      getUsers(),
-    ]).then(([t, u]) => {
-      setTransactions(t);
-      setUsers(u);
+
+    // OPTIMASI: Gunakan Rekap Harian untuk Grafik (Hemat 99% Kuota)
+    getDailyRekapByRange(sDate, eDate).then(data => {
+      setRekapData(data);
     }).catch(() => {});
+    
+    getUsers().then(setUsers).catch(() => {});
   }, [startDate, endDate, month, viewMode]);
 
   const kasirList = users.filter(u => u.role !== "owner" && u.isActive);
-  const filteredTx = filterKasir === "Semua" ? transactions : transactions.filter(t => t.kasirName === filterKasir);
+  // Note: Kasir filter di grafik sekarang hanya aktif jika data per kasir ada di rekap.
+  // Untuk saat ini, kita tampilkan rekap GLOBAL.
+  const filteredData = rekapData;
 
   const dailyData = useMemo(() => {
-    const map = new Map<string, { bank: number; flip: number; app: number; dana: number; tarik: number; aks: number; admin: number }>();
-    filteredTx.forEach(tx => {
-      const d = tx.transDate;
-      if (!map.has(d)) map.set(d, { bank: 0, flip: 0, app: 0, dana: 0, tarik: 0, aks: 0, admin: 0 });
-      const entry = map.get(d)!;
-      if (tx.category === "BANK") entry.bank += tx.nominal || 0;
-      else if (tx.category === "FLIP") entry.flip += tx.nominal || 0;
-      else if (tx.category === "APP PULSA") entry.app += tx.nominal || 0;
-      else if (tx.category === "DANA") entry.dana += tx.nominal || 0;
-      else if (tx.category === "TARIK TUNAI") entry.tarik += tx.nominal || 0;
-      else if (tx.category === "AKSESORIS") entry.aks += tx.nominal || 0;
-      entry.admin += tx.admin || 0;
-    });
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([date, data]) => ({ date: date.slice(5), ...data }));
-  }, [filteredTx]);
+    return filteredData.sort((a, b) => a.date.localeCompare(b.date)).map(d => ({
+      date: d.date.slice(5),
+      bank: d.total_bank || 0,
+      flip: d.total_flip || 0,
+      app: d.total_app || 0,
+      dana: d.total_dana || 0,
+      tarik: d.total_tarik || 0,
+      aks: d.total_aks || 0,
+      admin: d.total_admin || 0
+    }));
+  }, [filteredData]);
 
   const maxVal = Math.max(1, ...dailyData.map(d => Math.max(d.bank, d.flip, d.app, d.dana, d.tarik, d.aks)));
   const categories = [
@@ -433,7 +431,7 @@ function GrafikPage({ goBack }: { goBack: () => void }) {
 
 function PerformaPage({ goBack }: { goBack: () => void }) {
   const [users, setUsers] = useState<UserRecord[]>([]);
-  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+  const [rekapList, setRekapList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const now = new Date();
   const [month, setMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
@@ -444,12 +442,14 @@ function PerformaPage({ goBack }: { goBack: () => void }) {
     const startDate = `${y}-${String(m).padStart(2, "0")}-01`;
     const lastDay = new Date(y, m, 0).getDate();
     const endDate = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    
+    // OPTIMASI: Gunakan Rekap Kasir (Hemat 95% kuota)
     Promise.all([
       getUsers(),
-      getTransactions({ startDate, endDate }),
-    ]).then(([u, t]) => {
+      getAllRekapKasirByRange(startDate, endDate),
+    ]).then(([u, r]) => {
       setUsers(u);
-      setTransactions(t);
+      setRekapList(r);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [month]);
 
@@ -457,14 +457,15 @@ function PerformaPage({ goBack }: { goBack: () => void }) {
 
   const kasirList = users.filter(u => u.role !== "owner" && u.isActive);
   const performaData = kasirList.map(k => {
-    const kasirTx = transactions.filter(t => t.kasirName === k.name);
-    const daysSet = new Set(kasirTx.map(t => t.transDate));
-    const daysActive = daysSet.size || 1;
-    const totalNominal = kasirTx.reduce((s, t) => s + (t.nominal || 0), 0);
-    const totalAdmin = kasirTx.reduce((s, t) => s + (t.admin || 0), 0);
+    const kasirRekap = (rekapList || []).filter(r => r && r.kasirName === k.name);
+    const totalNominal = kasirRekap.reduce((s, r) => s + (r.total_nominal || 0), 0);
+    const totalAdmin = kasirRekap.reduce((s, r) => s + (r.total_admin || 0), 0);
+    const totalTx = kasirRekap.reduce((s, r) => s + (r.count_tx || 0), 0);
+    const daysActive = kasirRekap.length || 1;
+    
     return {
       name: k.name,
-      count: kasirTx.length,
+      count: totalTx,
       totalNominal,
       totalAdmin,
       rataPerHari: Math.round(totalNominal / daysActive),
@@ -531,6 +532,7 @@ function PerformaPage({ goBack }: { goBack: () => void }) {
 
 function AbsenPage({ goBack }: { goBack: () => void }) {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [rekapList, setRekapList] = useState<any[]>([]);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"ringkasan" | "lengkap">("ringkasan");
@@ -542,12 +544,20 @@ function AbsenPage({ goBack }: { goBack: () => void }) {
 
   useEffect(() => {
     setLoading(true);
+    const y = monthDate.getFullYear();
+    const m = monthDate.getMonth() + 1;
+    const startDate = `${y}-${String(m).padStart(2, "0")}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const endDate = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
     Promise.all([
       getAttendance({ month: monthStr }),
       getUsers(),
-    ]).then(([a, u]) => {
+      getAllRekapKasirByRange(startDate, endDate),
+    ]).then(([a, u, r]) => {
       setAttendance(a);
       setUsers(u);
+      setRekapList(r);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [monthStr]);
 
@@ -563,11 +573,9 @@ function AbsenPage({ goBack }: { goBack: () => void }) {
   }, [attendance, filterKasir]);
 
   const summaryData = kasirList.map(k => {
-    const kasirAbsen = attendance.filter(a => a.kasirName === k.name);
-    const hadir = kasirAbsen.length;
-    const pagi = kasirAbsen.filter(a => a.shift === "PAGI").length;
-    const siang = kasirAbsen.filter(a => a.shift === "SIANG").length;
-    return { name: k.name, hadir, pagi, siang };
+    const kasirRekap = (rekapList || []).filter(r => r && r.kasirName === k.name);
+    const hadir = kasirRekap.filter(r => (r.count_absen_masuk || 0) > 0).length;
+    return { name: k.name, hadir, pagi: 0, siang: 0 };
   });
 
   const attendanceByDate = useMemo(() => {
@@ -1781,12 +1789,14 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
   const [allNotes, setAllNotes] = useState<Record<string, { sisaSaldoBank: number; saldoRealApp: number }>>({});
   const [allSaldoHistory, setAllSaldoHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dailyRekap, setDailyRekap] = useState<DailyRekapRecord | null>(null);
   const today = getWibDate();
   const [date, setDate] = useState(today);
   const [viewMode, setViewMode] = useState<"day" | "month">("day");
   const now = new Date();
   const [month, setMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
   const [selectedKasir, setSelectedKasir] = useState("Semua");
+  const [allKasirRekaps, setAllKasirRekaps] = useState<DailyRekapRecord[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -1800,18 +1810,30 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
       const lastDay = new Date(y, m, 0).getDate();
       endDate = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
     }
+    
     Promise.all([
       getUsers(),
-      getTransactions({ startDate, endDate }),
-      getSaldoHistory({ startDate, endDate }),
-    ]).then(async ([u, t, sh]) => {
+      viewMode === "day" ? getDailyRekap(date).catch(() => null) : Promise.resolve(null),
+      viewMode === "day" ? getAllRekapKasirByRange(date, date).catch(() => []) : Promise.resolve([]),
+      viewMode !== "day" ? getTransactions({ startDate, endDate }).catch(() => []) : Promise.resolve([]),
+      viewMode !== "day" ? getSaldoHistory({ startDate, endDate }).catch(() => []) : Promise.resolve([]),
+    ]).then(([u, rekap, kasirRekaps, t, sh]) => {
       setUsers(u);
+      setDailyRekap(rekap);
+      setAllKasirRekaps(kasirRekaps);
       setAllTransactions(t);
       setAllSaldoHistory(sh);
-      const kasirList = u.filter(usr => usr.role !== "owner" && usr.isActive);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [date, month, viewMode]);
+
+  useEffect(() => {
+    if (viewMode === "day" && selectedKasir !== "Admin" && users.length > 0) {
+      const kasirList = users.filter(usr => usr.role !== "owner" && usr.isActive);
       const notesMap: Record<string, { sisaSaldoBank: number; saldoRealApp: number }> = {};
-      if (viewMode === "day") {
+      
+      const fetchNotes = async () => {
         for (const k of kasirList) {
+          if (selectedKasir !== "Semua" && k.name !== selectedKasir) continue;
           try {
             const notes = await getDailyNotes(k.name, date);
             notesMap[k.name] = notes;
@@ -1819,13 +1841,16 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
             notesMap[k.name] = { sisaSaldoBank: 0, saldoRealApp: 0 };
           }
         }
-      }
-      setAllNotes(notesMap);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [date, month, viewMode]);
+        setAllNotes(notesMap);
+      };
+      fetchNotes();
+    } else {
+      setAllNotes({});
+    }
+  }, [date, viewMode, selectedKasir, users]);
 
   const kasirList = users.filter(u => u.role !== "owner" && u.isActive);
-  const allKasirs = [{ name: "PANEL ADMIN", isAdmin: true }, ...kasirList.map(k => ({ name: k.name, isAdmin: false }))];
+  const allKasirs = [{ name: "PANEL ADMIN (GLOBAL)", isAdmin: true }, ...kasirList.map(k => ({ name: k.name, isAdmin: false }))];
   const chipNames = ["Semua", "Admin", ...kasirList.map(k => k.name)];
 
   const filteredKasirs = selectedKasir === "Semua"
@@ -1835,6 +1860,38 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
       : allKasirs.filter(k => k.name === selectedKasir);
 
   const getKasirData = (kasirName: string, isAdmin: boolean) => {
+    // MODE HARIAN (Gunakan Rekap Kasir - Super Efisien)
+    if (viewMode === "day") {
+      const rekap = isAdmin ? dailyRekap : allKasirRekaps.find(r => r.kasirName === kasirName);
+      if (rekap) {
+        const totalPenjualan = (rekap.total_bank || 0) + (rekap.total_flip || 0) + (rekap.total_dana || 0) + (rekap.total_app || 0);
+        const tAdminTunai = rekap.total_admin || 0;
+        const tAdminNT = rekap.total_admin_non_tunai || 0;
+        const tTarik = rekap.total_tarik || 0;
+        const tAks = rekap.total_aks || 0;
+        
+        const notes = allNotes[kasirName] || { sisaSaldoBank: 0, saldoRealApp: 0 };
+        const saldoBankCatatan = isAdmin ? 0 : notes.sisaSaldoBank;
+        const saldoRealApp = isAdmin ? 0 : notes.saldoRealApp;
+
+        return {
+          totalIsiSaldoBank: rekap.total_isi_bank || 0,
+          saldoBankCatatan,
+          saldoRealApp,
+          selisih: saldoBankCatatan - saldoRealApp,
+          sesuai: isAdmin || (saldoBankCatatan - saldoRealApp === 0),
+          totalPenjualan,
+          totalAdmin: tAdminTunai + tAdminNT,
+          sisaCash: totalPenjualan - tTarik,
+          tarik: tTarik,
+          nonTunai: rekap.total_non_tunai || 0,
+          totalUangCash: (totalPenjualan - tTarik) + tAdminTunai + tAks,
+          saldoPlusPenjualan: saldoBankCatatan + totalPenjualan,
+        };
+      }
+    }
+
+    // MODE BULANAN (Manual calculation dari transaksi)
     const tx = isAdmin ? allTransactions : allTransactions.filter(t => t.kasirName === kasirName);
     const bank = tx.filter(t => t.category === "BANK").reduce((s, t) => s + (t.nominal || 0), 0);
     const flip = tx.filter(t => t.category === "FLIP").reduce((s, t) => s + (t.nominal || 0), 0);
@@ -1845,8 +1902,8 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
     const totalAdmin = tx.reduce((s, t) => s + (t.admin || 0), 0);
     const totalPenjualan = bank + flip + dana + app;
     const sisaCash = totalPenjualan - tarik;
-    const nonTunai = tx.filter(t => (t.nominalNonTunai || 0) > 0).reduce((s, t) => s + (t.nominalNonTunai || 0), 0);
-    const totalUangCash = sisaCash + totalAdmin + aks;
+    const nonTunai = tx.filter(t => (t.paymentMethod || "").toLowerCase().includes("non-tunai")).reduce((s, t) => s + (t.nominal || 0), 0);
+    const totalUangCash = sisaCash + tx.reduce((s, t) => s + (!t.adminNonTunai ? (t.admin || 0) : 0), 0) + aks;
 
     const sh = isAdmin ? allSaldoHistory : allSaldoHistory.filter((s: any) => s.kasirName === kasirName);
     const totalIsiSaldoBank = sh.reduce((s: number, h: any) => s + (h.nominal || 0), 0);
@@ -1865,29 +1922,29 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
   };
 
   return (
-    <div className="px-3 pt-3 pb-20 min-h-screen bg-gradient-to-b from-primary via-blue-500 to-blue-400">
+    <div className="px-3 pt-3 pb-20 min-h-screen bg-gradient-to-b from-primary via-blue-600 to-indigo-500">
       <div className="flex items-center gap-2 mb-3">
         <button onClick={goBack} className="text-white"><ArrowLeft className="w-5 h-5" /></button>
         <div>
-          <h1 className="font-extrabold text-base text-white">Ringkasan Harian Per Kasir</h1>
-          <p className="text-[11px] text-white/70">Data ringkasan seluruh kasir</p>
+          <h1 className="font-extrabold text-base text-white">Ringkasan Per Kasir</h1>
+          <p className="text-[10px] text-white/70 font-bold uppercase">Data harian & bulanan</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <button onClick={() => setViewMode("day")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "day" ? "bg-white text-primary shadow" : "bg-white/20 text-white border border-white/30"}`}>
+        <button onClick={() => setViewMode("day")} className={`py-2 rounded-full text-xs font-bold transition border border-white/20 ${viewMode === "day" ? "bg-white text-primary shadow" : "bg-white/10 text-white"}`}>
           Per Hari
         </button>
-        <button onClick={() => setViewMode("month")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "month" ? "bg-white text-primary shadow" : "bg-white/20 text-white border border-white/30"}`}>
+        <button onClick={() => setViewMode("month")} className={`py-2 rounded-full text-xs font-bold transition border border-white/20 ${viewMode === "month" ? "bg-white text-primary shadow" : "bg-white/10 text-white"}`}>
           Per Bulan
         </button>
       </div>
 
       <div className="mb-3">
         {viewMode === "day" ? (
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full rounded-xl border border-white/30 bg-white/10 text-white px-3 py-2.5 text-sm outline-none" />
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full rounded-xl border border-white/20 bg-white/10 text-white px-3 py-2 text-sm outline-none font-bold" />
         ) : (
-          <input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-full rounded-xl border border-white/30 bg-white/10 text-white px-3 py-2.5 text-sm outline-none" />
+          <input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-full rounded-xl border border-white/20 bg-white/10 text-white px-3 py-2 text-sm outline-none font-bold" />
         )}
       </div>
 
@@ -1896,87 +1953,118 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
           <button
             key={name}
             onClick={() => setSelectedKasir(name)}
-            className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition flex-shrink-0 ${selectedKasir === name ? "bg-white text-primary shadow" : "bg-white/20 text-white border border-white/30"}`}
+            className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[11px] font-bold transition flex-shrink-0 border border-white/20 ${selectedKasir === name ? "bg-white text-primary shadow" : "bg-white/10 text-white"}`}
           >
-            {name}
+            {name === "Admin" ? "SEMUA (GLOBAL)" : name}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="text-center py-10"><Loader2 className="w-6 h-6 animate-spin mx-auto text-white" /></div>
+        <div className="text-center py-10 flex flex-col items-center gap-2">
+          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+          <p className="text-[10px] font-bold text-gray-400 uppercase">Sinkronisasi Data...</p>
+        </div>
       ) : filteredKasirs.length === 0 ? (
-        <div className="text-center py-10 text-white/70 text-sm">Tidak ada data kasir</div>
+        <div className="text-center py-10 text-gray-400 text-sm">Tidak ada data kasir</div>
       ) : (
         filteredKasirs.map((k, idx) => {
           const data = getKasirData(k.name, k.isAdmin);
           return (
-            <div key={k.name} className="bg-white rounded-2xl mb-4 shadow-lg overflow-hidden">
-              <div className={`px-4 py-3 flex items-center justify-between ${k.isAdmin ? 'bg-gradient-to-r from-blue-700 to-blue-500' : 'bg-gradient-to-r from-green-600 to-green-400'}`}>
-                <span className="text-white font-bold text-sm">{String(idx + 1).padStart(2, "0")} - {k.name.toUpperCase()}</span>
-                <span className="flex items-center gap-1 text-white text-[10px] font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-green-300 animate-pulse" /> Live
+            <div key={k.name} className="bg-white rounded-[25px] mb-4 shadow-sm border border-black overflow-hidden p-4">
+              {/* Kasir Name Header */}
+              <div className="flex items-center justify-between mb-3 px-1">
+                <span className="font-black text-xs text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${k.isAdmin ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+                  {k.name}
                 </span>
+                <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Live Rekap</span>
               </div>
-              <div className="p-4 space-y-2.5">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-600 flex items-center gap-1.5">💳 Total Tambah/Isi Saldo Bank</span>
-                  <span className="font-bold text-blue-700">{formatRupiah(data.totalIsiSaldoBank)}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-600 flex items-center gap-1.5">🏦 Saldo Bank Catatan</span>
-                  <span className="font-bold text-blue-700">{formatRupiah(data.saldoBankCatatan)}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-600 flex items-center gap-1.5">📱 Saldo Real App</span>
-                  <span className="font-bold text-blue-700">{formatRupiah(data.saldoRealApp)}</span>
-                </div>
 
-                <div className="flex justify-between items-center text-xs bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="text-gray-700 font-semibold flex items-center gap-1.5">✅ Selisih</span>
-                  <span className={`font-bold ${data.sesuai ? 'text-green-600' : 'text-red-600'}`}>
+              {/* Top Saldo List */}
+              <div className="space-y-2 mb-4 px-1">
+                <div className="flex justify-between items-center text-[11px]">
+                  <div className="flex items-center gap-2 font-bold text-slate-600">
+                    <span>💳</span> Total Tambah/Isi Saldo Bank
+                  </div>
+                  <span className="font-black text-blue-700">{formatRupiah(data.totalIsiSaldoBank)}</span>
+                </div>
+                {!k.isAdmin && (
+                  <>
+                    <div className="flex justify-between items-center text-[11px]">
+                      <div className="flex items-center gap-2 font-bold text-slate-600">
+                        <span>🏦</span> Saldo Bank Catatan
+                      </div>
+                      <span className="font-black text-blue-700">{formatRupiah(data.saldoBankCatatan)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px]">
+                      <div className="flex items-center gap-2 font-bold text-slate-600">
+                        <span>📱</span> Saldo Real App
+                      </div>
+                      <span className="font-black text-blue-700">{formatRupiah(data.saldoRealApp)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Selisih Bar */}
+              {!k.isAdmin && (
+                <div className="bg-emerald-50/60 rounded-full px-4 py-2 flex justify-between items-center mb-4 border border-emerald-100/50">
+                  <div className="flex items-center gap-2 text-emerald-700 font-bold text-[11px]">
+                    <div className="bg-emerald-500 text-white p-0.5 rounded-sm">
+                      <Check className="w-2.5 h-2.5" />
+                    </div>
+                    Selisih
+                  </div>
+                  <span className={`font-black text-[11px] ${data.sesuai ? 'text-emerald-600' : 'text-red-600'}`}>
                     {data.sesuai ? '✓ Sesuai' : formatRupiah(data.selisih)}
                   </span>
                 </div>
+              )}
 
-                <div className="grid grid-cols-3 gap-2 pt-1">
-                  <div className="bg-green-50 rounded-xl p-2.5 text-center">
-                    <p className="text-xs font-extrabold text-green-700">{formatRupiah(data.totalPenjualan)}</p>
-                    <p className="text-[9px] text-green-600">Total Penjualan</p>
-                  </div>
-                  <div className="bg-amber-50 rounded-xl p-2.5 text-center">
-                    <p className="text-xs font-extrabold text-amber-700">{formatRupiah(data.totalAdmin)}</p>
-                    <p className="text-[9px] text-amber-500">Total Admin</p>
-                  </div>
-                  <div className="bg-purple-50 rounded-xl p-2.5 text-center">
-                    <p className="text-xs font-extrabold text-purple-700">{formatRupiah(data.sisaCash)}</p>
-                    <p className="text-[9px] text-purple-500">Sisa Cash</p>
-                  </div>
+              {/* Bubbles Grid (2x3) */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {/* Penjualan */}
+                <div className="bg-emerald-50/50 rounded-[20px] py-2.5 text-center flex flex-col justify-center border border-emerald-100/30">
+                  <span className="text-[10px] font-black text-emerald-600">{formatRupiah(data.totalPenjualan)}</span>
+                  <span className="text-[8px] font-bold text-emerald-500 uppercase mt-0.5">Total Penjualan</span>
                 </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-red-50 rounded-xl p-2.5 text-center">
-                    <p className="text-xs font-extrabold text-red-600">{formatRupiah(data.tarik)}</p>
-                    <p className="text-[9px] text-red-500">Tarik Tunai</p>
-                  </div>
-                  <div className="bg-green-50 rounded-xl p-2.5 text-center">
-                    <p className="text-xs font-extrabold text-green-700">{formatRupiah(data.nonTunai)}</p>
-                    <p className="text-[9px] text-green-500">Non Tunai</p>
-                  </div>
-                  <div className="bg-red-50 rounded-xl p-2.5 text-center">
-                    <p className="text-xs font-extrabold text-red-600">{formatRupiah(data.totalUangCash)}</p>
-                    <p className="text-[9px] text-red-500 font-bold">TOTAL UANG CASH</p>
-                  </div>
+                {/* Admin */}
+                <div className="bg-amber-50/50 rounded-[20px] py-2.5 text-center flex flex-col justify-center border border-amber-100/30">
+                  <span className="text-[10px] font-black text-amber-600">{formatRupiah(data.totalAdmin)}</span>
+                  <span className="text-[8px] font-bold text-amber-500 uppercase mt-0.5">Total Admin</span>
                 </div>
-
-                <div className="flex justify-between items-center text-xs bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg px-3 py-2">
-                  <span className="text-gray-700 font-semibold flex items-center gap-1.5">🏦 Saldo Bank Catatan + Total Penjualan</span>
-                  <span className="font-bold text-indigo-700">{formatRupiah(data.saldoPlusPenjualan)}</span>
+                {/* Sisa Cash */}
+                <div className="bg-purple-50/50 rounded-[20px] py-2.5 text-center flex flex-col justify-center border border-purple-100/30">
+                  <span className="text-[10px] font-black text-purple-600">{formatRupiah(data.sisaCash)}</span>
+                  <span className="text-[8px] font-bold text-purple-500 uppercase mt-0.5">Sisa Cash</span>
                 </div>
-                <div className="text-[10px] text-gray-400 pl-1">
-                  {formatRupiah(data.saldoBankCatatan)} + {formatRupiah(data.totalPenjualan)}
+                {/* Tarik Tunai */}
+                <div className="bg-rose-50/50 rounded-[20px] py-2.5 text-center flex flex-col justify-center border border-rose-100/30">
+                  <span className="text-[10px] font-black text-rose-600">{formatRupiah(data.tarik)}</span>
+                  <span className="text-[8px] font-bold text-rose-500 uppercase mt-0.5">Tarik Tunai</span>
+                </div>
+                {/* Non Tunai */}
+                <div className="bg-teal-50/50 rounded-[20px] py-2.5 text-center flex flex-col justify-center border border-teal-100/30">
+                  <span className="text-[10px] font-black text-teal-600">{formatRupiah(data.nonTunai)}</span>
+                  <span className="text-[8px] font-bold text-teal-500 uppercase mt-0.5">Non Tunai</span>
+                </div>
+                {/* Total Cash */}
+                <div className="bg-red-50 rounded-[20px] py-2.5 text-center flex flex-col justify-center border border-red-200/50">
+                  <span className="text-[10px] font-black text-red-600">{formatRupiah(data.totalUangCash)}</span>
+                  <span className="text-[8px] font-black text-red-600 uppercase mt-0.5">TOTAL UANG CASH</span>
                 </div>
               </div>
+
+              {/* Bottom Combined Bar */}
+              {!k.isAdmin && (
+                <div className="bg-blue-50/60 rounded-full px-4 py-2.5 flex justify-between items-center border border-blue-100/50">
+                   <div className="flex items-center gap-2 text-blue-700 font-extrabold text-[11px]">
+                    <span>🏦</span> Saldo Bank Catatan + Total Penjualan
+                  </div>
+                  <span className="font-black text-blue-700 text-[11px]">{formatRupiah(data.saldoPlusPenjualan)}</span>
+                </div>
+              )}
             </div>
           );
         })

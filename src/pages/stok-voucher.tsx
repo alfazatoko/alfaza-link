@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, Pencil, X, CreditCard, Plus, Minus, Cloud, CloudUpload, Loader2, Calendar } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { getStokVoucher, syncStokVoucher, getSettings } from "@/lib/firestore";
+import { getStokVoucher, syncStokVoucher, getSettings, getDailyRekap, getUsers, getStokVoucherByRange, type DailyRekapRecord, type UserRecord, type StokVoucherRecord } from "@/lib/firestore";
 import { getWibDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -63,58 +63,98 @@ export default function StokVoucher() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [dailyRekap, setDailyRekap] = useState<DailyRekapRecord | null>(null);
+  const [kasirFilter, setKasirFilter] = useState(kasirName);
+  const [kasirList, setKasirList] = useState<UserRecord[]>([]);
 
   useEffect(() => {
     getSettings().then(s => setShopName(s.shopName)).catch(() => {});
-  }, []);
+    if (user?.role === "owner") {
+      getUsers().then(list => setKasirList(list.filter(u => u.role !== "owner"))).catch(() => {});
+    }
+  }, [user]);
+
+  const isOwner = user?.role === "owner";
 
   // Load data when selectedDate changes
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      const savedVoucher = localStorage.getItem(storageKeyVoucher);
-      const savedQris = localStorage.getItem(storageKeyQris);
+      const isInstantMode = kasirFilter === "Semua Kasir";
 
-      if (savedVoucher) {
-        setDataVoucher(JSON.parse(savedVoucher));
-        setDataQris(savedQris ? JSON.parse(savedQris) : []);
-        setIsLoading(false);
-      } else {
-        setIsSyncing(true);
-        try {
-          const cloudData = await getStokVoucher(kasirName, selectedDate);
-          if (cloudData) {
-            setDataVoucher(cloudData.dataVoucher);
-            setDataQris(cloudData.dataQris);
-            setLastSync(new Date(cloudData.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-          } else {
-            setDataVoucher(initialDataVoucher);
-            setDataQris([]);
-            setLastSync(null);
-          }
-        } catch (error) {
-          console.error("Failed to fetch stok voucher:", error);
+      // Reset data jika ganti mode
+      if (isInstantMode) {
+        setDataVoucher({});
+        setDataQris([]);
+      }
+
+      try {
+        const [cloudData, rekap, allVouchers] = await Promise.all([
+          isInstantMode ? Promise.resolve(null) : getStokVoucher(kasirFilter, selectedDate),
+          getDailyRekap(selectedDate),
+          isInstantMode ? getStokVoucherByRange(undefined, selectedDate, selectedDate) : Promise.resolve([])
+        ]);
+
+        if (isInstantMode) {
+          // Agregasi data dari semua kasir untuk tampilan tabel jika "Semua Kasir"
+          const aggregatedVoucher: Record<string, VoucherItem[]> = {};
+          const aggregatedQris: QrisItem[] = [];
+          
+          allVouchers.forEach(sv => {
+            // Gabungkan dataVoucher
+            Object.keys(sv.dataVoucher).forEach(provider => {
+              if (!aggregatedVoucher[provider]) aggregatedVoucher[provider] = [];
+              sv.dataVoucher[provider].forEach((item: any) => {
+                const existing = aggregatedVoucher[provider].find(v => v.name === item.name);
+                if (existing) {
+                  existing.awal += item.awal;
+                  existing.akhir += item.akhir;
+                } else {
+                  aggregatedVoucher[provider].push({ ...item });
+                }
+              });
+            });
+            // Gabungkan dataQris
+            sv.dataQris.forEach((q: any) => {
+              const existing = aggregatedQris.find(x => x.nama === q.nama && x.provider === q.provider);
+              if (existing) {
+                existing.qty += q.qty;
+              } else {
+                aggregatedQris.push({ ...q });
+              }
+            });
+          });
+          setDataVoucher(aggregatedVoucher);
+          setDataQris(aggregatedQris);
+        } else if (cloudData) {
+          setDataVoucher(cloudData.dataVoucher);
+          setDataQris(cloudData.dataQris);
+          setLastSync(new Date(cloudData.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        } else {
           setDataVoucher(initialDataVoucher);
           setDataQris([]);
-        } finally {
-          setIsSyncing(false);
-          setIsLoading(false);
+          setLastSync(null);
         }
+        setDailyRekap(rekap);
+      } catch (error) {
+        console.error("Failed to fetch stok voucher:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     loadData();
-  }, [selectedDate, kasirName, storageKeyVoucher, storageKeyQris]);
+  }, [selectedDate, kasirFilter]);
 
-  // Save to LocalStorage on every change (0 lag)
+  // Save to LocalStorage on every change (0 lag) - Hanya jika mode kasir tunggal
   useEffect(() => {
-    if (isLoading) return; // Prevent overwriting with initial state during load
+    if (isLoading || kasirFilter === "Semua Kasir") return;
     localStorage.setItem(storageKeyVoucher, JSON.stringify(dataVoucher));
-  }, [dataVoucher, storageKeyVoucher, isLoading]);
+  }, [dataVoucher, storageKeyVoucher, isLoading, kasirFilter]);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || kasirFilter === "Semua Kasir") return;
     localStorage.setItem(storageKeyQris, JSON.stringify(dataQris));
-  }, [dataQris, storageKeyQris, isLoading]);
+  }, [dataQris, storageKeyQris, isLoading, kasirFilter]);
 
   // Sync to Firebase function
   const handleSync = useCallback(async (manual = false) => {
@@ -141,7 +181,7 @@ export default function StokVoucher() {
 
   // Auto-sync every time data changes (with 2 seconds debounce)
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || kasirFilter === "Semua Kasir") return;
     
     if (autoSyncTimeout.current) {
       clearTimeout(autoSyncTimeout.current);
@@ -149,7 +189,7 @@ export default function StokVoucher() {
     
     autoSyncTimeout.current = setTimeout(async () => {
       try {
-        await syncStokVoucher(kasirName, selectedDate, dataVoucher, dataQris);
+        await syncStokVoucher(kasirFilter, selectedDate, dataVoucher, dataQris);
         const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         setLastSync(timeStr);
       } catch (error) {
@@ -162,7 +202,7 @@ export default function StokVoucher() {
         clearTimeout(autoSyncTimeout.current);
       }
     };
-  }, [dataVoucher, dataQris, kasirName, selectedDate, isLoading]);
+  }, [dataVoucher, dataQris, kasirFilter, selectedDate, isLoading]);
 
   const toggleEditProvider = (provider: string) => {
     setProvidersEditState(prev => ({ ...prev, [provider]: !prev[provider] }));
@@ -299,23 +339,17 @@ export default function StokVoucher() {
     }
   };
 
-  let totalQtyLakuKeseluruhan = 0;
-  let totalUangKeseluruhan = 0;
-  let totalUangQris = 0;
+  const totalUangTunaiFisik = (dailyRekap && kasirFilter === "Semua Kasir") 
+    ? (dailyRekap.total_v_tunai || 0) 
+    : (totalUangKeseluruhan - totalUangQris);
 
-  dataQris.forEach(item => {
-    totalUangQris += item.harga * item.qty;
-  });
+  const totalDisplayLaku = (dailyRekap && kasirFilter === "Semua Kasir")
+    ? (dailyRekap.count_v_laku || 0)
+    : totalQtyLakuKeseluruhan;
 
-  Object.values(dataVoucher).forEach(items => {
-    items.forEach(item => {
-      const laku = Math.max(0, item.awal - item.akhir);
-      totalQtyLakuKeseluruhan += laku;
-      totalUangKeseluruhan += laku * item.price;
-    });
-  });
-
-  const totalUangTunaiFisik = totalUangKeseluruhan - totalUangQris;
+  const totalDisplayQris = (dailyRekap && kasirFilter === "Semua Kasir")
+    ? (dailyRekap.total_v_qris || 0)
+    : totalUangQris;
 
   const getProviderColor = (provider: string) => {
     switch (provider) {
@@ -354,18 +388,29 @@ export default function StokVoucher() {
               <div>
                 <h1 className="text-sm font-black text-blue-200 tracking-wider uppercase">{shopName}</h1>
                 <h2 className="text-xl font-black tracking-tight leading-none mt-0.5">STOK VOUCHER</h2>
-                <p className="text-[10px] md:text-xs text-blue-100 font-medium">{kasirName}</p>
+                <p className="text-[10px] md:text-xs text-blue-100 font-medium">{kasirFilter}</p>
               </div>
             </div>
-            <button 
-              onClick={() => handleSync(true)}
-              disabled={isSyncing || isLoading}
-              className="flex flex-col items-center justify-center bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors border border-white/20"
-            >
-              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mb-0.5" /> : <CloudUpload className="w-4 h-4 mb-0.5" />}
-              <span className="text-[8px] font-medium leading-none">{lastSync ? `Sync: ${lastSync}` : 'Auto Sync'}</span>
-            </button>
+            {kasirFilter !== "Semua Kasir" && (
+              <button 
+                onClick={() => handleSync(true)}
+                disabled={isSyncing || isLoading}
+                className="flex flex-col items-center justify-center bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors border border-white/20"
+              >
+                {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mb-0.5" /> : <CloudUpload className="w-4 h-4 mb-0.5" />}
+                <span className="text-[8px] font-medium leading-none">{lastSync ? `Sync: ${lastSync}` : 'Auto Sync'}</span>
+              </button>
+            )}
           </div>
+
+          {isOwner && (
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              <button onClick={() => setKasirFilter("Semua Kasir")} className={`rounded-full px-3 py-1 text-[10px] font-bold border ${kasirFilter === "Semua Kasir" ? 'bg-white text-blue-700 border-white' : 'bg-white/20 text-white border-white/30'}`}>Semua Kasir</button>
+              {kasirList.map(k => (
+                <button key={k.name} onClick={() => setKasirFilter(k.name)} className={`rounded-full px-3 py-1 text-[10px] font-bold border ${kasirFilter === k.name ? 'bg-white text-blue-700 border-white' : 'bg-white/20 text-white border-white/30'}`}>{k.name}</button>
+              ))}
+            </div>
+          )}
           
           <div className="flex items-center justify-between bg-white/10 p-2.5 rounded-xl border border-white/10">
             <div className="flex flex-col">
@@ -405,7 +450,7 @@ export default function StokVoucher() {
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-white border border-gray-200 rounded-xl p-2 text-center shadow-sm">
                 <div className="text-[10px] text-gray-500 font-bold uppercase mb-1">Laku</div>
-                <div className="text-lg font-black text-gray-800">{totalQtyLakuKeseluruhan}</div>
+                <div className="text-lg font-black text-gray-800">{totalDisplayLaku}</div>
               </div>
               <div className="bg-white border border-gray-200 rounded-xl p-2 text-center shadow-sm">
                 <div className="text-[10px] text-gray-500 font-bold uppercase mb-1">Tunai</div>
@@ -413,7 +458,7 @@ export default function StokVoucher() {
               </div>
               <div className="bg-white border border-gray-200 rounded-xl p-2 text-center shadow-sm">
                 <div className="text-[10px] text-gray-500 font-bold uppercase mb-1">QRIS</div>
-                <div className="text-sm font-black text-sky-500 truncate">{formatRupiah(totalUangQris)}</div>
+                <div className="text-sm font-black text-sky-500 truncate">{formatRupiah(totalDisplayQris)}</div>
               </div>
             </div>
 
@@ -458,6 +503,9 @@ export default function StokVoucher() {
 
                             const renderStokCell = (field: 'awal' | 'akhir', value: number) => {
                               const cellId = `${provider}-${idx}-${field}`;
+                              if (kasirFilter === "Semua Kasir") {
+                                return <span className="font-bold text-xs">{value}</span>;
+                              }
                               if (activeEditingCell === cellId) {
                                 return (
                                   <div className="flex items-center justify-center border border-gray-300 rounded overflow-hidden h-6 bg-white editable-cell">
@@ -510,7 +558,7 @@ export default function StokVoucher() {
                                   {laku > 0 ? formatRupiah(total) : '-'}
                                 </td>
                                 <td className="p-2 align-middle text-center">
-                                  {!isEditing && (
+                                  {!isEditing && kasirFilter !== "Semua Kasir" && (
                                     <button 
                                       className="bg-sky-500 text-white text-[9px] font-black px-1.5 py-1 rounded shadow-sm active:scale-95 transition-transform mx-auto block"
                                       onClick={() => jualQris(provider, idx)}
@@ -600,12 +648,14 @@ export default function StokVoucher() {
                           <td className="p-2 text-xs font-bold text-center">{item.qty}</td>
                           <td className="p-2 text-[11px] font-black text-sky-500 text-right">{formatRupiah(item.harga * item.qty)}</td>
                           <td className="p-2 text-center">
-                            <button 
-                              className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold px-2 py-1 rounded transition-colors flex items-center gap-1 mx-auto"
-                              onClick={() => editQris(item.id)}
-                            >
-                              <Pencil className="w-3 h-3" /> Edit
-                            </button>
+                            {kasirFilter !== "Semua Kasir" && (
+                              <button 
+                                className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold px-2 py-1 rounded transition-colors flex items-center gap-1 mx-auto"
+                                onClick={() => editQris(item.id)}
+                              >
+                                <Pencil className="w-3 h-3" /> Edit
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))

@@ -1,7 +1,7 @@
 import {
   collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc,
-  setDoc, query, where
-} from "firebase/firestore/lite";
+  setDoc, query, where, writeBatch, increment, limit
+} from "firebase/firestore";
 import { db } from "./firebase";
 import { getWibDate } from "./utils";
 
@@ -67,7 +67,7 @@ export interface TransactionRecord {
   nominalTunai?: number;
   adminTunai?: number;
   nominalNonTunai?: number;
-  adminNonTunai?: number;
+  adminNonTunai?: number | boolean;
   createdAt: any;
   photoUrl?: string;
   saldoBankAfter?: number;
@@ -152,6 +152,65 @@ export interface DailyNoteRecord {
 export interface DailySnapshotRecord {
   locked: boolean;
   lockedAt?: any;
+}
+
+export interface DailyRekapRecord {
+  total_bank: number;
+  count_bank: number;
+  total_flip: number;
+  count_flip: number;
+  total_app: number;
+  count_app: number;
+  total_dana: number;
+  count_dana: number;
+  total_tarik: number;
+  count_tarik: number;
+  total_aks: number;
+  count_aks: number;
+  total_admin: number;
+  total_admin_non_tunai: number;
+  total_non_tunai: number;
+  total_isi_bank: number;
+  total_isi_cash: number;
+  total_closing: number;
+  count_closing: number;
+  total_nota_nominal: number;
+  count_nota: number;
+}
+
+export interface KasirRekapRecord extends DailyRekapRecord {
+  kasirName: string;
+  date: string;
+  total_nominal: number;
+  total_admin: number;
+  count_tx: number;
+  count_absen_masuk: number;
+  count_absen_pulang: number;
+  total_v_tunai: number;
+  total_v_qris: number;
+  count_v_laku: number;
+}
+
+// Helper to update both global and per-kasir rekap
+async function updateRekap(batch: any, date: string, kasirName: string | null, increments: any, rawData?: { nominal?: number, admin?: number, count?: number }) {
+  // Global
+  const globalRef = doc(db, "rekap_harian", date);
+  batch.set(globalRef, increments, { merge: true });
+
+  // Per Kasir (jika ada)
+  if (kasirName && kasirName !== "owner") {
+    const kasirRef = doc(db, "rekap_kasir", `${kasirName}_${date}`);
+    const kasirIncrements: any = { ...increments, kasirName, date };
+    
+    // Jika ada raw data, tambahkan ke field spesifik kasir
+    if (rawData) {
+      if (rawData.nominal) kasirIncrements.total_nominal = increment(rawData.nominal);
+      if (rawData.admin) kasirIncrements.total_admin = increment(rawData.admin);
+      if (rawData.count) kasirIncrements.count_tx = increment(rawData.count);
+    }
+
+    batch.set(kasirRef, kasirIncrements, { merge: true });
+  }
 }
 
 export async function getUsers(): Promise<UserRecord[]> {
@@ -239,6 +298,7 @@ export async function getTransactions(params: {
   kasirName?: string;
   startDate?: string;
   endDate?: string;
+  limit?: number;
 }): Promise<TransactionRecord[]> {
   const colRef = collection(db, "transactions");
   let q = query(colRef);
@@ -249,6 +309,10 @@ export async function getTransactions(params: {
   }
   if (params.endDate) {
     q = query(q, where("transDate", "<=", params.endDate));
+  }
+
+  if (params.limit) {
+    q = query(q, limit(params.limit));
   }
 
   const snap = await getDocs(q);
@@ -266,37 +330,141 @@ export async function getTransactions(params: {
 export async function createTransaction(data: Omit<TransactionRecord, "id" | "createdAt" | "saldoBankAfter" | "saldoCashAfter">): Promise<string> {
   const { bal: newBal } = await updateBalance(data.kasirName, data);
 
-  const ref = await addDoc(collection(db, "transactions"), {
+  const batch = writeBatch(db);
+  const transRef = doc(collection(db, "transactions"));
+  const createdAt = new Date().toISOString();
+  
+  batch.set(transRef, {
     ...data,
-    createdAt: new Date().toISOString(),
+    createdAt,
     saldoBankAfter: newBal.bank,
     saldoCashAfter: newBal.cash,
   });
 
-  return ref.id;
+  // Update Rekap Harian
+  const rekapRef = doc(db, "rekap_harian", data.transDate);
+  const isNonTunai = data.paymentMethod && data.paymentMethod.toLowerCase().includes("non-tunai");
+  const nominal = data.nominal || 0;
+  const admin = data.admin || 0;
+
+  const increments: any = {};
+
+  if (data.category === "BANK") {
+    increments.total_bank = increment(nominal);
+    increments.count_bank = increment(1);
+  } else if (data.category === "FLIP") {
+    increments.total_flip = increment(nominal);
+    increments.count_flip = increment(1);
+  } else if (data.category === "APP PULSA") {
+    increments.total_app = increment(nominal);
+    increments.count_app = increment(1);
+  } else if (data.category === "DANA") {
+    increments.total_dana = increment(nominal);
+    increments.count_dana = increment(1);
+  } else if (data.category === "TARIK TUNAI") {
+    increments.total_tarik = increment(nominal);
+    increments.count_tarik = increment(1);
+  } else if (data.category === "AKSESORIS") {
+    increments.total_aks = increment(nominal);
+    increments.count_aks = increment(1);
+  } else if (data.category === "CLOSING") {
+    increments.total_closing = increment(nominal);
+    increments.count_closing = increment(1);
+  }
+
+  if (data.category === "NON TUNAI" || isNonTunai) {
+    increments.total_non_tunai = increment(nominal);
+  }
+
+  if (!(data.category === "NON TUNAI" || isNonTunai || data.adminNonTunai)) {
+    increments.total_admin = increment(admin);
+  }
+  if (data.adminNonTunai) {
+    increments.total_admin_non_tunai = increment(admin);
+  }
+
+  await updateRekap(batch, data.transDate, data.kasirName, increments, {
+    nominal: data.nominal,
+    admin: data.admin,
+    count: 1
+  });
+  await batch.commit();
+
+  return transRef.id;
 }
 
 export async function updateTransaction(id: string, data: Partial<TransactionRecord>): Promise<void> {
+  // Logic for updateTransaction is complex for rekap because it involves reversing old and adding new.
+  // For now, let's just reverse and re-add which is what the current code does but with rekap support.
   const oldSnap = await getDoc(doc(db, "transactions", id));
   if (oldSnap.exists()) {
     const oldTx = oldSnap.data() as TransactionRecord;
-    await reverseBalance(oldTx.kasirName, oldTx);
-  }
-  await updateDoc(doc(db, "transactions", id), data as any);
-  const newSnap = await getDoc(doc(db, "transactions", id));
-  if (newSnap.exists()) {
-    const newTx = newSnap.data() as TransactionRecord;
-    await updateBalance(newTx.kasirName, newTx);
+    await deleteTransaction(id); // Use delete to handle rekap reversal
+    await createTransaction({ ...oldTx, ...data } as any); // Use create to handle rekap addition
   }
 }
 
 export async function deleteTransaction(id: string): Promise<void> {
   const snap = await getDoc(doc(db, "transactions", id));
-  if (snap.exists()) {
-    const txData = snap.data() as TransactionRecord;
-    await reverseBalance(txData.kasirName, txData);
+  if (!snap.exists()) return;
+  
+  const txData = snap.data() as TransactionRecord;
+  const today = getWibDate();
+
+  // Reverse Balance
+  await reverseBalance(txData.kasirName, txData);
+
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "transactions", id));
+
+  // Reverse Rekap Harian (Only if it's from today or we track historical rekap)
+  const rekapRef = doc(db, "rekap_harian", txData.transDate);
+  const isNonTunai = txData.paymentMethod && txData.paymentMethod.toLowerCase().includes("non-tunai");
+  const nominal = txData.nominal || 0;
+  const admin = txData.admin || 0;
+
+  const decrements: any = {};
+
+  if (txData.category === "BANK") {
+    decrements.total_bank = increment(-nominal);
+    decrements.count_bank = increment(-1);
+  } else if (txData.category === "FLIP") {
+    decrements.total_flip = increment(-nominal);
+    decrements.count_flip = increment(-1);
+  } else if (txData.category === "APP PULSA") {
+    decrements.total_app = increment(-nominal);
+    decrements.count_app = increment(-1);
+  } else if (txData.category === "DANA") {
+    decrements.total_dana = increment(-nominal);
+    decrements.count_dana = increment(-1);
+  } else if (txData.category === "TARIK TUNAI") {
+    decrements.total_tarik = increment(-nominal);
+    decrements.count_tarik = increment(-1);
+  } else if (txData.category === "AKSESORIS") {
+    decrements.total_aks = increment(-nominal);
+    decrements.count_aks = increment(-1);
+  } else if (txData.category === "CLOSING") {
+    decrements.total_closing = increment(-nominal);
+    decrements.count_closing = increment(-1);
   }
-  await deleteDoc(doc(db, "transactions", id));
+
+  if (txData.category === "NON TUNAI" || isNonTunai) {
+    decrements.total_non_tunai = increment(-nominal);
+  }
+
+  if (!(txData.category === "NON TUNAI" || isNonTunai || txData.adminNonTunai)) {
+    decrements.total_admin = increment(-admin);
+  }
+  if (txData.adminNonTunai) {
+    decrements.total_admin_non_tunai = increment(-admin);
+  }
+
+  await updateRekap(batch, txData.transDate, txData.kasirName, decrements, {
+    nominal: -nominal,
+    admin: -admin,
+    count: -1
+  });
+  await batch.commit();
 }
 
 async function updateBalance(kasirName: string, tx: Omit<TransactionRecord, "id" | "createdAt">) {
@@ -410,6 +578,41 @@ export async function getBalance(kasirName: string): Promise<BalanceRecord> {
   return bal;
 }
 
+export async function getDailyRekap(date: string): Promise<DailyRekapRecord | null> {
+  const ref = doc(db, "rekap_harian", date);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return snap.data() as DailyRekapRecord;
+}
+
+export async function getDailyRekapByRange(startDate: string, endDate: string): Promise<DailyRekapRecord[]> {
+  const colRef = collection(db, "rekap_harian");
+  const q = query(colRef, where("__name__", ">=", startDate), where("__name__", "<=", endDate));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ date: d.id, ...d.data() } as any));
+}
+
+export async function getRekapKasirByRange(kasirName: string, startDate: string, endDate: string): Promise<KasirRekapRecord[]> {
+  const colRef = collection(db, "rekap_kasir");
+  const q = query(colRef, 
+    where("kasirName", "==", kasirName),
+    where("date", ">=", startDate),
+    where("date", "<=", endDate)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data() as KasirRekapRecord);
+}
+
+export async function getAllRekapKasirByRange(startDate: string, endDate: string): Promise<KasirRekapRecord[]> {
+  const colRef = collection(db, "rekap_kasir");
+  const q = query(colRef, 
+    where("date", ">=", startDate),
+    where("date", "<=", endDate)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data() as KasirRekapRecord);
+}
+
 export async function resetBalance(kasirName: string): Promise<void> {
   const ref = doc(db, "balances", kasirName);
   const today = getWibDate();
@@ -420,6 +623,7 @@ export async function getSaldoHistory(params: {
   kasirName?: string;
   startDate?: string;
   endDate?: string;
+  limit?: number;
 }): Promise<SaldoHistoryRecord[]> {
   const colRef = collection(db, "saldo_history");
   let q = query(colRef);
@@ -430,6 +634,10 @@ export async function getSaldoHistory(params: {
   }
   if (params.endDate) {
     q = query(q, where("saldoDate", "<=", params.endDate));
+  }
+
+  if (params.limit) {
+    q = query(q, limit(params.limit));
   }
 
   const snap = await getDocs(q);
@@ -457,7 +665,7 @@ export async function addSaldo(kasirName: string, data: {
   const balSnap = await getDoc(balRef);
   const today = getWibDate();
   
-  const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, lastUpdateDate: today };
+  const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, adminNonTunaiTotal: 0, lastUpdateDate: today };
   let bal: BalanceRecord;
 
   if (balSnap.exists()) {
@@ -477,13 +685,16 @@ export async function addSaldo(kasirName: string, data: {
 
   bal.lastUpdateDate = saldoDate;
 
+  const batch = writeBatch(db);
+  
   if (balSnap.exists()) {
-    await updateDoc(balRef, bal as any);
+    batch.update(balRef, bal as any);
   } else {
-    await setDoc(balRef, bal);
+    batch.set(balRef, bal);
   }
 
-  const ref = await addDoc(collection(db, "saldo_history"), {
+  const historyRef = doc(collection(db, "saldo_history"));
+  batch.set(historyRef, {
     kasirName,
     jenis: data.jenis,
     nominal: data.nominal,
@@ -495,7 +706,17 @@ export async function addSaldo(kasirName: string, data: {
     saldoCashAfter: bal.cash,
   });
 
-  return ref.id;
+  // Update Rekap Harian
+  const rekapRef = doc(db, "rekap_harian", saldoDate);
+  if (data.jenis === "Bank") {
+    batch.set(rekapRef, { total_isi_bank: increment(data.nominal) }, { merge: true });
+  } else if (data.jenis === "Cash") {
+    batch.set(rekapRef, { total_isi_cash: increment(data.nominal) }, { merge: true });
+  }
+
+  await batch.commit();
+
+  return historyRef.id;
 }
 
 export async function updateSaldoHistory(id: string, kasirName: string, data: {
@@ -536,6 +757,8 @@ export async function deleteSaldoHistory(id: string, kasirName: string): Promise
   if (!snap.exists()) throw new Error("Data tidak ditemukan");
   const old = snap.data() as SaldoHistoryRecord;
 
+  const batch = writeBatch(db);
+
   // Balikkan efek ke balance (hanya Bank/Cash)
   if (old.jenis === "Bank" || old.jenis === "Cash") {
     const balRef = doc(db, "balances", kasirName);
@@ -544,11 +767,20 @@ export async function deleteSaldoHistory(id: string, kasirName: string): Promise
       const bal = balSnap.data() as BalanceRecord;
       if (old.jenis === "Bank") bal.bank -= old.nominal;
       if (old.jenis === "Cash") bal.cash -= old.nominal;
-      await updateDoc(balRef, bal as any);
+      batch.update(balRef, bal as any);
     }
   }
 
-  await deleteDoc(ref);
+  // Reverse Rekap Harian
+  const rekapRef = doc(db, "rekap_harian", old.saldoDate);
+  if (old.jenis === "Bank") {
+    batch.set(rekapRef, { total_isi_bank: increment(-old.nominal) }, { merge: true });
+  } else if (old.jenis === "Cash") {
+    batch.set(rekapRef, { total_isi_cash: increment(-old.nominal) }, { merge: true });
+  }
+
+  batch.delete(ref);
+  await batch.commit();
 }
 
 export async function addSaldoHistoryOnly(kasirName: string, data: {
@@ -647,10 +879,17 @@ export async function getTodayAttendance(kasirName: string): Promise<AttendanceR
 }
 
 export async function createAttendance(data: Omit<AttendanceRecord, "id" | "createdAt">): Promise<string> {
-  const ref = await addDoc(collection(db, "attendance"), {
+  const batch = writeBatch(db);
+  const ref = doc(collection(db, "attendance"));
+  batch.set(ref, {
     ...data,
     createdAt: new Date().toISOString(),
   });
+
+  // Update Rekap Harian (Global & Kasir)
+  await updateRekap(batch, data.tanggal, data.kasirName, { count_absen_masuk: increment(1) });
+
+  await batch.commit();
   return ref.id;
 }
 
@@ -678,10 +917,18 @@ export async function getIzinList(params?: {
 }
 
 export async function createIzin(data: Omit<IzinRecord, "id" | "createdAt">): Promise<string> {
-  const ref = await addDoc(collection(db, "izin"), {
+  const batch = writeBatch(db);
+  const ref = doc(collection(db, "izin"));
+  batch.set(ref, {
     ...data,
     createdAt: new Date().toISOString(),
   });
+
+  // Update Rekap Harian
+  const rekapRef = doc(db, "rekap_harian", data.tanggal);
+  batch.set(rekapRef, { count_izin: increment(1) }, { merge: true });
+
+  await batch.commit();
   return ref.id;
 }
 
@@ -737,11 +984,18 @@ export async function setDailyNote(
 
   current[field] = value;
 
+  const batch = writeBatch(db);
   if (snap.exists()) {
-    await updateDoc(ref, current as any);
+    batch.update(ref, current as any);
   } else {
-    await setDoc(ref, current);
+    batch.set(ref, current);
   }
+
+  // Juga simpan ke rekap harian global jika ini adalah owner atau "Semua"
+  // Note: Halaman Catatan biasanya per kasir. Kita simpan di rekap_harian sebagai catatan global.
+  // Tapi di sini field nya sisaSaldoBank/saldoRealApp.
+  
+  await batch.commit();
   return current;
 }
 
@@ -815,12 +1069,19 @@ export async function loginUser(name: string, pin?: string, shift?: string, devi
 
     if (!existing) {
       // First time today
-      await createAttendance({
+      const batch = writeBatch(db);
+      const ref = doc(collection(db, "attendance"));
+      batch.set(ref, {
         kasirName: name,
         tanggal: today,
         shift: shift || "NORMAL",
         jamMasuk: currentTime,
       });
+
+      // Update Rekap Harian (Global & Kasir)
+      await updateRekap(batch, today, name, { count_absen_masuk: increment(1) });
+
+      await batch.commit();
       finalAbsenTime = currentTime;
       console.log(`[Attendance] First login today: ${currentTime}`);
     } else {
@@ -870,55 +1131,74 @@ export async function getStokVoucher(kasirName: string, date: string): Promise<S
 export async function syncStokVoucher(kasirName: string, date: string, dataVoucher: any, dataQris: any): Promise<void> {
   const docId = `${kasirName}_${date}`;
   const ref = doc(db, "stok_voucher", docId);
-  await setDoc(ref, {
+  
+  // Ambil data lama untuk hitung selisih rekap
+  const oldSnap = await getDoc(ref);
+  let diffTunai = 0;
+  let diffQris = 0;
+  let diffLaku = 0;
+
+  const calculateSales = (v: any, q: any[]) => {
+    let tunai = 0;
+    let qris = 0;
+    let laku = 0;
+    if (q) q.forEach(item => { qris += (item.harga * item.qty); });
+    if (v) Object.values(v).forEach((items: any) => {
+      items.forEach((item: any) => {
+        const itemLaku = Math.max(0, item.awal - item.akhir);
+        laku += itemLaku;
+        tunai += (itemLaku * item.price);
+      });
+    });
+    return { tunai: tunai - qris, qris, laku };
+  };
+
+  const currentSales = calculateSales(dataVoucher, dataQris);
+  
+  if (oldSnap.exists()) {
+    const oldData = oldSnap.data() as StokVoucherRecord;
+    const oldSales = calculateSales(oldData.dataVoucher, oldData.dataQris);
+    diffTunai = currentSales.tunai - oldSales.tunai;
+    diffQris = currentSales.qris - oldSales.qris;
+    diffLaku = currentSales.laku - oldSales.laku;
+  } else {
+    diffTunai = currentSales.tunai;
+    diffQris = currentSales.qris;
+    diffLaku = currentSales.laku;
+  }
+
+  const batch = writeBatch(db);
+  batch.set(ref, {
     kasirName,
     date,
     dataVoucher,
     dataQris,
     updatedAt: new Date().toISOString()
   });
+
+  // 4. Update Rekap Harian (Global & Kasir)
+  if (diffTunai !== 0 || diffQris !== 0 || diffLaku !== 0) {
+    await updateRekap(batch, date, kasirName, {
+      total_v_tunai: increment(diffTunai),
+      total_v_qris: increment(diffQris),
+      count_v_laku: increment(diffLaku)
+    });
+  }
+
+  await batch.commit();
 }
 
 export async function getStokVoucherByRange(kasirName: string | undefined, startDate: string, endDate: string): Promise<StokVoucherRecord[]> {
-  // Jika tanggal awal === tanggal akhir, langsung lookup per doc ID
-  if (startDate === endDate) {
-    if (kasirName) {
-      const docId = `${kasirName}_${startDate}`;
-      const ref = doc(db, "stok_voucher", docId);
-      const snap = await getDoc(ref);
-      if (snap.exists()) return [snap.data() as StokVoucherRecord];
-      return [];
-    }
-    // Tanpa kasirName, fallback ke query sederhana hanya filter date
-    const colRef = collection(db, "stok_voucher");
-    const q = query(colRef, where("date", "==", startDate));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => d.data() as StokVoucherRecord);
+  const colRef = collection(db, "stok_voucher");
+  let q = query(colRef, 
+    where("date", ">=", startDate), 
+    where("date", "<=", endDate)
+  );
+  
+  if (kasirName && kasirName !== "Semua") {
+    q = query(q, where("kasirName", "==", kasirName));
   }
 
-  // Range tanggal: generate semua tanggal dalam range, lalu fetch per doc
-  const results: StokVoucherRecord[] = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().split("T")[0];
-    if (kasirName) {
-      const docId = `${kasirName}_${dateStr}`;
-      const ref = doc(db, "stok_voucher", docId);
-      try {
-        const snap = await getDoc(ref);
-        if (snap.exists()) results.push(snap.data() as StokVoucherRecord);
-      } catch { /* skip */ }
-    } else {
-      // Tanpa kasirName, query per tanggal
-      try {
-        const colRef = collection(db, "stok_voucher");
-        const q = query(colRef, where("date", "==", dateStr));
-        const snap = await getDocs(q);
-        snap.docs.forEach(d => results.push(d.data() as StokVoucherRecord));
-      } catch { /* skip */ }
-    }
-  }
-  return results;
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data() as StokVoucherRecord);
 }

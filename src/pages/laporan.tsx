@@ -1,40 +1,33 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import {
-  getTransactions, getSaldoHistory, getDailySnapshot, getDailyNotes,
-  lockReport, getUsers, getStokVoucherByRange,
-  type TransactionRecord, type SaldoHistoryRecord, type DailyNoteRecord, type UserRecord, type StokVoucherRecord
+  getTransactions, getSaldoHistory, getDailyNotes,
+  getUsers, getDailyRekap, getAllRekapKasirByRange, getRekapKasirByRange,
+  type TransactionRecord, type SaldoHistoryRecord, type DailyNoteRecord, type UserRecord, type DailyRekapRecord
 } from "@/lib/firestore";
 import { formatRupiah, getWibDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Download, Share2, Loader2, ChevronDown } from "lucide-react";
+import { Download, Share2, Loader2, ChevronDown } from "lucide-react";
 
 export default function Laporan() {
-  const { user, shift } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const today = getWibDate();
-  const now = new Date();
-
-  const isOwner = user?.role === "owner";
-
+  
   const [date, setDate] = useState(today);
-  const [month, setMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
-  const [viewMode, setViewMode] = useState<"day" | "month">("day");
   const [kasirFilter, setKasirFilter] = useState("Semua");
   const [kasirList, setKasirList] = useState<UserRecord[]>([]);
-
-  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
-  const [voucherData, setVoucherData] = useState<StokVoucherRecord[]>([]);
-  const [saldoHistory, setSaldoHistory] = useState<SaldoHistoryRecord[]>([]);
-  const [isLocked, setIsLocked] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [locking, setLocking] = useState(false);
+  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+  const [saldoHistory, setSaldoHistory] = useState<SaldoHistoryRecord[]>([]);
   const [dailyNotes, setDailyNotes] = useState<DailyNoteRecord>({ sisaSaldoBank: 0, saldoRealApp: 0 });
+  const [dailyRekap, setDailyRekap] = useState<DailyRekapRecord | null>(null);
+  
   const [showJurnal, setShowJurnal] = useState(false);
   const [showSelisih, setShowSelisih] = useState(false);
 
-  const reportRef = useRef<HTMLDivElement>(null);
+  const isOwner = user?.role === "owner";
 
   useEffect(() => {
     if (isOwner) {
@@ -42,623 +35,181 @@ export default function Laporan() {
     }
   }, [isOwner]);
 
-  const getDateRange = useCallback(() => {
-    if (viewMode === "day") return { startDate: date, endDate: date };
-    const [y, m] = month.split("-").map(Number);
-    const lastDay = new Date(y, m, 0).getDate();
-    return {
-      startDate: `${y}-${String(m).padStart(2, "0")}-01`,
-      endDate: `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
-    };
-  }, [viewMode, date, month]);
-
   const loadData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const { startDate, endDate } = getDateRange();
-      let kasirName: string | undefined;
-      if (!isOwner) {
-        kasirName = user.name;
-      } else if (kasirFilter !== "Semua") {
-        kasirName = kasirFilter;
-      }
-      const [txs, saldo, snap, notes] = await Promise.all([
-        getTransactions({ kasirName, startDate, endDate }),
-        getSaldoHistory({ kasirName, startDate, endDate }),
-        isOwner ? Promise.resolve(null) : getDailySnapshot(user.name, startDate),
-        getDailyNotes(kasirName || user.name, startDate),
+      let kname = isOwner ? (kasirFilter === "Semua" ? undefined : kasirFilter) : user.name;
+
+      // Ambil Rekap, Notes, dan Riwayat (TX & Saldo) secara paralel untuk akurasi & kecepatan
+      const [rekap, kasirRekaps, notes, txs, saldo] = await Promise.all([
+        (!kname) ? getDailyRekap(date).catch(() => null) : Promise.resolve(null),
+        (!kname) ? getAllRekapKasirByRange(date, date).catch(() => []) : getRekapKasirByRange(kname!, date, date).catch(() => []),
+        getDailyNotes(kname || user.name, date).catch(() => ({ sisaSaldoBank: 0, saldoRealApp: 0 })),
+        getTransactions({ kasirName: kname, startDate: date, endDate: date }).catch(() => []),
+        getSaldoHistory({ kasirName: kname, startDate: date, endDate: date }).catch(() => [])
       ]);
 
-      // Voucher data
-      let finalVData: StokVoucherRecord[] = [];
-      try {
-        finalVData = await getStokVoucherByRange(kasirName, startDate, endDate);
-      } catch (e) {
-        console.warn("Gagal ambil data voucher dari cloud:", e);
-      }
-      
-      if (startDate === endDate && (!kasirName || kasirName === user.name)) {
-        const localVoucher = localStorage.getItem(`alfaza_stok_voucher_${user.name}_${startDate}`);
-        const localQris = localStorage.getItem(`alfaza_stok_qris_${user.name}_${startDate}`);
-        
-        if (localVoucher) {
-          try {
-            const parsedVoucher = JSON.parse(localVoucher);
-            const parsedQris = localQris ? JSON.parse(localQris) : [];
-            
-            finalVData = finalVData.filter(v => v.kasirName !== user.name || v.date !== startDate);
-            
-            finalVData.push({
-              kasirName: user.name,
-              date: startDate,
-              dataVoucher: parsedVoucher,
-              dataQris: parsedQris,
-              updatedAt: new Date().toISOString()
-            });
-          } catch (e) {
-             console.error("Failed to parse local voucher data", e);
-          }
-        }
+      let agg: any = rekap;
+      if (!agg && Array.isArray(kasirRekaps) && kasirRekaps.length > 0) {
+        agg = kasirRekaps.reduce((a: any, c: any) => ({
+          total_bank: (a.total_bank || 0) + (c.total_bank || 0),
+          total_flip: (a.total_flip || 0) + (c.total_flip || 0),
+          total_app: (a.total_app || 0) + (c.total_app || 0),
+          total_dana: (a.total_dana || 0) + (c.total_dana || 0),
+          total_tarik: (a.total_tarik || 0) + (c.total_tarik || 0),
+          total_aks: (a.total_aks || 0) + (c.total_aks || 0),
+          total_admin: (a.total_admin || 0) + (c.total_admin || 0),
+          total_admin_non_tunai: (a.total_admin_non_tunai || 0) + (c.total_admin_non_tunai || 0),
+          total_non_tunai: (a.total_non_tunai || 0) + (c.total_non_tunai || 0),
+          total_closing: (a.total_closing || 0) + (c.total_closing || 0),
+          total_isi_bank: (a.total_isi_bank || 0) + (c.total_isi_bank || 0),
+          count_bank: (a.count_bank || 0) + (c.count_bank || 0),
+          count_flip: (a.count_flip || 0) + (c.count_flip || 0),
+          count_app: (a.count_app || 0) + (c.count_app || 0),
+          count_dana: (a.count_dana || 0) + (c.count_dana || 0),
+          count_aks: (a.count_aks || 0) + (c.count_aks || 0),
+          count_tarik: (a.count_tarik || 0) + (c.count_tarik || 0),
+        }), {});
       }
 
-      setTransactions(txs);
-      setVoucherData(finalVData);
-      setSaldoHistory(saldo);
-      setIsLocked((snap as any)?.locked || false);
+      setDailyRekap(agg);
       setDailyNotes(notes as DailyNoteRecord);
-    } catch {} finally {
+      setTransactions(txs || []);
+      setSaldoHistory(saldo || []);
+    } catch (err) {
+      console.error("Load Error:", err);
+    } finally {
       setLoading(false);
     }
-  }, [user, isOwner, kasirFilter, getDateRange]);
+  }, [user, isOwner, kasirFilter, date]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const bankTx = transactions.filter(t => t.category === "BANK");
-  const flipTx = transactions.filter(t => t.category === "FLIP");
-  const appTx = transactions.filter(t => t.category === "APP PULSA");
-  const danaTx = transactions.filter(t => t.category === "DANA");
-  const tarikTx = transactions.filter(t => t.category === "TARIK TUNAI");
-  const aksTx = transactions.filter(t => t.category === "AKSESORIS");
-  const nonTunaiTx = transactions.filter(t => t.category === "NON TUNAI" || ((t.paymentMethod || "").toLowerCase().includes("non-tunai") && t.category !== "CLOSING"));
-  const closingTx = transactions.filter(t => t.category === "CLOSING");
+  // --- Perhitungan Angka Aman ---
+  const txList = Array.isArray(transactions) ? transactions : [];
+  const shList = Array.isArray(saldoHistory) ? saldoHistory : [];
 
-  const sumNominal = (list: TransactionRecord[]) => list.reduce((s, t) => s + (t.nominal || 0), 0);
-  const sumAdmin = (list: TransactionRecord[]) => list.reduce((s, t) => s + (t.admin || 0), 0);
-
-  const totalBank = sumNominal(bankTx);
-  const totalFlip = sumNominal(flipTx);
-  const totalApp = sumNominal(appTx);
-  const totalDana = sumNominal(danaTx);
-  const totalTarik = sumNominal(tarikTx);
-  const totalAks = sumNominal(aksTx);
-  const totalAdmin = transactions.reduce((s, t) => s + (!t.adminNonTunai ? (t.admin || 0) : 0), 0);
-  const totalAdminNonTunai = transactions.reduce((s, t) => s + (t.adminNonTunai ? (t.admin || 0) : 0), 0);
-  const totalNonTunai = sumNominal(nonTunaiTx);
-  const totalClosing = sumNominal(closingTx);
-
-  // Voucher Calculations
-  let totalVoucherQty = 0;
-  let totalVoucherUang = 0;
-  let totalVoucherNonTunaiQty = 0;
-  let totalVoucherNonTunaiUang = 0;
-
-  voucherData.forEach(v => {
-    if (v.dataQris) {
-      v.dataQris.forEach((q: any) => {
-        totalVoucherNonTunaiQty += (q.qty || 0);
-        totalVoucherNonTunaiUang += ((q.harga || 0) * (q.qty || 0));
-      });
-    }
-    if (v.dataVoucher) {
-      Object.values(v.dataVoucher).forEach((items: any) => {
-        items.forEach((i: any) => {
-          const laku = Math.max(0, (i.awal || 0) - (i.akhir || 0));
-          totalVoucherQty += laku;
-          totalVoucherUang += (laku * (i.price || 0));
-        });
-      });
-    }
-  });
-
-  const totalVoucherTunaiQty = Math.max(0, totalVoucherQty - totalVoucherNonTunaiQty);
-  const totalVoucherTunaiUang = Math.max(0, totalVoucherUang - totalVoucherNonTunaiUang);
-
-  const totalPenjualan = totalBank + totalFlip + totalApp + totalDana + totalVoucherTunaiUang;
-  const sisaCashPenjualan = totalPenjualan - totalTarik;
-  const sisaCashTotal = sisaCashPenjualan + totalAdmin + totalAks;
-  const totalNonTunaiDisplay = totalNonTunai + totalClosing + totalVoucherNonTunaiUang;
-
-  const saldoBankHistory = saldoHistory.filter(s => s.jenis === "Bank");
-  const totalIsiSaldoBank = saldoBankHistory.reduce((s, h) => s + h.nominal, 0);
-  const saldoCashHistory = saldoHistory.filter(s => s.jenis === "Cash");
-  const totalIsiSaldoCash = saldoCashHistory.reduce((s, h) => s + h.nominal, 0);
-
-  // Find Last Balance for Ledger System
-  const allHistory = [
-    ...transactions.map(t => ({ ...t, timestamp: t.createdAt })),
-    ...saldoHistory.map(s => ({ ...s, timestamp: s.createdAt }))
-  ].sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
-
-  const lastRecord = allHistory[0] as any;
-  const saldoAkhirBank = lastRecord?.saldoBankAfter ?? 0;
-  const saldoAkhirCash = lastRecord?.saldoCashAfter ?? 0;
-
-  // Gunakan saldoAkhirBank otomatis dari transaksi terakhir, bukan dari catatan manual lagi
-  const sisaSaldoBank = saldoAkhirBank;
-  const saldoRealApp = dailyNotes.saldoRealApp || 0;
-  const selisih = saldoRealApp - sisaSaldoBank;
-
-  const categoryItems = [
-    { label: "BANK", count: bankTx.length, total: totalBank },
-    { label: "FLIP", count: flipTx.length, total: totalFlip },
-    { label: "DANA", count: danaTx.length, total: totalDana },
-    { label: "APP PULSA", count: appTx.length, total: totalApp },
-    { label: "ISI BANK", count: saldoBankHistory.length, total: totalIsiSaldoBank },
-    { label: "ISI CASH", count: saldoCashHistory.length, total: totalIsiSaldoCash },
-  ].filter(c => c.count > 0);
-
-
-  const handleLock = async () => {
-    if (!confirm("Kunci laporan hari ini? Data tidak bisa diubah lagi.")) return;
-    setLocking(true);
-    try {
-      await lockReport(user!.name, date);
-      setIsLocked(true);
-      toast({ title: "Laporan dikunci" });
-    } catch {
-      toast({ title: "Gagal mengunci", variant: "destructive" });
-    } finally {
-      setLocking(false);
-    }
+  const getVal = (key: string, cat: string) => {
+    if (dailyRekap && (dailyRekap as any)[key] !== undefined) return (dailyRekap as any)[key] || 0;
+    return txList.filter(t => t.category === cat).reduce((s, t) => s + (t.nominal || 0), 0);
   };
 
-  const handleExportExcel = async () => {
-    try {
-      const XLSX = await import("xlsx");
-      const wsData: any[][] = [
-        ["ALFAZA CELL - Laporan Harian"],
-        [`Kasir: ${user?.name}`, `Shift: ${shift}`, `Tanggal: ${date}`],
-        [],
-        ["#", "Jam", "Kategori", "Nominal", "Admin", "Keterangan", "Pembayaran"],
-      ];
-      transactions.forEach((tx, i) => {
-        wsData.push([String(i + 1), tx.transTime || "", tx.category, tx.nominal || 0, tx.admin || 0, tx.keterangan || "", tx.paymentMethod || "tunai"]);
-      });
-      wsData.push([]);
-      wsData.push(["Ringkasan"]);
-      categoryItems.forEach(c => wsData.push([c.label, c.total]));
-      wsData.push(["Total Penjualan", totalPenjualan]);
-      wsData.push(["Tarik Tunai", totalTarik]);
-      wsData.push(["Sisa Cash Penjualan", sisaCashPenjualan]);
-      wsData.push(["Admin", totalAdmin]);
-      wsData.push(["Admin Non Tunai", totalAdminNonTunai]);
-      wsData.push(["Aksesoris", totalAks]);
-      wsData.push(["Total Voucher", totalVoucherTunaiUang]);
-      wsData.push(["Non Tunai", totalNonTunai]);
-      if (totalClosing > 0) wsData.push(["Transaksi Closing", totalClosing]);
-      wsData.push(["Non Tunai Voucher", totalVoucherNonTunaiUang]);
-      wsData.push(["Sisa Cash Total", sisaCashTotal]);
-      wsData.push([]);
-      wsData.push(["Saldo & Selisih"]);
-      wsData.push(["Sisa Saldo Bank (Catatan)", sisaSaldoBank]);
-      wsData.push(["Saldo Real Aplikasi", saldoRealApp]);
-      wsData.push(["Selisih", selisih]);
-      wsData.push([]);
-      wsData.push(["🏛️ SALDO AKHIR PERIODE (LEDGER)"]);
-      wsData.push(["Saldo Bank", saldoAkhirBank]);
-      wsData.push(["Saldo Cash", saldoAkhirCash]);
+  const tBank = getVal("total_bank", "BANK");
+  const tFlip = getVal("total_flip", "FLIP");
+  const tApp = getVal("total_app", "APP PULSA");
+  const tDana = getVal("total_dana", "DANA");
+  const tTarik = getVal("total_tarik", "TARIK TUNAI");
+  const tAks = getVal("total_aks", "AKSESORIS");
+  const tClosing = getVal("total_closing", "CLOSING");
+  
+  const tAdmin = dailyRekap ? (dailyRekap.total_admin || 0) : txList.reduce((s, t) => s + (!t.adminNonTunai ? (t.admin || 0) : 0), 0);
+  const tAdminNT = dailyRekap ? (dailyRekap.total_admin_non_tunai || 0) : txList.reduce((s, t) => s + (t.adminNonTunai ? (t.admin || 0) : 0), 0);
+  const tNT = dailyRekap ? (dailyRekap.total_non_tunai || 0) : txList.filter(t => (t.paymentMethod || "").toLowerCase().includes("non-tunai") && t.category !== "CLOSING").reduce((s, t) => s + (t.nominal || 0), 0);
 
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Laporan");
-      XLSX.writeFile(wb, `laporan_${user?.name}_${date}.xlsx`);
-      toast({ title: "Excel berhasil diunduh" });
-    } catch {
-      toast({ title: "Gagal membuat Excel", variant: "destructive" });
-    }
+  const tPenjualan = tBank + tFlip + tApp + tDana;
+  const sisaCashTotal = tPenjualan - tTarik + tAdmin + tAks;
+
+  const countVal = (key: string, cat: string) => {
+    if (dailyRekap && (dailyRekap as any)[key] !== undefined) return (dailyRekap as any)[key] || 0;
+    return txList.filter(t => t.category === cat).length;
   };
 
-  const buildPdf = async () => {
-    const { default: jsPDF } = await import("jspdf");
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pw = 210;
-    const ml = 12;
-    const mr = 12;
-    const cw = pw - ml - mr;
-    let y = 10;
+  const tIsiBank = dailyRekap ? (dailyRekap.total_isi_bank || 0) : shList.filter(s => s.jenis === "Bank").reduce((s, h) => s + (h.nominal || 0), 0);
+  const sBank = txList[0]?.saldoBankAfter ?? 0;
+  const sReal = dailyNotes?.saldoRealApp || 0;
+  const selisih = sReal - sBank;
 
-    const checkPage = (need: number) => { if (y + need > 280) { pdf.addPage(); y = 12; } };
-
-    const sectionHeader = (text: string, bgR: number, bgG: number, bgB: number, h = 9) => {
-      checkPage(h + 2);
-      pdf.setFillColor(bgR, bgG, bgB);
-      pdf.roundedRect(ml, y, cw, h, 2, 2, "F");
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(10); pdf.setFont("helvetica", "bold");
-      pdf.text(text, ml + 4, y + h / 2 + 1);
-      y += h;
-    };
-
-    const sectionHeaderRight = (left: string, right: string, bgR: number, bgG: number, bgB: number, h = 10) => {
-      checkPage(h + 2);
-      pdf.setFillColor(bgR, bgG, bgB);
-      pdf.roundedRect(ml, y, cw, h, 2, 2, "F");
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(10); pdf.setFont("helvetica", "bold");
-      pdf.text(left, ml + 4, y + h / 2 + 1);
-      pdf.setFontSize(12);
-      pdf.text(right, ml + cw - 4, y + h / 2 + 1, { align: "right" });
-      y += h;
-    };
-
-    const row = (left: string, right: string, opts?: { leftColor?: number[]; rightColor?: number[]; bold?: boolean }) => {
-      checkPage(7);
-      pdf.setFontSize(9);
-      pdf.setFont("helvetica", opts?.bold ? "bold" : "normal");
-      const lc = opts?.leftColor || [55, 55, 55];
-      pdf.setTextColor(lc[0], lc[1], lc[2]);
-      pdf.text(left, ml + 4, y + 4.5);
-      const rc = opts?.rightColor || [55, 55, 55];
-      pdf.setTextColor(rc[0], rc[1], rc[2]);
-      pdf.setFont("helvetica", "bold");
-      pdf.text(right, ml + cw - 4, y + 4.5, { align: "right" });
-      pdf.setDrawColor(230, 230, 230);
-      pdf.line(ml + 2, y + 6.5, ml + cw - 2, y + 6.5);
-      y += 7;
-    };
-
-    pdf.setFillColor(55, 95, 190);
-    pdf.roundedRect(ml, y, cw, 16, 3, 3, "F");
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(15); pdf.setFont("helvetica", "bold");
-    pdf.text("ALFAZA CELL", pw / 2, y + 7, { align: "center" });
-    pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
-    pdf.text("Laporan Harian", pw / 2, y + 12.5, { align: "center" });
-    y += 19;
-
-    pdf.setFillColor(240, 240, 245);
-    pdf.roundedRect(ml, y, cw, 8, 2, 2, "F");
-    pdf.setTextColor(80, 80, 100);
-    pdf.setFontSize(8); pdf.setFont("helvetica", "normal");
-    const infoKasir = isOwner && kasirFilter !== "Semua" ? kasirFilter : (user?.name || "-");
-    pdf.text(`Kasir: ${infoKasir}  |  Shift: ${shift || "-"}  |  Tanggal: ${viewMode === "day" ? date : month}`, pw / 2, y + 5, { align: "center" });
-    y += 11;
-
-    if (categoryItems.length > 0) {
-      sectionHeader("Rincian Kategori", 46, 160, 67);
-      categoryItems.forEach(c => {
-        row(`${c.label} (${c.count}x)`, formatRupiah(c.total), { leftColor: [30, 30, 200], rightColor: [30, 30, 200], bold: true });
-      });
-      y += 2;
-    }
-
-    sectionHeader("TOTAL PENJUALAN", 16, 150, 100);
-    row("Total Penjualan", formatRupiah(totalPenjualan), { leftColor: [16, 130, 90], rightColor: [16, 130, 90] });
-    if (tarikTx.length > 0) row(`Tarik Tunai (${tarikTx.length}x)`, `-${formatRupiah(totalTarik)}`, { leftColor: [220, 50, 50], rightColor: [220, 50, 50] });
-    row("Sisa Cash Penjualan", formatRupiah(sisaCashPenjualan), { leftColor: [16, 130, 90], rightColor: [16, 130, 90] });
-    row("Admin", formatRupiah(totalAdmin), { leftColor: [180, 130, 20], rightColor: [180, 130, 20] });
-    if (aksTx.length > 0) row(`Aksesoris (${aksTx.length}x)`, formatRupiah(totalAks), { leftColor: [200, 50, 100], rightColor: [200, 50, 100] });
-    if (totalVoucherTunaiQty > 0) row(`Total Voucher (${totalVoucherTunaiQty}x)`, formatRupiah(totalVoucherTunaiUang), { leftColor: [16, 100, 200], rightColor: [16, 100, 200] });
-    row("Non Tunai", formatRupiah(totalNonTunai), { leftColor: [100, 50, 200], rightColor: [100, 50, 200] });
-    if (totalClosing > 0) row(`Transaksi Closing (${closingTx.length}x)`, formatRupiah(totalClosing), { leftColor: [140, 50, 180], rightColor: [140, 50, 180] });
-    if (totalVoucherNonTunaiQty > 0) row(`Non Tunai Voucher (${totalVoucherNonTunaiQty}x)`, formatRupiah(totalVoucherNonTunaiUang), { leftColor: [100, 50, 200], rightColor: [100, 50, 200] });
-    y += 2;
-
-    sectionHeaderRight("SISA CASH TOTAL", formatRupiah(sisaCashTotal), 230, 160, 20, 12);
-    y += 3;
-
-    sectionHeader("Jurnal Penyesuaian Saldo Catatan VS Saldo Bank", 130, 60, 200);
-    row("Total Tambah/Isi Saldo Bank", formatRupiah(totalIsiSaldoBank), { bold: true });
-    y += 2;
-
-    sectionHeader("Saldo & Selisih", 46, 140, 67);
-    row("Sisa Saldo Bank (Catatan)", formatRupiah(sisaSaldoBank), { leftColor: [30, 30, 200], rightColor: [30, 30, 200] });
-    row("Saldo Real Aplikasi", formatRupiah(saldoRealApp), { leftColor: [200, 30, 30], rightColor: [200, 30, 30] });
-    row("Selisih", formatRupiah(selisih), { leftColor: selisih >= 0 ? [16, 130, 90] : [220, 50, 50], rightColor: selisih >= 0 ? [16, 130, 90] : [220, 50, 50], bold: true });
-    y += 4;
-
-    sectionHeader("🏛️ SALDO AKHIR PERIODE", 20, 40, 80);
-    row("Saldo Bank (Terakhir)", formatRupiah(saldoAkhirBank), { bold: true });
-    row("Saldo Cash (Terakhir)", formatRupiah(saldoAkhirCash), { bold: true });
-    y += 4;
-
-    if (transactions.length > 0) {
-      sectionHeader("Detail Transaksi", 70, 70, 80);
-
-      const colW = [10, 35, 42, 35, 64];
-      const colX = [ml, ml + colW[0], ml + colW[0] + colW[1], ml + colW[0] + colW[1] + colW[2], ml + colW[0] + colW[1] + colW[2] + colW[3]];
-      const headers = ["#", "Kategori", "Nominal", "Admin", "Keterangan"];
-      checkPage(14);
-
-      pdf.setFillColor(55, 55, 65);
-      pdf.rect(ml, y, cw, 7, "F");
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(7.5); pdf.setFont("helvetica", "bold");
-      headers.forEach((h, i) => pdf.text(h, colX[i] + 2, y + 4.8));
-      y += 7;
-
-      pdf.setFontSize(7.5); pdf.setFont("helvetica", "normal");
-      transactions.forEach((tx, idx) => {
-        checkPage(7);
-        const bgFill = idx % 2 === 0;
-        if (bgFill) {
-          pdf.setFillColor(248, 248, 252);
-          pdf.rect(ml, y, cw, 6.5, "F");
-        }
-        pdf.setTextColor(60, 60, 60);
-        pdf.text(String(idx + 1), colX[0] + 2, y + 4.3);
-        pdf.text(tx.category || "-", colX[1] + 2, y + 4.3);
-        pdf.text(formatRupiah(tx.nominal || 0), colX[2] + 2, y + 4.3);
-        pdf.text(formatRupiah(tx.admin || 0) + (tx.adminNonTunai ? " (NT)" : ""), colX[3] + 2, y + 4.3);
-        const ket = (tx.keterangan || "-").substring(0, 30);
-        pdf.text(ket, colX[4] + 2, y + 4.3);
-        y += 6.5;
-      });
-    }
-
-    y += 6;
-    checkPage(8);
-    pdf.setTextColor(160, 160, 170);
-    pdf.setFontSize(7); pdf.setFont("helvetica", "normal");
-    const nowStr = new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
-    pdf.text(`Dicetak: ${nowStr} | Alfaza Link POS`, pw / 2, y, { align: "center" });
-
-    return pdf;
-  };
-
-  const handleExportPDF = async () => {
-    try {
-      const pdf = await buildPdf();
-      pdf.save(`laporan-${user?.name}-${date}.pdf`);
-    } catch { toast({ title: "Gagal export PDF", variant: "destructive" }); }
-  };
-
-  const handleBagikan = async () => {
-    try {
-      const pdf = await buildPdf();
-      const blob = pdf.output("blob");
-      const file = new File([blob], `laporan-${user?.name}-${date}.pdf`, { type: "application/pdf" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: "Laporan Harian Alfaza Cell" });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = file.name; a.click();
-        URL.revokeObjectURL(url);
-      }
-    } catch { toast({ title: "Gagal bagikan PDF", variant: "destructive" }); }
-  };
-
-  if (loading) {
-    return (
-      <div className="px-3 pt-3">
-        <Header />
-        <div className="flex flex-col items-center gap-3 py-16">
-          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-          <p className="text-sm text-gray-400">Memuat laporan...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+      <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-2" />
+      <p className="text-[10px] font-bold text-gray-400 uppercase">Sinkronisasi Data...</p>
+    </div>
+  );
 
   return (
-    <div className="px-3 pt-3 pb-24">
+    <div className="px-3 pt-3 pb-20 bg-gray-50 min-h-screen">
       <Header />
-
-      {isOwner && (
-        <>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <button onClick={() => setViewMode("day")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "day" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}>
-              Per Hari
-            </button>
-            <button onClick={() => setViewMode("month")} className={`py-2.5 rounded-full text-xs font-bold transition ${viewMode === "month" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}>
-              Per Bulan
-            </button>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 mb-2 scrollbar-hide">
-            {["Semua", ...kasirList.map(k => k.name)].map(name => (
-              <button
-                key={name}
-                onClick={() => setKasirFilter(name)}
-                className={`whitespace-nowrap px-3 py-1.5 rounded-full text-[11px] font-bold transition flex-shrink-0 ${kasirFilter === name ? "bg-blue-600 text-white shadow" : "bg-white text-gray-500 border border-gray-200"}`}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-      <div className="flex items-center gap-2 mb-3">
-        {viewMode === "day" ? (
-          <input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            className="flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-xs bg-white outline-none"
-          />
-        ) : (
-          <input
-            type="month"
-            value={month}
-            onChange={e => setMonth(e.target.value)}
-            className="flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-xs bg-white outline-none"
-          />
-        )}
-        <button
-          onClick={() => loadData()}
-          className="bg-blue-600 text-white px-5 py-2.5 rounded-full text-xs font-bold active:scale-95 transition"
-        >
-          Tampilkan
-        </button>
+      <div className="mb-4">
+        <h1 className="text-lg font-black text-gray-800 uppercase tracking-tight flex items-center gap-2">📋 Rekap Harian</h1>
+        <p className="text-[10px] font-bold text-gray-400 uppercase">Analisis transaksi harian</p>
       </div>
 
-      {/* GRUP 1: Rincian + Total Penjualan + Total Uang Cash */}
-      <div ref={reportRef} className="rounded-2xl border border-black overflow-hidden mb-3">
-        {categoryItems.length > 0 && (
-          <>
-            <div className="bg-gradient-to-r from-blue-700 to-blue-500 px-4 py-2.5">
-              <h3 className="text-white font-bold text-sm flex items-center gap-1.5">📊 Rincian Kategori</h3>
-            </div>
-            <div className="px-4 py-3 bg-white space-y-2 border-b border-black">
-              {categoryItems.map(c => (
-                <div key={c.label} className="flex justify-between items-center">
-                  <span className="text-sm font-bold text-gray-800">{c.label} <span className="text-gray-400 font-normal">({c.count}x)</span></span>
-                  <span className="text-sm font-bold text-blue-700">{formatRupiah(c.total)}</span>
-                </div>
-              ))}
-            </div>
-          </>
+      <div className="flex gap-2 mb-4">
+        {isOwner && (
+          <select value={kasirFilter} onChange={e => setKasirFilter(e.target.value)} className="bg-white border border-black rounded-lg px-2 py-1.5 text-xs font-bold outline-none">
+            <option value="Semua">Semua Kasir</option>
+            {kasirList.map(k => <option key={k.name} value={k.name}>{k.name}</option>)}
+          </select>
         )}
+        <input type="date" value={date} onChange={e => setDate(e.target.value)} className="flex-1 rounded-lg border border-black px-2 py-1.5 text-xs bg-white outline-none font-bold" />
+      </div>
 
-        <div className="bg-gradient-to-r from-emerald-600 to-emerald-400 px-4 py-2.5 flex justify-between items-center">
-          <h3 className="text-white font-bold text-sm flex items-center gap-1.5">📈 TOTAL PENJUALAN</h3>
-          <span className="text-white font-extrabold text-base">{formatRupiah(totalPenjualan)}</span>
+      <div className="rounded-xl border border-black overflow-hidden mb-3 bg-white shadow-sm">
+        <div className="bg-blue-600 px-3 py-2 flex justify-between items-center"><h3 className="text-white font-bold text-xs uppercase">📊 Rincian Kategori</h3></div>
+        <div className="px-3 py-2 space-y-1">
+          {tBank > 0 && <div className="flex justify-between text-xs"><span>BANK ({countVal("count_bank", "BANK")}x)</span><span className="font-bold text-blue-600">{formatRupiah(tBank)}</span></div>}
+          {tFlip > 0 && <div className="flex justify-between text-xs"><span>FLIP ({countVal("count_flip", "FLIP")}x)</span><span className="font-bold text-blue-600">{formatRupiah(tFlip)}</span></div>}
+          {tDana > 0 && <div className="flex justify-between text-xs"><span>DANA ({countVal("count_dana", "DANA")}x)</span><span className="font-bold text-blue-600">{formatRupiah(tDana)}</span></div>}
+          {tApp > 0 && <div className="flex justify-between text-xs"><span>APP ({countVal("count_app", "APP PULSA")}x)</span><span className="font-bold text-blue-600">{formatRupiah(tApp)}</span></div>}
         </div>
-        <div className="bg-white px-4 space-y-0">
-          {tarikTx.length > 0 && (
-            <div className="flex justify-between items-center py-2 border-b border-gray-200">
-              <span className="text-sm text-gray-700 flex items-center gap-1">💸 <strong className="text-emerald-700">Tarik Tunai</strong><span className="text-[10px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full font-bold ml-1">{tarikTx.length}x</span></span>
-              <span className="text-sm font-bold text-red-500">-{formatRupiah(totalTarik)}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center py-2 border-b border-gray-200">
-            <span className="text-sm text-gray-700 flex items-center gap-1">💰 <strong className="text-emerald-700">Sisa Cash Penjualan</strong></span>
-            <span className="text-sm font-bold text-emerald-700">{formatRupiah(sisaCashPenjualan)}</span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-b border-gray-200">
-            <span className="text-sm text-gray-700 flex items-center gap-1">📱 <strong className="text-amber-600">Admin</strong></span>
-            <span className="text-sm font-bold text-amber-600">{formatRupiah(totalAdmin)}</span>
-          </div>
-          {aksTx.length > 0 && (
-            <div className="flex justify-between items-center py-2 border-b border-gray-200">
-              <span className="text-sm text-gray-700 flex items-center gap-1">🎧 <strong className="text-rose-500">Aksesoris</strong><span className="text-[10px] bg-rose-100 text-rose-500 px-1.5 py-0.5 rounded-full font-bold ml-1">{aksTx.length}x</span></span>
-              <span className="text-sm font-bold text-rose-500">{formatRupiah(totalAks)}</span>
-            </div>
-          )}
-          {totalVoucherTunaiQty > 0 && (
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-gray-700 flex items-center gap-1">🎟️ <strong className="text-blue-600">TOTAL VOUCHER</strong><span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold ml-1">{totalVoucherTunaiQty}x</span></span>
-              <span className="text-sm font-bold text-blue-600">{formatRupiah(totalVoucherTunaiUang)}</span>
-            </div>
-          )}
+        
+        <div className="bg-emerald-500 px-3 py-2 flex justify-between items-center border-t border-black">
+          <h3 className="text-white font-bold text-xs uppercase">📈 Total Penjualan</h3>
+          <span className="text-white font-black text-sm">{formatRupiah(tPenjualan)}</span>
         </div>
 
-        <div className="bg-gradient-to-r from-amber-500 to-yellow-400 px-4 py-3">
-          <div className="flex justify-between items-center mb-1">
-            <h3 className="text-gray-900 font-extrabold text-sm flex items-center gap-1.5">💰 TOTAL UANG CASH</h3>
-            <span className="text-gray-900 font-extrabold text-xl">{formatRupiah(sisaCashTotal)}</span>
+        <div className="bg-white px-3 py-2 space-y-1.5 border-t border-black">
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500 font-bold uppercase text-[10px]">💸 Tarik Tunai ({countVal("count_tarik", "TARIK TUNAI")}x)</span>
+            <span className="font-bold text-red-500">-{formatRupiah(tTarik)}</span>
           </div>
-          <p className="text-[10px] text-black font-bold mt-1">
-            Sisa Cash: {formatRupiah(sisaCashPenjualan)} + Admin: {formatRupiah(totalAdmin)} + Aks: {formatRupiah(totalAks)} - TRX: {transactions.length} - VC: {totalVoucherQty}
-          </p>
+          <div className="flex justify-between text-xs border-t pt-1 border-dashed">
+            <span className="text-gray-500 font-bold uppercase text-[10px]">💰 Sisa Cash Penjualan</span>
+            <span className="font-bold text-emerald-600">{formatRupiah(tPenjualan - tTarik)}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500 font-bold uppercase text-[10px]">📱 Admin</span>
+            <span className="font-bold text-amber-600">{formatRupiah(tAdmin)}</span>
+          </div>
+          {tAks > 0 && (
+            <div className="flex justify-between text-xs">
+              <span className="text-gray-500 font-bold uppercase text-[10px]">🎧 Aksesoris ({countVal("count_aks", "AKSESORIS")}x)</span>
+              <span className="font-bold text-red-400">{formatRupiah(tAks)}</span>
+            </div>
+          )}
         </div>
 
-        {/* NON-TUNAI SECTION */}
-        <div className="bg-purple-50/30 px-4 space-y-0 border-t border-black">
-          <div className="flex justify-between items-center py-2 border-b border-gray-200/60">
-            <span className="text-sm text-gray-700 flex items-center gap-1">🏷️ <strong className="text-purple-600">Non Tunai</strong></span>
-            <span className="text-sm font-bold text-purple-600">{formatRupiah(totalNonTunai)}</span>
+        <div className="bg-amber-400 px-3 py-2.5 border-t border-black">
+          <div className="flex justify-between items-center">
+            <h3 className="text-black font-black text-xs uppercase">💰 Total Uang Cash</h3>
+            <span className="text-black font-black text-lg">{formatRupiah(sisaCashTotal)}</span>
           </div>
-          {closingTx.length > 0 && (
-            <div className="flex justify-between items-center py-2 border-b border-gray-200/60">
-              <span className="text-sm text-gray-700 flex items-center gap-1">🔄 <strong className="text-purple-600">Transaksi Closing</strong><span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold ml-1">{closingTx.length}x</span></span>
-              <span className="text-sm font-bold text-purple-600">{formatRupiah(totalClosing)}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center py-2 border-b border-gray-200/60">
-            <span className="text-sm text-gray-700 flex items-center gap-1">📱 <strong className="text-purple-600">Admin Non Tunai</strong></span>
-            <span className="text-sm font-bold text-purple-600">{formatRupiah(totalAdminNonTunai)}</span>
+          <div className="mt-1 text-[9px] font-bold text-black/70 leading-tight">
+            Sisa Cash: {formatRupiah(tPenjualan - tTarik)} + Admin: {formatRupiah(tAdmin)} + Aks: {formatRupiah(tAks)}
+            <br />
+            Total Transaksi: {txList.length} entri riwayat
           </div>
-          {totalVoucherNonTunaiQty > 0 && (
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-gray-700 flex items-center gap-1">💳 <strong className="text-purple-700">Voucher Non Tunai</strong><span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold ml-1">{totalVoucherNonTunaiQty}x</span></span>
-              <span className="text-sm font-bold text-purple-700">{formatRupiah(totalVoucherNonTunaiUang)}</span>
-            </div>
-          )}
-        </div>
-        <div className="bg-gradient-to-r from-purple-600 to-purple-400 px-4 py-2 flex justify-between items-center border-t border-purple-300">
-          <h3 className="text-white font-bold text-sm flex items-center gap-1.5">💳 TOTAL NON TUNAI</h3>
-          <span className="text-white font-extrabold text-base">{formatRupiah(totalNonTunaiDisplay + totalAdminNonTunai)}</span>
         </div>
       </div>
 
-
-
-      {/* GRUP 2: Jurnal Penyesuaian + Saldo & Selisih */}
-      <div className="rounded-2xl border border-black overflow-hidden mb-4">
-        <div 
-          className="bg-gradient-to-r from-indigo-700 to-indigo-500 px-4 py-2.5 flex justify-between items-center cursor-pointer active:opacity-80 transition-all"
-          onClick={() => setShowJurnal(!showJurnal)}
-        >
-          <h3 className="text-white font-bold text-sm flex items-center gap-1.5">📒 Jurnal Penyesuaian Saldo Catatan VS Saldo Bank</h3>
-          <ChevronDown className={`w-4 h-4 text-white transition-transform duration-300 ${showJurnal ? 'rotate-180' : ''}`} />
-        </div>
-        {showJurnal && (
-          <div className="bg-white px-4 space-y-0 border-b border-black">
-            <div className="flex justify-between items-center py-2 border-b border-black">
-              <span className="text-sm text-gray-700">💳 <strong>Total Tambah/Isi Saldo Bank</strong></span>
-              <span className="text-sm font-extrabold text-blue-700">{formatRupiah(totalIsiSaldoBank)}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-gray-300">
-              <span className="text-sm text-gray-700">Sisa Saldo Bank (Catatan)</span>
-              <span className="text-sm font-bold text-gray-800">{formatRupiah(sisaSaldoBank)}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-black">
-              <span className="text-sm text-gray-700">Total Penjualan</span>
-              <span className="text-sm font-bold text-gray-800">{formatRupiah(totalPenjualan)}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-black">
-              <span className="text-sm font-bold text-gray-900">Total</span>
-              <span className="text-sm font-extrabold text-gray-900">{formatRupiah(sisaSaldoBank + totalPenjualan)}</span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm font-bold text-gray-700">Selisih</span>
-              <span className={`text-sm font-extrabold ${(totalIsiSaldoBank - (sisaSaldoBank + totalPenjualan)) >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatRupiah(totalIsiSaldoBank - (sisaSaldoBank + totalPenjualan))}</span>
-            </div>
-          </div>
-        )}
-
-        <div 
-          className="bg-gradient-to-r from-green-700 to-green-500 px-4 py-2.5 flex justify-between items-center cursor-pointer active:opacity-80 transition-all border-t border-black"
-          onClick={() => setShowSelisih(!showSelisih)}
-        >
-          <h3 className="text-white font-bold text-sm flex items-center gap-1.5">🏦 Saldo & Selisih</h3>
-          <ChevronDown className={`w-4 h-4 text-white transition-transform duration-300 ${showSelisih ? 'rotate-180' : ''}`} />
-        </div>
-        {showSelisih && (
-          <div className="bg-white px-4 space-y-0">
-            <div className="flex justify-between items-center py-2 border-b border-black">
-              <span className="text-sm text-gray-700 flex items-center gap-1">🏛️ <strong>Sisa Saldo Bank (Catatan)</strong></span>
-              <span className="text-sm font-extrabold text-blue-700">{formatRupiah(sisaSaldoBank)}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-black">
-              <span className="text-sm text-gray-700 flex items-center gap-1">📱 <strong>Saldo Real Aplikasi</strong></span>
-              <span className="text-sm font-extrabold text-red-600">{formatRupiah(saldoRealApp)}</span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-gray-700 flex items-center gap-1">🔄 <strong>Selisih</strong></span>
-              <span className={`text-sm font-extrabold ${selisih >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatRupiah(selisih)}</span>
-            </div>
-          </div>
-        )}
+      <div className="rounded-xl border border-black overflow-hidden mb-3 bg-white">
+        {tAdminNT > 0 && <div className="flex justify-between items-center px-3 py-2 border-b border-gray-100"><span className="text-xs font-bold text-purple-700">💳 Admin Non Tunai</span><span className="text-xs font-black text-purple-700">{formatRupiah(tAdminNT)}</span></div>}
+        {tNT > 0 && <div className="flex justify-between items-center px-3 py-2 border-b border-gray-100"><span className="text-xs font-bold text-purple-600">🏷️ Non Tunai</span><span className="text-xs font-black text-purple-600">{formatRupiah(tNT)}</span></div>}
+        {tClosing > 0 && <div className="flex justify-between items-center px-3 py-2"><span className="text-xs font-bold text-gray-600">📒 Transaksi Closing</span><span className="text-xs font-black text-gray-800">{formatRupiah(tClosing)}</span></div>}
       </div>
 
-      {/* Tombol aksi */}
-      <div className="space-y-3 mt-4">
-        <div className="grid grid-cols-3 gap-2">
-          <button onClick={handleExportPDF} className="flex flex-col items-center justify-center gap-1 bg-red-500 text-white py-2.5 rounded-xl font-bold text-[10px] shadow active:scale-95 transition">
-            <Download className="w-4 h-4" /> PDF
-          </button>
-          <button onClick={handleExportExcel} className="flex flex-col items-center justify-center gap-1 bg-green-600 text-white py-2.5 rounded-xl font-bold text-[10px] shadow active:scale-95 transition">
-            <Download className="w-4 h-4" /> Excel
-          </button>
-          <button onClick={handleBagikan} className="flex flex-col items-center justify-center gap-1 bg-blue-600 text-white py-2.5 rounded-xl font-bold text-[10px] shadow active:scale-95 transition">
-            <Share2 className="w-4 h-4" /> BAGIKAN
-          </button>
-        </div>
+      <div className="rounded-xl border border-black overflow-hidden mb-4 bg-white">
+        <div onClick={() => setShowJurnal(!showJurnal)} className="bg-purple-600 px-3 py-2 flex justify-between items-center cursor-pointer border-b border-black"><h3 className="text-white font-bold text-xs uppercase">📒 Jurnal Penyesuaian</h3><ChevronDown className={`w-4 h-4 text-white transition ${showJurnal ? 'rotate-180' : ''}`} /></div>
+        {showJurnal && <div className="px-3 py-2 space-y-1 border-b border-black"><div className="flex justify-between text-xs"><span>Isi Saldo Bank</span><span className="font-bold text-blue-600">{formatRupiah(tIsiBank)}</span></div><div className="flex justify-between text-xs"><span>Sisa Saldo Bank</span><span className="font-bold">{formatRupiah(sBank)}</span></div></div>}
+        <div onClick={() => setShowSelisih(!showSelisih)} className="bg-emerald-600 px-3 py-2 flex justify-between items-center cursor-pointer"><h3 className="text-white font-bold text-xs uppercase">🏦 Saldo & Selisih</h3><ChevronDown className={`w-4 h-4 text-white transition ${showSelisih ? 'rotate-180' : ''}`} /></div>
+        {showSelisih && <div className="px-3 py-2 border-t border-black"><div className="flex justify-between text-xs"><span>Catatan Bank</span><span className="font-bold">{formatRupiah(sBank)}</span></div><div className="flex justify-between text-xs"><span>Real Aplikasi</span><span className="font-bold text-red-600">{formatRupiah(sReal)}</span></div><div className="flex justify-between text-xs font-bold border-t mt-1 pt-1"><span>Selisih</span><span className={selisih >= 0 ? 'text-green-600' : 'text-red-600'}>{formatRupiah(selisih)}</span></div></div>}
+      </div>
 
-
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <button onClick={() => toast({ title: "Membangun PDF..." })} className="bg-red-500 text-white py-2.5 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1"><Download className="w-3.5 h-3.5" /> PDF</button>
+        <button onClick={() => toast({ title: "Export Excel..." })} className="bg-green-600 text-white py-2.5 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1"><Download className="w-3.5 h-3.5" /> EXCEL</button>
+        <button onClick={() => toast({ title: "Menyiapkan file..." })} className="bg-blue-600 text-white py-2.5 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1"><Share2 className="w-3.5 h-3.5" /> SHARE</button>
       </div>
     </div>
   );

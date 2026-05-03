@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
-import { getTransactions, getSaldoHistory, getUsers, updateTransaction, deleteTransaction, updateSaldoHistory, deleteSaldoHistory, type TransactionRecord, type SaldoHistoryRecord, type UserRecord } from "@/lib/firestore";
+import { getTransactions, getSaldoHistory, getUsers, updateTransaction, deleteTransaction, updateSaldoHistory, deleteSaldoHistory, getDailyRekap, type TransactionRecord, type SaldoHistoryRecord, type UserRecord, type DailyRekapRecord } from "@/lib/firestore";
 import { Receipt, AlertCircle, X, Lock, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,20 +43,34 @@ export default function Riwayat() {
   const [saldoHistory, setSaldoHistory] = useState<SaldoHistoryRecord[]>([]);
   const [allUsers, setAllUsers] = useState<UserRecord[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [dailyRekap, setDailyRekap] = useState<DailyRekapRecord | null>(null);
 
   const kasirFilter = selectedKasir === "Semua Kasir" ? undefined : selectedKasir;
 
   const loadData = useCallback(async () => {
     if (!user?.name) return;
     try {
-      const [txs, saldo, users] = await Promise.all([
-        getTransactions({ kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), startDate, endDate }),
-        getSaldoHistory({ kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), startDate: today, endDate: today }),
+      const isDailyAll = startDate === endDate && (!kasirFilter || kasirFilter === "Semua Kasir");
+      const isLast20 = selectedCategory === "20 Riwayat Terakhir";
+      const [txs, saldo, users, rekap] = await Promise.all([
+        getTransactions({ 
+          kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), 
+          startDate, 
+          endDate,
+          limit: isLast20 ? 20 : undefined
+        }),
+        getSaldoHistory({ 
+          kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), 
+          startDate: today, 
+          endDate: today 
+        }),
         getUsers(),
+        isDailyAll ? getDailyRekap(startDate) : Promise.resolve(null)
       ]);
       setTransactions(txs || []);
       setSaldoHistory(saldo || []);
       setAllUsers(users || []);
+      setDailyRekap(rekap);
     } catch (err) {
       console.error("Riwayat Load Error:", err);
       toast({ title: "Gagal memuat data", variant: "destructive" });
@@ -337,13 +351,23 @@ export default function Riwayat() {
         {filteredTx.length > 0 && (
           <div className="border-t border-gray-200 px-3 py-3 text-[11px] bg-gray-50/50">
             <div className="flex justify-between items-center mb-2">
-              <span className="font-bold text-gray-700">{filteredTx.length} transaksi</span>
+              <span className="font-bold text-gray-700">
+                {dailyRekap 
+                  ? ((dailyRekap.count_bank || 0) + (dailyRekap.count_flip || 0) + (dailyRekap.count_app || 0) + (dailyRekap.count_dana || 0) + (dailyRekap.count_tarik || 0) + (dailyRekap.count_aks || 0)) 
+                  : filteredTx.length} transaksi
+              </span>
               <div className="flex items-center gap-2.5">
-                <span className="font-bold text-gray-800">Total: {formatRupiah(filteredTx.reduce((sum, tx) => sum + (tx.nominal || 0), 0))}</span>
+                <span className="font-bold text-gray-800">
+                  Total: {dailyRekap 
+                    ? formatRupiah((dailyRekap.total_bank || 0) + (dailyRekap.total_flip || 0) + (dailyRekap.total_app || 0) + (dailyRekap.total_dana || 0)) 
+                    : formatRupiah(filteredTx.reduce((sum, tx) => sum + (tx.nominal || 0), 0))}
+                </span>
                 <span className="text-gray-500 font-medium border-l border-gray-300 pl-2.5">
-                  Admin: {formatRupiah(filteredTx.reduce((sum, tx) => sum + (!tx.adminNonTunai ? (tx.admin || 0) : 0), 0))}
-                  {filteredTx.reduce((sum, tx) => sum + (tx.adminNonTunai ? (tx.admin || 0) : 0), 0) > 0 && (
-                    <> / <span className="text-purple-600">{(filteredTx.reduce((sum, tx) => sum + (tx.adminNonTunai ? (tx.admin || 0) : 0), 0)).toLocaleString('id-ID')}</span></>
+                  Admin: {dailyRekap 
+                    ? formatRupiah(dailyRekap.total_admin || 0) 
+                    : formatRupiah(filteredTx.reduce((sum, tx) => sum + (!tx.adminNonTunai ? (tx.admin || 0) : 0), 0))}
+                  {((dailyRekap ? (dailyRekap.total_admin_non_tunai || 0) : filteredTx.reduce((sum, tx) => sum + (tx.adminNonTunai ? (tx.admin || 0) : 0), 0))) > 0 && (
+                    <> / <span className="text-purple-600">{(dailyRekap ? (dailyRekap.total_admin_non_tunai || 0) : filteredTx.reduce((sum, tx) => sum + (tx.adminNonTunai ? (tx.admin || 0) : 0), 0)).toLocaleString('id-ID')}</span></>
                   )}
                 </span>
               </div>
