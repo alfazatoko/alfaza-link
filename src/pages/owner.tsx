@@ -8,7 +8,7 @@ import {
   getAttendance, getIzinList, createIzin, updateIzin,
   getHutangList, getKontakList,
   resetAllData, getDailyNotes, getDailyRekap, getDailyRekapByRange, getAllRekapKasirByRange,
-  type UserRecord, type SettingsRecord, type TransactionRecord, type AttendanceRecord, type IzinRecord, type SaldoHistoryRecord, type CategoryLabels, type DailyRekapRecord
+  type UserRecord, type SettingsRecord, type TransactionRecord, type AttendanceRecord, type IzinRecord, type SaldoHistoryRecord, type CategoryLabels, type DailyRekapRecord, type KasirRekapRecord
 } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -1798,7 +1798,7 @@ function RingkasanPage({ goBack }: { goBack: () => void }) {
   const now = new Date();
   const [month, setMonth] = useState(() => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
   const [selectedKasir, setSelectedKasir] = useState("Semua");
-  const [allKasirRekaps, setAllKasirRekaps] = useState<DailyRekapRecord[]>([]);
+  const [allKasirRekaps, setAllKasirRekaps] = useState<KasirRekapRecord[]>([]);
 
   useEffect(() => {
     setLoading(true);

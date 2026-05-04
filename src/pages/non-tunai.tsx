@@ -1,13 +1,15 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import { getBalance, createTransaction, type BalanceRecord } from "@/lib/firestore";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
-import { CreditCard, Check } from "lucide-react";
+import { CreditCard, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function NonTunai() {
   const { user, shift } = useAuth();
+  const [, setLocation] = useLocation();
   const [nominalDisplay, setNominalDisplay] = useState("");
   const [adminDisplay, setAdminDisplay] = useState("");
   const [keterangan, setKeterangan] = useState("");
@@ -65,7 +67,13 @@ export default function NonTunai() {
       <div className="p-4">
         <Header />
 
-        <div className="bg-gradient-to-r from-purple-600 to-purple-500 text-white p-4 rounded-2xl mb-5 text-center shadow-lg">
+        <div className="bg-gradient-to-r from-purple-600 to-purple-500 text-white p-4 rounded-2xl mb-5 text-center shadow-lg relative">
+          <button 
+            onClick={() => setLocation("/beranda")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-white/10 rounded-full transition-all active:scale-90"
+          >
+            <X className="w-5 h-5 text-white" strokeWidth={3} />
+          </button>
           <div className="flex items-center justify-center gap-2 text-base font-extrabold">
             <CreditCard className="w-5 h-5" />
             Khusus Pembayaran Non Tunai

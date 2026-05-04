@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Printer, Share2, Plus, Trash2, Edit2, Save, Loader2, Download } from "lucide-react";
+import { ArrowLeft, Printer, Share2, Plus, Trash2, Edit2, Save, Loader2, Download, X } from "lucide-react";
 import { getSettings, type SettingsRecord } from "@/lib/firestore";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -314,7 +314,7 @@ export default function Nota() {
     <div className="min-h-screen bg-gray-100 pb-24">
       {/* Header - Hidden saat print */}
       <div className="bg-gradient-to-r from-blue-800 via-blue-600 to-blue-500 text-white p-4 shadow-lg no-print">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 relative">
           <button
             onClick={() => setLocation("/beranda")}
             className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition flex items-center gap-1"
@@ -338,6 +338,13 @@ export default function Nota() {
               title="Print"
             >
               <Printer className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setLocation("/beranda")}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all active:scale-90"
+              title="Keluar"
+            >
+              <X className="w-5 h-5 text-white" strokeWidth={3} />
             </button>
           </div>
         </div>

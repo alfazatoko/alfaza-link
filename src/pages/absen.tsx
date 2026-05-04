@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import { getAttendance, createAttendance } from "@/lib/firestore";
 import { db } from "@/lib/firebase";
 import { getWibDate } from "@/lib/utils";
-import { Clock, MapPin, Camera, CheckCircle2, History, Timer, LogOut, LogIn } from "lucide-react";
+import { Clock, MapPin, Camera, CheckCircle2, History, Timer, LogOut, LogIn, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
 
 export default function Absen() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [attendanceToday, setAttendanceToday] = useState<any>(null);
@@ -101,11 +103,17 @@ export default function Absen() {
 
       {/* Hero Clock Card */}
       <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[32px] p-6 text-white shadow-xl shadow-blue-500/20 mb-6 relative overflow-hidden">
+        <button 
+          onClick={() => setLocation("/beranda")}
+          className="absolute left-4 top-4 z-20 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all active:scale-90"
+        >
+          <X className="w-5 h-5 text-white" strokeWidth={3} />
+        </button>
         <div className="absolute top-0 right-0 p-8 opacity-10">
           <Clock className="w-32 h-32" />
         </div>
         
-        <div className="relative z-10">
+        <div className="relative z-10 pt-8">
           <p className="text-blue-100 text-sm font-medium mb-1">{dateString}</p>
           <h2 className="text-5xl font-black tracking-tighter mb-4">{timeString}</h2>
           

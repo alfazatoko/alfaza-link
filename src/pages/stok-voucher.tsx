@@ -203,6 +203,30 @@ export default function StokVoucher() {
       }
     };
   }, [dataVoucher, dataQris, kasirFilter, selectedDate, isLoading]);
+  
+  const { totalQtyLakuKeseluruhan, totalUangKeseluruhan, totalUangQris } = useMemo(() => {
+    let qty = 0;
+    let uang = 0;
+    let qris = 0;
+    
+    Object.values(dataVoucher).forEach(items => {
+      items.forEach(item => {
+        const laku = Math.max(0, item.awal - item.akhir);
+        qty += laku;
+        uang += laku * item.price;
+      });
+    });
+    
+    dataQris.forEach(item => {
+      qris += item.harga * item.qty;
+    });
+    
+    return { 
+      totalQtyLakuKeseluruhan: qty, 
+      totalUangKeseluruhan: uang, 
+      totalUangQris: qris 
+    };
+  }, [dataVoucher, dataQris]);
 
   const toggleEditProvider = (provider: string) => {
     setProvidersEditState(prev => ({ ...prev, [provider]: !prev[provider] }));
@@ -377,10 +401,10 @@ export default function StokVoucher() {
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-800 via-blue-600 to-blue-500 text-white shadow-lg sticky top-0 z-10">
         <div className="p-4 flex flex-col gap-3">
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start relative">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => window.history.back()}
+                onClick={() => setLocation("/beranda")}
                 className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition flex items-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -391,16 +415,24 @@ export default function StokVoucher() {
                 <p className="text-[10px] md:text-xs text-blue-100 font-medium">{kasirFilter}</p>
               </div>
             </div>
-            {kasirFilter !== "Semua Kasir" && (
-              <button 
-                onClick={() => handleSync(true)}
-                disabled={isSyncing || isLoading}
-                className="flex flex-col items-center justify-center bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors border border-white/20"
+            <div className="flex items-center gap-2">
+              {kasirFilter !== "Semua Kasir" && (
+                <button 
+                  onClick={() => handleSync(true)}
+                  disabled={isSyncing || isLoading}
+                  className="flex flex-col items-center justify-center bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors border border-white/20"
+                >
+                  {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mb-0.5" /> : <CloudUpload className="w-4 h-4 mb-0.5" />}
+                  <span className="text-[8px] font-medium leading-none">{lastSync ? `Sync: ${lastSync}` : 'Auto Sync'}</span>
+                </button>
+              )}
+              <button
+                onClick={() => setLocation("/beranda")}
+                className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all active:scale-90"
               >
-                {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mb-0.5" /> : <CloudUpload className="w-4 h-4 mb-0.5" />}
-                <span className="text-[8px] font-medium leading-none">{lastSync ? `Sync: ${lastSync}` : 'Auto Sync'}</span>
+                <X className="w-5 h-5 text-white" strokeWidth={3} />
               </button>
-            )}
+            </div>
           </div>
 
           {isOwner && (
