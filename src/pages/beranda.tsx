@@ -218,26 +218,26 @@ export default function Beranda() {
 
         {/* Bottom 3 Secondary Balances */}
         <div className="grid grid-cols-3 gap-0 pt-3 border-t border-black/10 relative z-10 mt-2">
-          <div className="p-1 px-2">
+          <div className="p-1 px-1.5">
             <span className="text-[8px] font-bold text-gray-700/80 uppercase flex items-center gap-1 mb-1">
               <ArrowDownToLine className="w-2.5 h-2.5" /> Tarik Tunai
             </span>
-            <span className="text-xs font-black">{formatRupiah(balance?.tarik || 0)}</span>
+            <span className="text-[10px] font-black whitespace-nowrap">{formatRupiah(balance?.tarik || 0)}</span>
           </div>
-          <div className="p-1 px-2 pl-4 border-l border-black/10">
+          <div className="p-1 px-1.5 pl-3 border-l border-black/10">
             <span className="text-[8px] font-bold text-gray-700/80 uppercase flex items-center gap-1 mb-1">
               <Gem className="w-2.5 h-2.5" /> Aksesoris
             </span>
-            <span className="text-xs font-black">{formatRupiah(balance?.aks || 0)}</span>
+            <span className="text-[10px] font-black whitespace-nowrap">{formatRupiah(balance?.aks || 0)}</span>
           </div>
-          <div className="p-1 px-2 pl-4 border-l border-black/10">
+          <div className="p-1 px-1.5 pl-3 border-l border-black/10">
             <span className="text-[8px] font-bold text-gray-700/80 uppercase flex items-center gap-1 mb-1">
               <RefreshCw className="w-2.5 h-2.5" /> Admin
             </span>
-            <span className="text-xs font-black">
+            <span className="text-[10px] font-black whitespace-nowrap">
               {formatRupiah(balance?.adminTotal || 0)}
               {balance?.adminNonTunaiTotal ? (
-                <> / <span className="text-purple-700">{(balance.adminNonTunaiTotal).toLocaleString('id-ID')}</span></>
+                <span className="text-purple-700"> / {(balance.adminNonTunaiTotal).toLocaleString('id-ID')}</span>
               ) : null}
             </span>
           </div>
