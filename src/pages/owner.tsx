@@ -661,17 +661,19 @@ function AbsenPage({ goBack }: { goBack: () => void }) {
           <div className="text-center py-10 text-gray-400 text-sm">Tidak ada data absensi</div>
         ) : (
           summaryData.map((k, i) => (
-            <div key={k.name} className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-2">
-                <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${cardColors[i % cardColors.length]} flex items-center justify-center text-white font-bold text-lg shadow`}>
-                  {k.name.charAt(0).toUpperCase()}
+            <div key={k.name} className="bg-white rounded-xl p-2 mb-2 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${cardColors[i % cardColors.length]} flex items-center justify-center text-white font-bold text-xs shadow-sm`}>
+                    {k.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="font-extrabold text-[11px] uppercase text-gray-700">{k.name}</span>
                 </div>
-                <span className="font-extrabold text-sm uppercase">{k.name}</span>
-              </div>
-              <div className="flex gap-2">
-                <span className="text-[11px] font-semibold bg-green-100 text-green-700 px-2.5 py-1 rounded-full">{k.hadir} Hadir</span>
-                {k.pagi > 0 && <span className="text-[11px] font-semibold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">{k.pagi} Pagi</span>}
-                {k.siang > 0 && <span className="text-[11px] font-semibold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">{k.siang} Siang</span>}
+                <div className="flex gap-1.5">
+                  <span className="text-[9px] font-bold bg-green-50 text-green-600 px-2 py-0.5 rounded-md border border-green-100">{k.hadir} HADIR</span>
+                  {k.pagi > 0 && <span className="text-[9px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-md border border-amber-100">{k.pagi} PAGI</span>}
+                  {k.siang > 0 && <span className="text-[9px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md border border-blue-100">{k.siang} SIANG</span>}
+                </div>
               </div>
             </div>
           ))
@@ -689,24 +691,24 @@ function AbsenPage({ goBack }: { goBack: () => void }) {
                     <span className="font-extrabold text-xs text-gray-700">{format(new Date(date), "EEEE, dd MMMM", { locale: idLocale })}</span>
                     <span className="text-[10px] font-bold text-gray-400">{records.length} Kasir</span>
                   </div>
-                  <div className="divide-y divide-inherit">
+                  <div className="divide-y divide-gray-100">
                     {records.map(a => (
-                      <div key={a.id} className="grid grid-cols-4 px-4 py-3 items-center">
+                      <div key={a.id} className="grid grid-cols-4 px-3 py-1.5 items-center bg-white">
                         <div className="col-span-1">
-                          <p className="text-[11px] font-extrabold text-gray-800 uppercase truncate">{a.kasirName}</p>
+                          <p className="text-[10px] font-black text-gray-800 uppercase truncate">{a.kasirName}</p>
                         </div>
                         <div className="text-center">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${a.shift === "PAGI" ? "bg-amber-100 text-amber-600" : "bg-indigo-100 text-indigo-600"}`}>
+                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${a.shift === "PAGI" ? "text-amber-500" : "text-indigo-500"}`}>
                             {a.shift}
                           </span>
                         </div>
-                        <div className="text-center">
-                          <p className="text-[8px] font-bold text-gray-300 uppercase">Masuk</p>
-                          <p className="text-[11px] font-extrabold text-blue-600">{a.jamMasuk}</p>
+                        <div className="text-center flex flex-col">
+                          <span className="text-[7px] font-bold text-gray-300 uppercase leading-none">Masuk</span>
+                          <span className="text-[10px] font-black text-blue-600">{a.jamMasuk}</span>
                         </div>
-                        <div className="text-right">
-                          <p className="text-[8px] font-bold text-gray-300 uppercase">Pulang</p>
-                          <p className="text-[11px] font-extrabold text-gray-800">{a.jamPulang || "--:--"}</p>
+                        <div className="text-right flex flex-col">
+                          <span className="text-[7px] font-bold text-gray-300 uppercase leading-none">Pulang</span>
+                          <span className="text-[10px] font-black text-gray-700">{a.jamPulang || "--:--" }</span>
                         </div>
                       </div>
                     ))}
