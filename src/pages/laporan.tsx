@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import {
@@ -109,44 +109,60 @@ export default function Laporan() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // --- Perhitungan Angka Aman ---
-  const txList = Array.isArray(transactions) ? transactions : [];
-  const shList = Array.isArray(saldoHistory) ? saldoHistory : [];
+  // --- Perhitungan Angka Aman dengan Memoization ---
+  const stats = useMemo(() => {
+    const txList = Array.isArray(transactions) ? transactions : [];
+    const shList = Array.isArray(saldoHistory) ? saldoHistory : [];
 
-  const getVal = (key: string, cat: string) => {
-    if (dailyRekap && (dailyRekap as any)[key] !== undefined) return (dailyRekap as any)[key] || 0;
-    return txList.filter(t => t.category === cat).reduce((s, t) => s + (t.nominal || 0), 0);
-  };
+    const getVal = (key: string, cat: string) => {
+      if (dailyRekap && (dailyRekap as any)[key] !== undefined) return (dailyRekap as any)[key] || 0;
+      return txList.filter(t => t.category === cat).reduce((s, t) => s + (t.nominal || 0), 0);
+    };
 
-  const tBank = getVal("total_bank", "BANK");
-  const tFlip = getVal("total_flip", "FLIP");
-  const tApp = getVal("total_app", "APP PULSA");
-  const tDana = getVal("total_dana", "DANA");
-  const tTarik = getVal("total_tarik", "TARIK TUNAI");
-  const tAks = getVal("total_aks", "AKSESORIS");
-  const tClosing = getVal("total_closing", "CLOSING");
-  
-  const tAdmin = dailyRekap ? (dailyRekap.total_admin || 0) : txList.reduce((s, t) => s + (!t.adminNonTunai ? (t.admin || 0) : 0), 0);
-  const tAdminNT = dailyRekap ? (dailyRekap.total_admin_non_tunai || 0) : txList.reduce((s, t) => s + (t.adminNonTunai ? (t.admin || 0) : 0), 0);
-  const tNT = dailyRekap ? (dailyRekap.total_non_tunai || 0) : txList.filter(t => (t.paymentMethod || "").toLowerCase().includes("non-tunai") && t.category !== "CLOSING").reduce((s, t) => s + (t.nominal || 0), 0);
+    const countVal = (key: string, cat: string) => {
+      if (dailyRekap && (dailyRekap as any)[key] !== undefined) return (dailyRekap as any)[key] || 0;
+      return txList.filter(t => t.category === cat).length;
+    };
 
-  const tPenjualan = tBank + tFlip + tApp + tDana;
-  const sisaCashTotal = tPenjualan - tTarik + tAdmin + tAks;
+    const tBank = getVal("total_bank", "BANK");
+    const tFlip = getVal("total_flip", "FLIP");
+    const tApp = getVal("total_app", "APP PULSA");
+    const tDana = getVal("total_dana", "DANA");
+    const tTarik = getVal("total_tarik", "TARIK TUNAI");
+    const tAks = getVal("total_aks", "AKSESORIS");
+    const tClosing = getVal("total_closing", "CLOSING");
 
-  const countVal = (key: string, cat: string) => {
-    if (dailyRekap && (dailyRekap as any)[key] !== undefined) return (dailyRekap as any)[key] || 0;
-    return txList.filter(t => t.category === cat).length;
-  };
+    const tAdmin = dailyRekap ? (dailyRekap.total_admin || 0) : txList.reduce((s, t) => s + (!t.adminNonTunai ? (t.admin || 0) : 0), 0);
+    const tAdminNT = dailyRekap ? (dailyRekap.total_admin_non_tunai || 0) : txList.reduce((s, t) => s + (t.adminNonTunai ? (t.admin || 0) : 0), 0);
+    const tNT = dailyRekap ? (dailyRekap.total_non_tunai || 0) : txList.filter(t => (t.paymentMethod || "").toLowerCase().includes("non-tunai") && t.category !== "CLOSING").reduce((s, t) => s + (t.nominal || 0), 0);
 
-  const tIsiBank = dailyRekap ? (dailyRekap.total_isi_bank || 0) : shList.filter(s => s.jenis === "Bank").reduce((s, h) => s + (h.nominal || 0), 0);
-  const sBank = txList[0]?.saldoBankAfter ?? 0;
-  const sCash = txList[0]?.saldoCashAfter ?? 0;
-  const sReal = dailyNotes?.saldoRealApp || 0;
-  const selisih = sReal - sBank;
+    const tPenjualan = tBank + tFlip + tApp + tDana;
+    const sisaCashTotal = tPenjualan - tTarik + tAdmin + tAks;
 
-  const totalTxCount = dailyRekap 
-    ? ((dailyRekap.count_bank || 0) + (dailyRekap.count_flip || 0) + (dailyRekap.count_app || 0) + (dailyRekap.count_dana || 0) + (dailyRekap.count_tarik || 0) + (dailyRekap.count_aks || 0) + (dailyRekap.count_closing || 0))
-    : txList.length;
+    const tIsiBank = dailyRekap ? (dailyRekap.total_isi_bank || 0) : shList.filter(s => s.jenis === "Bank").reduce((s, h) => s + (h.nominal || 0), 0);
+    const sBank = txList[0]?.saldoBankAfter ?? 0;
+    const sCash = txList[0]?.saldoCashAfter ?? 0;
+    const sReal = dailyNotes?.saldoRealApp || 0;
+    const selisih = sReal - sBank;
+
+    const totalTxCount = dailyRekap
+      ? ((dailyRekap.count_bank || 0) + (dailyRekap.count_flip || 0) + (dailyRekap.count_app || 0) + (dailyRekap.count_dana || 0) + (dailyRekap.count_tarik || 0) + (dailyRekap.count_aks || 0) + (dailyRekap.count_closing || 0))
+      : txList.length;
+
+    return {
+      tBank, tFlip, tApp, tDana, tTarik, tAks, tClosing,
+      tAdmin, tAdminNT, tNT, tPenjualan, sisaCashTotal,
+      tIsiBank, sBank, sCash, sReal, selisih, totalTxCount,
+      countVal
+    };
+  }, [dailyRekap, transactions, saldoHistory, dailyNotes]);
+
+  const {
+    tBank, tFlip, tApp, tDana, tTarik, tAks, tClosing,
+    tAdmin, tAdminNT, tNT, tPenjualan, sisaCashTotal,
+    tIsiBank, sBank, sCash, sReal, selisih, totalTxCount,
+    countVal
+  } = stats;
 
   const prepareCapture = async () => {
     setShowRincianKategori(true);
