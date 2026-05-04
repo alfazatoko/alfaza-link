@@ -61,53 +61,58 @@ function Router() {
 
 
   const shadowClass = theme === "light" ? "shadow-[0_0_40px_rgba(0,0,0,0.05)]" : "shadow-none";
+  const containerBorder = mode !== "pc" ? "border-x border-border/50" : "";
+  const transitionClass = "transition-all duration-500 ease-in-out";
 
   return (
-    <div className={`pb-20 ${maxW} mx-auto min-h-[100dvh] bg-background ${shadowClass}`}>
-
-      <Switch>
-        <Route path="/">
-          <Login />
-        </Route>
-        <Route path="/beranda">
-          <ProtectedRoute component={Beranda} />
-        </Route>
-        <Route path="/riwayat">
-          <ProtectedRoute component={Riwayat} />
-        </Route>
-        <Route path="/non-tunai">
-          <ProtectedRoute component={NonTunai} />
-        </Route>
-        <Route path="/catatan">
-          <ProtectedRoute component={Catatan} />
-        </Route>
-        <Route path="/laporan">
-          <ProtectedRoute component={Laporan} />
-        </Route>
-        <Route path="/owner">
-          <ProtectedRoute component={Owner} allowedRoles={["owner"]} />
-        </Route>
-        <Route path="/nota">
-          <ProtectedRoute component={Nota} />
-        </Route>
-        <Route path="/lainnya">
-          <ProtectedRoute component={Lainnya} />
-        </Route>
-        <Route path="/kalender">
-          <ProtectedRoute component={Kalender} />
-        </Route>
-        <Route path="/stok-voucher">
-          <ProtectedRoute component={StokVoucher} />
-        </Route>
-        <Route path="/absen">
-          <ProtectedRoute component={Absen} />
-        </Route>
-        <Route>
-          <NotFound />
-        </Route>
-      </Switch>
+    <>
+      <div className={`w-full ${maxW} mx-auto min-h-[100dvh] bg-background ${shadowClass} ${containerBorder} ${transitionClass} relative`}>
+        <div className="pb-20">
+        <Switch>
+          <Route path="/">
+            <Login />
+          </Route>
+          <Route path="/beranda">
+            <ProtectedRoute component={Beranda} />
+          </Route>
+          <Route path="/riwayat">
+            <ProtectedRoute component={Riwayat} />
+          </Route>
+          <Route path="/non-tunai">
+            <ProtectedRoute component={NonTunai} />
+          </Route>
+          <Route path="/catatan">
+            <ProtectedRoute component={Catatan} />
+          </Route>
+          <Route path="/laporan">
+            <ProtectedRoute component={Laporan} />
+          </Route>
+          <Route path="/owner">
+            <ProtectedRoute component={Owner} allowedRoles={["owner"]} />
+          </Route>
+          <Route path="/nota">
+            <ProtectedRoute component={Nota} />
+          </Route>
+          <Route path="/lainnya">
+            <ProtectedRoute component={Lainnya} />
+          </Route>
+          <Route path="/kalender">
+            <ProtectedRoute component={Kalender} />
+          </Route>
+          <Route path="/stok-voucher">
+            <ProtectedRoute component={StokVoucher} />
+          </Route>
+          <Route path="/absen">
+            <ProtectedRoute component={Absen} />
+          </Route>
+          <Route>
+            <NotFound />
+          </Route>
+        </Switch>
+        </div>
+      </div>
       <BottomNav />
-    </div>
+    </>
   );
 }
 

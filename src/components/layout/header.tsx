@@ -156,17 +156,23 @@ export function Header() {
               {getThemeIcon()}
             </button>
 
-            <button
-              onClick={() => {
-                const modes: ("hp" | "tablet" | "pc")[] = ["hp", "tablet", "pc"];
-                const nextIndex = (modes.indexOf(mode) + 1) % modes.length;
-                setMode(modes[nextIndex]);
-              }}
-              className="flex items-center justify-center bg-black/20 hover:bg-black/30 active:scale-90 transition-all rounded-full w-10 h-10 border border-white/20 shadow-lg backdrop-blur-sm touch-manipulation"
-              title={`Ukuran: ${mode === 'hp' ? 'Kecil' : mode === 'tablet' ? 'Sedang' : 'Besar'}`}
-            >
-              <Monitor className="w-4 h-4" />
-            </button>
+            <div className="flex items-center bg-black/20 backdrop-blur-md rounded-xl p-1 border border-white/10 shadow-lg">
+              {(["hp", "tablet", "pc"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className={`
+                    flex items-center justify-center w-8 h-8 rounded-lg text-[10px] font-black transition-all duration-200
+                    ${mode === m 
+                      ? "bg-white text-blue-600 shadow-sm scale-110" 
+                      : "text-white/60 hover:text-white hover:bg-white/10"}
+                  `}
+                  title={`Mode: ${m === 'hp' ? 'Kecil (S)' : m === 'tablet' ? 'Sedang (M)' : 'Besar (L)'}`}
+                >
+                  {m === 'hp' ? 'S' : m === 'tablet' ? 'M' : 'L'}
+                </button>
+              ))}
+            </div>
           </div>
 
         </div>

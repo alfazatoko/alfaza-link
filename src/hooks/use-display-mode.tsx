@@ -41,7 +41,9 @@ const DisplayModeContext = createContext<DisplayModeContextType>({
 
 export function DisplayModeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<DisplayMode>(() => {
-    return (localStorage.getItem("alfaza_display_mode") as DisplayMode) || "hp";
+    const saved = localStorage.getItem("alfaza_display_mode");
+    if (saved === "hp" || saved === "tablet" || saved === "pc") return saved as DisplayMode;
+    return "hp";
   });
 
   const [theme, setTheme] = useState<Theme>(() => {
@@ -110,10 +112,10 @@ export function useDisplayMode() {
 
 export function getMaxWidth(mode: DisplayMode): string {
   switch (mode) {
-    case "hp": return "max-w-[450px] responsive-landscape";
-    case "tablet": return "max-w-[700px] responsive-landscape";
+    case "hp": return "max-w-[450px]";
+    case "tablet": return "max-w-[700px]";
     case "pc": return "max-w-full";
-    default: return "max-w-[450px] responsive-landscape";
+    default: return "max-w-[450px]";
   }
 }
 

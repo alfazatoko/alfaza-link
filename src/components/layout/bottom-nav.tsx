@@ -4,11 +4,14 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { LogoutConfirmModal } from "@/components/auth/logout-confirm-modal";
+import { useDisplayMode, getMaxWidth } from "@/hooks/use-display-mode";
 
 export function BottomNav() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const { mode } = useDisplayMode();
+  const maxW = getMaxWidth(mode);
 
   if (location === "/") return null;
 
@@ -45,7 +48,10 @@ export function BottomNav() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border flex justify-around px-1 py-1.5 pb-5 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-none z-50 transition-colors duration-300">
+    <div className={cn(
+      "fixed bottom-0 left-0 right-0 mx-auto bg-card border-t border-border flex justify-around px-1 py-1.5 pb-2.5 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-none z-50 transition-colors duration-300",
+      maxW
+    )}>
       {navItems.map((item, idx) => {
         const isActive = item.href !== "logout" && location === item.href;
         const isLogout = (item as any).isLogout;

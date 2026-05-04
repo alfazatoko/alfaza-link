@@ -55,8 +55,23 @@ export const VisualInspector: React.FC = () => {
   const handleClick = useCallback((e: MouseEvent) => {
     if (!isActive) return;
     
-    // Check if we clicked on our own UI
-    if ((e.target as HTMLElement).closest("#visual-inspector-ui")) return;
+    const targetElement = e.target as HTMLElement;
+    
+    // Allow clicking on our own UI
+    if (targetElement.closest("#visual-inspector-ui")) return;
+    
+    // Allow clicking on important UI elements like the mode toggle or buttons
+    // This prevents the user from being "stuck" in inspector mode
+    if (
+      targetElement.closest("button") || 
+      targetElement.closest("select") || 
+      targetElement.closest("input") ||
+      targetElement.closest(".touch-manipulation")
+    ) {
+      // If it's a button, let the click pass through but deactivate inspector? 
+      // Or just let it pass through. Let's just let it pass through.
+      return;
+    }
 
     e.preventDefault();
     e.stopPropagation();
@@ -80,10 +95,12 @@ export const VisualInspector: React.FC = () => {
       window.addEventListener("mousemove", handleMouseMove, true);
       window.addEventListener("click", handleClick, true);
       document.body.style.cursor = "crosshair";
+      document.body.classList.add("inspector-active");
     } else {
       window.removeEventListener("mousemove", handleMouseMove, true);
       window.removeEventListener("click", handleClick, true);
       document.body.style.cursor = "";
+      document.body.classList.remove("inspector-active");
       setHoveredElement(null);
       setSelectedElement(null);
     }
@@ -92,6 +109,7 @@ export const VisualInspector: React.FC = () => {
       window.removeEventListener("mousemove", handleMouseMove, true);
       window.removeEventListener("click", handleClick, true);
       document.body.style.cursor = "";
+      document.body.classList.remove("inspector-active");
     };
   }, [isActive, handleMouseMove, handleClick]);
 
