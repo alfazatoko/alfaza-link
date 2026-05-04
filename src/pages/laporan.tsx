@@ -122,11 +122,11 @@ export default function Laporan() {
     const txList = Array.isArray(transactions) ? transactions : [];
     const shList = Array.isArray(saldoHistory) ? saldoHistory : [];
     const getVal = (key: string, cat: string) => {
-      if (dailyRekap && (dailyRekap as any)[key] !== undefined) return (dailyRekap as any)[key] || 0;
+      if (!isDetailsLoaded && dailyRekap && (dailyRekap as any)[key] !== undefined) return (dailyRekap as any)[key] || 0;
       return txList.filter(t => t.category === cat).reduce((s, t) => s + (t.nominal || 0), 0);
     };
     const countVal = (key: string, cat: string) => {
-      if (dailyRekap && (dailyRekap as any)[key] !== undefined) return (dailyRekap as any)[key] || 0;
+      if (!isDetailsLoaded && dailyRekap && (dailyRekap as any)[key] !== undefined) return (dailyRekap as any)[key] || 0;
       return txList.filter(t => t.category === cat).length;
     };
 
@@ -137,17 +137,17 @@ export default function Laporan() {
     const tTarik = getVal("total_tarik", "TARIK TUNAI");
     const tAks = getVal("total_aks", "AKSESORIS");
     const tClosing = getVal("total_closing", "CLOSING");
-    const tAdmin = dailyRekap ? (dailyRekap.total_admin || 0) : txList.reduce((s, t) => s + (!t.adminNonTunai ? (t.admin || 0) : 0), 0);
-    const tAdminNT = dailyRekap ? (dailyRekap.total_admin_non_tunai || 0) : txList.reduce((s, t) => s + (t.adminNonTunai ? (t.admin || 0) : 0), 0);
-    const tNT = dailyRekap ? (dailyRekap.total_non_tunai || 0) : txList.filter(t => (t.paymentMethod || "").toLowerCase().includes("non-tunai") && t.category !== "CLOSING").reduce((s, t) => s + (t.nominal || 0), 0);
+    const tAdmin = (!isDetailsLoaded && dailyRekap) ? (dailyRekap.total_admin || 0) : txList.reduce((s, t) => s + (!t.adminNonTunai ? (t.admin || 0) : 0), 0);
+    const tAdminNT = (!isDetailsLoaded && dailyRekap) ? (dailyRekap.total_admin_non_tunai || 0) : txList.reduce((s, t) => s + (t.adminNonTunai ? (t.admin || 0) : 0), 0);
+    const tNT = (!isDetailsLoaded && dailyRekap) ? (dailyRekap.total_non_tunai || 0) : txList.filter(t => (t.paymentMethod || "").toLowerCase().includes("non-tunai") && t.category !== "CLOSING").reduce((s, t) => s + (t.nominal || 0), 0);
     const tPenjualan = tBank + tFlip + tApp + tDana;
     const sisaCashTotal = tPenjualan - tTarik + tAdmin + tAks;
-    const tIsiBank = dailyRekap ? (dailyRekap.total_isi_bank || 0) : shList.filter(s => s.jenis === "Bank").reduce((s, h) => s + (h.nominal || 0), 0);
+    const tIsiBank = (!isDetailsLoaded && dailyRekap) ? (dailyRekap.total_isi_bank || 0) : shList.filter(s => s.jenis === "Bank").reduce((s, h) => s + (h.nominal || 0), 0);
     const sBank = txList[0]?.saldoBankAfter ?? 0;
     const sCash = txList[0]?.saldoCashAfter ?? 0;
     const sReal = dailyNotes?.saldoRealApp || 0;
     const selisih = sReal - sBank;
-    const totalTxCount = dailyRekap
+    const totalTxCount = (!isDetailsLoaded && dailyRekap)
       ? ((dailyRekap.count_bank || 0) + (dailyRekap.count_flip || 0) + (dailyRekap.count_app || 0) + (dailyRekap.count_dana || 0) + (dailyRekap.count_tarik || 0) + (dailyRekap.count_aks || 0) + (dailyRekap.count_closing || 0))
       : txList.length;
 
