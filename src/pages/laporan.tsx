@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import {
@@ -36,6 +36,11 @@ export default function Laporan() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   
   const isOwner = user?.role === "owner";
+
+  const viewModeRef = useRef(viewMode);
+  useEffect(() => {
+    viewModeRef.current = viewMode;
+  }, [viewMode]);
 
   useEffect(() => {
     if (isOwner) {
@@ -85,19 +90,20 @@ export default function Laporan() {
       setTransactions([]);
       setSaldoHistory([]);
       
-      // Auto-load details if we're already on detail tab
-      if (viewMode === 'detail') {
-        loadFullDetails(kname);
+      // Auto-load details if we're already on detail tab OR if no rekap found (force load)
+      if (viewModeRef.current === 'detail' || !agg) {
+        loadFullDetails(kname, true);
       }
     } catch (err) {
       console.error("Load Error:", err);
     } finally {
       setLoading(false);
     }
-  }, [user, isOwner, kasirFilter, date, viewMode]);
+  }, [user, isOwner, kasirFilter, date]);
 
-  const loadFullDetails = async (forcedKname?: string) => {
-    if (!user || loadingDetails || isDetailsLoaded) return;
+  const loadFullDetails = async (forcedKname?: string, force: boolean = false) => {
+    if (!user || loadingDetails) return;
+    if (!force && isDetailsLoaded) return;
     setLoadingDetails(true);
     try {
       let kname = forcedKname || (isOwner ? (kasirFilter === "Semua" ? undefined : kasirFilter) : user.name);
@@ -157,7 +163,7 @@ export default function Laporan() {
       tIsiBank, sBank, sCash, sReal, selisih, totalTxCount,
       countVal
     };
-  }, [dailyRekap, transactions, saldoHistory, dailyNotes]);
+  }, [dailyRekap, transactions, saldoHistory, dailyNotes, isDetailsLoaded]);
 
   const {
     tBank, tFlip, tApp, tDana, tTarik, tAks, tClosing,
@@ -641,6 +647,54 @@ export default function Laporan() {
                   <span className="text-[11px] font-bold text-gray-800 uppercase tracking-tighter">Total Selisih</span>
                   <span className={`font-black text-[13px] ${selisih === 0 ? "text-emerald-600" : "text-red-600"}`}>{formatRupiah(selisih)}</span>
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* 7. DAFTAR TRANSAKSI DETAIL */}
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between px-1 mb-2">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-1 bg-blue-600 rounded-full"></div>
+                <h3 className="text-[11px] font-black text-gray-800 uppercase tracking-wider">Daftar Transaksi</h3>
+              </div>
+              <span className="text-[9px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{transactions.length} Entri</span>
+            </div>
+            
+            {transactions.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 text-center border border-dashed border-gray-200">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Belum ada data transaksi</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm flex items-center justify-between gap-3 active:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-black shadow-sm ${
+                        tx.category === 'BANK' ? 'bg-blue-50 text-blue-600' :
+                        tx.category === 'TARIK TUNAI' ? 'bg-red-50 text-red-600' :
+                        tx.category === 'FLIP' ? 'bg-orange-50 text-orange-600' :
+                        tx.category === 'DANA' ? 'bg-emerald-50 text-emerald-600' :
+                        'bg-gray-50 text-gray-600'
+                      }`}>
+                        {tx.category.substring(0, 1)}
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-gray-800 leading-tight uppercase truncate max-w-[140px]">{tx.keterangan || tx.category}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter bg-gray-50 px-1.5 rounded-md border border-gray-100">{tx.transTime}</span>
+                          <span className="text-[9px] text-gray-500 font-bold">{tx.kasirName}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[11px] font-black text-gray-900 leading-tight">{formatRupiah(tx.nominal)}</p>
+                      <p className={`text-[9px] font-bold mt-0.5 ${tx.adminNonTunai ? "text-purple-600" : "text-emerald-600"}`}>
+                        {tx.adminNonTunai ? "NT: " : ""}+{formatRupiah(tx.admin)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
