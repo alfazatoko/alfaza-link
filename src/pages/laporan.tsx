@@ -190,7 +190,7 @@ export default function Laporan() {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
       doc.text(text.toUpperCase(), margin + 5, y + 6.5);
-      y += 12;
+      y += 10.5;
     };
 
     const drawRow = (label: string, value: string, color: [number, number, number] = [75, 85, 99], isBold = false) => {
@@ -203,7 +203,7 @@ export default function Laporan() {
       // Draw thin line
       doc.setDrawColor(240, 240, 240);
       doc.line(margin + 5, y - 1, pageWidth - margin - 5, y - 1);
-      y += 2;
+      y += 1.5;
     };
 
     // --- HEADER ---
@@ -234,7 +234,7 @@ export default function Laporan() {
     drawRow(`DANA (${countVal("count_dana", "DANA")}x)`, formatRupiah(tDana));
     drawRow(`APP PULSA (${countVal("count_app", "APP PULSA")}x)`, formatRupiah(tApp));
     drawRow(`ISI BANK (History)`, formatRupiah(tIsiBank));
-    y += 5;
+    y += 2.5;
 
     // --- SECTION: TOTAL PENJUALAN ---
     drawBar("Total Penjualan", [5, 150, 105]); // Darker Green
@@ -243,7 +243,7 @@ export default function Laporan() {
     drawRow("Sisa Cash Penjualan", formatRupiah(tPenjualan - tTarik), [16, 185, 129]);
     drawRow("Admin", formatRupiah(tAdmin), [245, 158, 11]);
     drawRow("Non Tunai", formatRupiah(tNT), [139, 92, 246]);
-    y += 5;
+    y += 2.5;
 
     // --- SECTION: SISA CASH TOTAL (Big Yellow Bar) ---
     doc.setFillColor(245, 158, 11); // Amber
@@ -253,19 +253,19 @@ export default function Laporan() {
     doc.setFont("helvetica", "bold");
     doc.text("SISA CASH TOTAL", margin + 5, y + 7.5);
     doc.text(formatRupiah(sisaCashTotal), pageWidth - margin - 5, y + 7.5, { align: "right" });
-    y += 18;
+    y += 14.5;
 
     // --- SECTION: JURNAL PENYESUAIAN ---
     drawBar("Jurnal Penyesuaian", [139, 92, 246]); // Purple
     drawRow("Total Tambah/Isi Saldo Bank", formatRupiah(tIsiBank));
-    y += 5;
+    y += 2.5;
 
     // --- SECTION: SALDO & SELISIH ---
     drawBar("Saldo & Selisih", [16, 185, 129]); // Green
     drawRow("Sisa Saldo Bank (Catatan)", formatRupiah(sBank), [59, 130, 246]);
     drawRow("Saldo Real App", formatRupiah(sReal), [220, 38, 38]);
     drawRow("Selisih", formatRupiah(selisih), selisih === 0 ? [16, 185, 129] : [220, 38, 38], true);
-    y += 5;
+    y += 2.5;
 
     // --- SECTION: SALDO AKHIR PERIODE ---
     drawBar("Saldo Akhir Periode", [30, 41, 59]); // Slate Dark
