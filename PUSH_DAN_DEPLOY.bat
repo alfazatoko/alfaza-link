@@ -8,7 +8,7 @@ echo [1/4] Menambahkan perubahan ke Git...
 git add .
 
 echo [2/4] Membuat commit...
-git commit -m "Update Alfaza Link: Perubahan sistem dan UI terbaru"
+git commit -m "feat(laporan): modernisasi UI dan perbaikan sistem rekap harian serta export PDF/Share"
 if %ERRORLEVEL% NEQ 0 (
     echo [INFO] Tidak ada perubahan kode baru untuk di-commit.
 )
@@ -20,9 +20,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo [4/4] Membangun dan Deploy ke Firebase...
-echo Menjalankan build (Mode Windows)...
-:: Mengeset variabel lingkungan secara manual agar cocok dengan Windows
-set FIREBASE_BUILD=true
+echo Menjalankan build...
 call npm run build
 if %ERRORLEVEL% NEQ 0 (
     echo GAGAL: Proses build bermasalah.
@@ -30,8 +28,8 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b %ERRORLEVEL%
 )
 
-echo Menjalankan deploy ke Firebase...
-call firebase deploy
+echo Menjalankan deploy ke Firebase (Live Kasir)...
+call firebase deploy --only hosting:app-kasir
 if %ERRORLEVEL% NEQ 0 (
     echo GAGAL: Gagal mengirim ke Firebase. Pastikan sudah login firebase.
     pause
