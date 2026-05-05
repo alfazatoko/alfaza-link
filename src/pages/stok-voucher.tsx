@@ -11,7 +11,8 @@ const formatRupiah = (n: number) => new Intl.NumberFormat('id-ID', { style: 'cur
 interface VoucherItem {
   id: number;
   name: string;
-  price: number;
+  price: number; // Harga Jual
+  modal: number; // Harga Modal
   awal: number;
   akhir: number;
 }
@@ -25,16 +26,16 @@ interface QrisItem {
 }
 
 const initialDataVoucher: Record<string, VoucherItem[]> = {
-  'TRI': [{ id: 101, name: 'AON 1.5GB', price: 15000, awal: 10, akhir: 10 }],
-  'TELKOMSEL': [{ id: 201, name: '4GB-1H', price: 8000, awal: 10, akhir: 10 }],
+  'TRI': [{ id: 101, name: 'AON 1.5GB', price: 15000, modal: 13000, awal: 10, akhir: 10 }],
+  'TELKOMSEL': [{ id: 201, name: '4GB-1H', price: 8000, modal: 7000, awal: 10, akhir: 10 }],
   'AXIS': [
-      { id: 301, name: '2GB-1H', price: 8000, awal: 5, akhir: 4 },
-      { id: 302, name: '5GB-5H', price: 10000, awal: 5, akhir: 5 },
-      { id: 303, name: '3GB-3H', price: 9000, awal: 7, akhir: 7 }
+      { id: 301, name: '2GB-1H', price: 8000, modal: 6500, awal: 5, akhir: 4 },
+      { id: 302, name: '5GB-5H', price: 10000, modal: 8500, awal: 5, akhir: 5 },
+      { id: 303, name: '3GB-3H', price: 9000, modal: 7500, awal: 7, akhir: 7 }
   ],
-  'XL': [{ id: 401, name: 'Xtra Combo 5GB', price: 25000, awal: 5, akhir: 5 }],
-  'SMARTFREN': [{ id: 501, name: 'Unlimited Harian', price: 15000, awal: 8, akhir: 8 }],
-  'IM3': [{ id: 601, name: 'Freedom 3GB', price: 15000, awal: 10, akhir: 10 }]
+  'XL': [{ id: 401, name: 'Xtra Combo 5GB', price: 25000, modal: 22000, awal: 5, akhir: 5 }],
+  'SMARTFREN': [{ id: 501, name: 'Unlimited Harian', price: 15000, modal: 13000, awal: 8, akhir: 8 }],
+  'IM3': [{ id: 601, name: 'Freedom 3GB', price: 15000, modal: 13000, awal: 10, akhir: 10 }]
 };
 
 export default function StokVoucher() {
@@ -58,7 +59,7 @@ export default function StokVoucher() {
     'TRI': false, 'TELKOMSEL': false, 'AXIS': false, 'XL': false, 'SMARTFREN': false, 'IM3': false
   });
   const [activeEditingCell, setActiveEditingCell] = useState<string | null>(null);
-  const [newProduct, setNewProduct] = useState<{ [key: string]: { name: string, price: string, awal: string } }>({});
+  const [newProduct, setNewProduct] = useState<{ [key: string]: { name: string, price: string, modal: string, awal: string } }>({});
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,12 +70,12 @@ export default function StokVoucher() {
 
   useEffect(() => {
     getSettings().then(s => setShopName(s.shopName)).catch(() => {});
-    if (user?.role === "owner") {
-      getUsers().then(list => setKasirList(list.filter(u => u.role !== "owner"))).catch(() => {});
+    if (user?.role?.toLowerCase() === "owner") {
+      getUsers().then(list => setKasirList(list.filter(u => u.role?.toLowerCase() !== "owner"))).catch(() => {});
     }
   }, [user]);
 
-  const isOwner = user?.role === "owner";
+  const isOwner = user?.role?.toLowerCase() === "owner";
 
   // Load data when selectedDate changes
   useEffect(() => {
@@ -131,7 +132,33 @@ export default function StokVoucher() {
           setDataQris(cloudData.dataQris);
           setLastSync(new Date(cloudData.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         } else {
-          setDataVoucher(initialDataVoucher);
+          // Jika data hari ini kosong, coba ambil dari hari sebelumnya
+          const d = new Date(selectedDate);
+          d.setDate(d.getDate() - 1);
+          const yesterdayStr = d.toISOString().split('T')[0];
+          
+          try {
+            const yesterdayData = await getStokVoucher(kasirFilter, yesterdayStr);
+            if (yesterdayData) {
+              const copiedVoucher: Record<string, VoucherItem[]> = {};
+              Object.keys(yesterdayData.dataVoucher).forEach(provider => {
+                copiedVoucher[provider] = yesterdayData.dataVoucher[provider].map((item: any) => ({
+                  ...item,
+                  awal: item.akhir, // Stok awal hari ini = stok akhir kemarin
+                  akhir: item.akhir, // Stok akhir hari ini = stok akhir kemarin
+                }));
+              });
+              setDataVoucher(copiedVoucher);
+              toast({ 
+                title: "Stok Otomatis", 
+                description: `Berhasil menarik stok akhir dari tanggal ${yesterdayStr}`,
+              });
+            } else {
+              setDataVoucher(initialDataVoucher);
+            }
+          } catch (err) {
+            setDataVoucher(initialDataVoucher);
+          }
           setDataQris([]);
           setLastSync(null);
         }
@@ -239,6 +266,9 @@ export default function StokVoucher() {
       if (field === 'price') {
         const parsedVal = parseInt(value as string);
         item.price = isNaN(parsedVal) ? 0 : parsedVal;
+      } else if (field === 'modal') {
+        const parsedVal = parseInt(value as string);
+        item.modal = isNaN(parsedVal) ? 0 : parsedVal;
       } else if (field === 'name') {
         item.name = value as string;
       }
@@ -335,25 +365,33 @@ export default function StokVoucher() {
   };
 
   const tambahProduk = (provider: string) => {
-    const prodData = newProduct[provider] || { name: '', price: '', awal: '' };
+    const prodData = newProduct[provider] || { name: '', price: '', modal: '', awal: '' };
     const name = prodData.name;
     const price = parseInt(prodData.price);
+    const modal = parseInt(prodData.modal);
     const awal = parseInt(prodData.awal);
 
     if (!name || isNaN(price)) return alert("Isi nama & harga");
 
     setDataVoucher(prev => ({
       ...prev,
-      [provider]: [...prev[provider], { id: Date.now(), name, price, awal: isNaN(awal) ? 0 : awal, akhir: isNaN(awal) ? 0 : awal }]
+      [provider]: [...prev[provider], { 
+        id: Date.now(), 
+        name, 
+        price, 
+        modal: isNaN(modal) ? 0 : modal, 
+        awal: isNaN(awal) ? 0 : awal, 
+        akhir: isNaN(awal) ? 0 : awal 
+      }]
     }));
     
-    setNewProduct(prev => ({ ...prev, [provider]: { name: '', price: '', awal: '' } }));
+    setNewProduct(prev => ({ ...prev, [provider]: { name: '', price: '', modal: '', awal: '' } }));
   };
 
-  const updateNewProductField = (provider: string, field: 'name' | 'price' | 'awal', value: string) => {
+  const updateNewProductField = (provider: string, field: 'name' | 'price' | 'modal' | 'awal', value: string) => {
     setNewProduct(prev => ({
       ...prev,
-      [provider]: { ...(prev[provider] || { name: '', price: '', awal: '' }), [field]: value }
+      [provider]: { ...(prev[provider] || { name: '', price: '', modal: '', awal: '' }), [field]: value }
     }));
   };
 
@@ -499,14 +537,16 @@ export default function StokVoucher() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[300px]">
                   <thead>
-                    <tr className="bg-gray-100/80 border-b-2 border-gray-200">
-                      <th className="p-2 text-[10px] font-bold text-gray-600 uppercase w-2/5">Produk</th>
-                      <th className="p-2 text-[10px] font-bold text-gray-600 uppercase text-center">Awal</th>
-                      <th className="p-2 text-[10px] font-bold text-gray-600 uppercase text-center">Akhir</th>
-                      <th className="p-2 text-[10px] font-bold text-gray-600 uppercase text-right">Harga</th>
-                      <th className="p-2 text-[10px] font-bold text-gray-600 uppercase text-center">Laku</th>
-                      <th className="p-2 text-[10px] font-bold text-gray-600 uppercase text-right">Total</th>
-                      <th className="p-2 text-[10px] font-bold text-gray-600 uppercase text-center">Aksi</th>
+                    <tr className="bg-gray-100/80 border-b-2 border-gray-200 text-[10px] font-bold text-gray-600 uppercase">
+                      <th className="p-2 w-2/5">Produk</th>
+                      <th className="p-2 text-center">Awal</th>
+                      <th className="p-2 text-center">Akhir</th>
+                      {isOwner && <th className="p-2 text-right text-red-500">Modal</th>}
+                      <th className="p-2 text-right">Jual</th>
+                      <th className="p-2 text-center">Laku</th>
+                      <th className="p-2 text-right">Total</th>
+                      {isOwner && <th className="p-2 text-right text-emerald-600">Untung</th>}
+                      <th className="p-2 text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -515,14 +555,16 @@ export default function StokVoucher() {
                       return (
                         <React.Fragment key={provider}>
                           <tr className={`${getProviderColor(provider)}`}>
-                            <td colSpan={7} className="p-0">
+                            <td colSpan={isOwner ? 9 : 7} className="p-0">
                               <div 
                                 className="flex items-center gap-2 p-2 cursor-pointer hover:bg-black/5 transition-colors"
-                                onClick={() => toggleEditProvider(provider)}
+                                onClick={() => isOwner && toggleEditProvider(provider)}
                               >
-                                <span className="bg-white/30 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1">
-                                  {isEditing ? <><X className="w-3 h-3"/> Tutup</> : <><Pencil className="w-3 h-3"/> Edit</>}
-                                </span>
+                                {isOwner && (
+                                  <span className="bg-white/30 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1">
+                                    {isEditing ? <><X className="w-3 h-3"/> Tutup</> : <><Pencil className="w-3 h-3"/> Edit</>}
+                                  </span>
+                                )}
                                 <span className="font-bold text-xs tracking-wider">{provider}</span>
                               </div>
                             </td>
@@ -573,6 +615,22 @@ export default function StokVoucher() {
                                 </td>
                                 <td className="p-1 align-middle text-center">{renderStokCell('awal', item.awal)}</td>
                                 <td className="p-1 align-middle text-center">{renderStokCell('akhir', item.akhir)}</td>
+                                
+                                {isOwner && (
+                                  <td className="p-2 align-middle text-right">
+                                    {isEditing ? (
+                                      <input 
+                                        type="number" 
+                                        className="w-full min-w-[50px] text-xs font-bold border border-red-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-red-500 text-right"
+                                        value={item.modal || 0}
+                                        onChange={(e) => updateProductDetail(provider, idx, 'modal', e.target.value)}
+                                      />
+                                    ) : (
+                                      <span className="text-[10px] text-red-500 font-semibold">{(item.modal || 0) / 1000}k</span>
+                                    )}
+                                  </td>
+                                )}
+
                                 <td className="p-2 align-middle text-right">
                                   {isEditing ? (
                                     <input 
@@ -589,6 +647,11 @@ export default function StokVoucher() {
                                 <td className="p-2 align-middle text-right font-black text-emerald-600 text-[10px] whitespace-nowrap">
                                   {laku > 0 ? formatRupiah(total) : '-'}
                                 </td>
+                                {isOwner && (
+                                  <td className="p-2 align-middle text-right font-black text-sky-600 text-[10px] whitespace-nowrap">
+                                    {laku > 0 ? formatRupiah(laku * (item.price - (item.modal || 0))) : '-'}
+                                  </td>
+                                )}
                                 <td className="p-2 align-middle text-center">
                                   {!isEditing && kasirFilter !== "Semua Kasir" && (
                                     <button 
@@ -603,9 +666,9 @@ export default function StokVoucher() {
                             );
                           })}
 
-                          {isEditing && (
+                          {isEditing && isOwner && (
                             <tr className="bg-gray-200/50">
-                              <td colSpan={2} className="p-1.5">
+                              <td colSpan={1} className="p-1.5">
                                 <input 
                                   type="text" 
                                   placeholder="Nama" 
@@ -623,16 +686,28 @@ export default function StokVoucher() {
                                   onChange={(e) => updateNewProductField(provider, 'awal', e.target.value)}
                                 />
                               </td>
+                              <td className="p-1.5 opacity-0 pointer-events-none">
+                                {/* Spacer for akhir */}
+                              </td>
                               <td className="p-1.5">
                                 <input 
                                   type="number" 
-                                  placeholder="Harga" 
-                                  className="w-full text-xs border border-gray-300 rounded px-2 py-1 text-right"
+                                  placeholder="Modal" 
+                                  className="w-full text-xs border border-red-300 rounded px-2 py-1 text-right"
+                                  value={newProduct[provider]?.modal || ''}
+                                  onChange={(e) => updateNewProductField(provider, 'modal', e.target.value)}
+                                />
+                              </td>
+                              <td className="p-1.5">
+                                <input 
+                                  type="number" 
+                                  placeholder="Jual" 
+                                  className="w-full text-xs border border-blue-300 rounded px-2 py-1 text-right"
                                   value={newProduct[provider]?.price || ''}
                                   onChange={(e) => updateNewProductField(provider, 'price', e.target.value)}
                                 />
                               </td>
-                              <td colSpan={3} className="p-1.5">
+                              <td colSpan={4} className="p-1.5">
                                 <button 
                                   className="w-full bg-blue-600 text-white text-[10px] font-bold py-1.5 rounded active:bg-blue-700 transition-colors"
                                   onClick={() => tambahProduk(provider)}
