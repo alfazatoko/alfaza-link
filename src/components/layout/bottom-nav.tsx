@@ -53,7 +53,7 @@ export function BottomNav() {
         "fixed bottom-0 left-0 right-0 mx-auto bg-transparent flex justify-around items-end px-2 z-50 transition-colors duration-300",
         maxW
       )}
-      style={{ paddingTop: '4px', paddingBottom: 'max(4px, env(safe-area-inset-bottom, 4px))' }}
+      style={{ paddingTop: '2px', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       {navItems.map((item, idx) => {
         const isActive = item.href !== "logout" && location === item.href;
@@ -87,7 +87,7 @@ export function BottomNav() {
                     className={cn(
                       "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300",
                       isActive
-                        ? "bg-primary text-white -translate-y-3 scale-110 shadow-lg shadow-primary/30"
+                        ? "bg-primary text-white -translate-y-2 scale-110 shadow-lg shadow-primary/30"
                         : "text-foreground/60 active:bg-gray-100"
                     )}
                   >
@@ -95,7 +95,7 @@ export function BottomNav() {
                   </div>
                   <span className={cn(
                     "text-[9px] font-medium transition-all",
-                    isActive ? "font-bold text-primary -translate-y-1" : "text-foreground/60"
+                    isActive ? "font-bold text-primary" : "text-foreground/60"
                   )}>
                     {item.label}
                   </span>

@@ -43,35 +43,6 @@ export default function Owner() {
     { id: "setting" as const, icon: Settings, label: "Setting", desc: "Pengaturan app", color: "from-gray-600 to-gray-500" },
   ];
 
-  const [zipping, setZipping] = useState(false);
-
-  const handleDownloadZip = async () => {
-    setZipping(true);
-    try {
-      const [{ getSourceFiles }, { default: JSZip }] = await Promise.all([
-        import("@/lib/source-bundle"),
-        import("jszip"),
-      ]);
-      const files = getSourceFiles();
-      const zip = new JSZip();
-      for (const [path, content] of Object.entries(files)) {
-        zip.file(path, content);
-      }
-      const blob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `alfaza-link-source-${new Date().toISOString().slice(0, 10)}.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast({ title: "Source code berhasil diunduh" });
-    } catch {
-      toast({ title: "Gagal membuat ZIP", variant: "destructive" });
-    } finally {
-      setZipping(false);
-    }
-  };
-
   if (page === "main") {
     return (
       <div className="px-3 pt-3 pb-20">
@@ -98,14 +69,6 @@ export default function Owner() {
               </button>
             );
           })}
-        </div>
-
-        <div className="mt-4">
-          <button onClick={handleDownloadZip} disabled={zipping} className="w-full bg-slate-800 dark:bg-slate-700 text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition disabled:opacity-60">
-            {zipping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            {zipping ? "Membuat ZIP..." : "Download Source Code (ZIP)"}
-          </button>
-          <p className="text-[10px] text-muted-foreground text-center mt-1.5">Unduh semua file kode terbaru untuk diedit di aplikasi lain</p>
         </div>
 
       </div>
@@ -947,79 +910,42 @@ function GajihPage({ goBack }: { goBack: () => void }) {
     } catch { }
   };
 
-  const buildPdf = async () => {
-    const { default: jsPDF } = await import("jspdf");
-    const pdf = new jsPDF("p", "mm", "a5");
-    const pw = 148;
-    const ml = 12;
-    const cw = pw - ml * 2;
-    let y = 15;
-
-    pdf.setFillColor(30, 60, 150);
-    pdf.roundedRect(ml, y, cw, 16, 3, 3, "F");
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(14); pdf.setFont("helvetica", "bold");
-    pdf.text("SLIP GAJI KARYAWAN", pw / 2, y + 7, { align: "center" });
-    pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
-    const pBulan = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
-    pdf.text(`Periode: ${pBulan}`, pw / 2, y + 12.5, { align: "center" });
-    y += 22;
-
-    const row = (left: string, right: string, bold = false) => {
-      pdf.setFontSize(10);
-      pdf.setFont("helvetica", bold ? "bold" : "normal");
-      pdf.setTextColor(50, 50, 50);
-      pdf.text(left, ml + 2, y + 4);
-      pdf.setFont("helvetica", "bold");
-      pdf.text(right, ml + cw - 2, y + 4, { align: "right" });
-      pdf.setDrawColor(220, 220, 220);
-      pdf.line(ml, y + 6, ml + cw, y + 6);
-      y += 8;
-    };
-
-    row("Nama", selectedKasir.toUpperCase(), true);
-    row("Hari Kerja", `${hariKerja} hari`);
-    row("Izin", `${currentIzin} hari ${potonganIzin > 0 ? `(-${formatRupiah(potonganIzin)})` : ""}`);
-    row("Gaji Pokok", formatRupiah(gajiPokok));
-    row("Bonus", formatRupiah(bonus));
-    if (potonganLain > 0) {
-      row(`Potongan ${ketPotongan ? `(${ketPotongan})` : "Lain"}`, `-${formatRupiah(potonganLain)}`);
-    }
-    if (catatan) {
-      row("Catatan", catatan);
-    }
-
-    y += 4;
-    pdf.setFillColor(240, 240, 245);
-    pdf.roundedRect(ml, y, cw, 12, 2, 2, "F");
-    pdf.setFontSize(11); pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(30, 60, 150);
-    pdf.text("TOTAL GAJI", ml + 4, y + 7.5);
-    pdf.setFontSize(13);
-    pdf.text(formatRupiah(totalGaji), ml + cw - 4, y + 7.5, { align: "right" });
-    y += 18;
-
-    pdf.setFontSize(8); pdf.setFont("helvetica", "italic");
-    pdf.setTextColor(150, 150, 150);
-    pdf.text(`Dicetak pada: ${new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}`, pw / 2, y, { align: "center" });
-
-    return pdf;
-  };
-
-  const handleDownloadPDF = async () => {
+  const handleSharePDF = async () => {
+    if (!slipRef.current) return;
+    toast({ title: "Menyiapkan Share..." });
     try {
-      const pdf = await buildPdf();
+      const canvas = await html2canvas(slipRef.current, { scale: 2, useCORS: true, backgroundColor: null });
+      const imgData = canvas.toDataURL("image/png");
+      const { default: jsPDF } = await import("jspdf");
+      
+      const pdf = new jsPDF("p", "mm", "a5");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const imgWidth = pdfWidth - 20;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      pdf.addImage(imgData, "PNG", 10, 15, imgWidth, imgHeight);
+      
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "italic");
+      pdf.setTextColor(150, 150, 150);
+      pdf.text(`Dicetak pada: ${new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}`, pdfWidth / 2, imgHeight + 25, { align: "center" });
+
       const blob = pdf.output("blob");
       const filename = `slip-gaji-${selectedKasir.replace(/\s+/g, '-')}-${month}.pdf`;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast({ title: "PDF berhasil diunduh" });
+      const file = new File([blob], filename, { type: "application/pdf" });
+      
+      if (navigator.share) {
+        await navigator.share({ title: `Slip Gaji ${selectedKasir}`, files: [file] }).catch(() => {});
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } catch {
-      toast({ title: "Gagal mengunduh PDF", variant: "destructive" });
+      toast({ title: "Gagal share PDF", variant: "destructive" });
     }
   };
 
@@ -1269,10 +1195,10 @@ function GajihPage({ goBack }: { goBack: () => void }) {
           🍰 Bagikan Teks
         </button>
         <button
-          onClick={handleDownloadPDF}
+          onClick={handleSharePDF}
           className="bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow active:scale-95 transition"
         >
-          ⬇️ Download PDF
+          <Share2 className="w-4 h-4" /> Bagikan PDF
         </button>
       </div>
     </div>
