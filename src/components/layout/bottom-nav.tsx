@@ -48,10 +48,13 @@ export function BottomNav() {
   };
 
   return (
-    <div className={cn(
-      "fixed bottom-0 left-0 right-0 mx-auto bg-card border-t border-border flex justify-around items-end px-2 pt-1 pb-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-none z-50 transition-colors duration-300",
-      maxW
-    )}>
+    <div
+      className={cn(
+        "fixed bottom-0 left-0 right-0 mx-auto bg-transparent flex justify-around items-end px-2 z-50 transition-colors duration-300",
+        maxW
+      )}
+      style={{ paddingTop: '4px', paddingBottom: 'max(4px, env(safe-area-inset-bottom, 4px))' }}
+    >
       {navItems.map((item, idx) => {
         const isActive = item.href !== "logout" && location === item.href;
         const isLogout = (item as any).isLogout;

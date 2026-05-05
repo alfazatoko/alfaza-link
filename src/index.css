@@ -307,12 +307,6 @@
   #root > div {
     padding-bottom: 52px !important;
   }
-
-  /* Bottom nav: compact in landscape */
-  .fixed.bottom-0 {
-    padding-bottom: 0.25rem !important;
-    padding-top: 0.25rem !important;
-  }
 }
 
 
