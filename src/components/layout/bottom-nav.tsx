@@ -49,7 +49,7 @@ export function BottomNav() {
 
   return (
     <div className={cn(
-      "fixed bottom-0 left-0 right-0 mx-auto bg-card border-t border-border flex justify-around px-1 py-0.5 pb-1 shadow-[0_-2px_15px_rgba(0,0,0,0.06)] dark:shadow-none z-50 transition-colors duration-300",
+      "fixed bottom-0 left-0 right-0 mx-auto bg-card border-t border-border flex justify-around items-end px-2 pt-1 pb-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-none z-50 transition-colors duration-300",
       maxW
     )}>
       {navItems.map((item, idx) => {
@@ -60,40 +60,40 @@ export function BottomNav() {
             {isLogout ? (
               <button
                 onClick={handleLogout}
-                className="w-full flex flex-col items-center justify-center py-0.5 gap-0"
+                className="w-full flex flex-col items-center justify-center gap-0.5"
               >
-                <div className="p-1 rounded-xl transform -translate-y-1">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center transition-all">
                   <item.icon className="w-5 h-5 text-red-500" strokeWidth={2.5} />
                 </div>
-                <span className="text-[9px] font-bold text-red-500 -mt-1">{item.label}</span>
+                <span className="text-[9px] font-bold text-red-500">{item.label}</span>
               </button>
             ) : (item as any).isModal ? (
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent("open-isi-saldo"))}
-                className="w-full flex flex-col items-center justify-center py-0.5 gap-0"
+                className="w-full flex flex-col items-center justify-center gap-0.5"
               >
-                <div className="p-1 rounded-xl text-foreground opacity-70 transform -translate-y-1">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-foreground/60 transition-all active:bg-gray-100">
                   <item.icon className="w-5 h-5" strokeWidth={2} />
                 </div>
-                <span className="text-[9px] font-medium text-foreground opacity-70 -mt-1">{item.label}</span>
+                <span className="text-[9px] font-medium text-foreground/60">{item.label}</span>
               </button>
             ) : (
               <Link href={item.href} className="block">
-                <div
-                  className={cn(
-                    "flex flex-col items-center justify-center py-0.5 gap-0 rounded-xl transition-all",
-                    isActive ? "text-primary" : "text-foreground opacity-70"
-                  )}
-                >
+                <div className="flex flex-col items-center justify-center gap-0.5 transition-all">
                   <div
                     className={cn(
-                      "p-1 rounded-xl transition-all transform",
-                      isActive ? "bg-primary/10 text-primary -translate-y-2.5 scale-110 shadow-sm" : "-translate-y-1"
+                      "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300",
+                      isActive
+                        ? "bg-primary text-white -translate-y-3 scale-110 shadow-lg shadow-primary/30"
+                        : "text-foreground/60 active:bg-gray-100"
                     )}
                   >
-                    <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                    <item.icon className={cn("w-5 h-5", isActive && "w-[22px] h-[22px]")} strokeWidth={isActive ? 2.5 : 2} />
                   </div>
-                  <span className={cn("text-[9px] font-medium -mt-1", isActive && "font-bold text-primary translate-y-[-2px]")}>
+                  <span className={cn(
+                    "text-[9px] font-medium transition-all",
+                    isActive ? "font-bold text-primary -translate-y-1" : "text-foreground/60"
+                  )}>
                     {item.label}
                   </span>
                 </div>

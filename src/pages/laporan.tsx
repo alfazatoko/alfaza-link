@@ -38,6 +38,8 @@ export default function Laporan() {
   const isOwner = user?.role === "owner";
 
   const viewModeRef = useRef(viewMode);
+  const txCacheRef = useRef<TransactionRecord[]>([]);
+  const saldoCacheRef = useRef<SaldoHistoryRecord[]>([]);
   useEffect(() => {
     viewModeRef.current = viewMode;
   }, [viewMode]);
@@ -82,17 +84,63 @@ export default function Laporan() {
         }), {});
       }
 
-      setDailyRekap(agg || null);
       setDailyNotes(notes as DailyNoteRecord);
       
-      // Reset details when date or kasir changes
+      // Reset details & cache when date or kasir changes
       setIsDetailsLoaded(false);
       setTransactions([]);
       setSaldoHistory([]);
-      
-      // Auto-load details if we're already on detail tab OR if no rekap found (force load)
-      if (viewModeRef.current === 'detail' || !agg) {
-        loadFullDetails(kname, true);
+      txCacheRef.current = [];
+      saldoCacheRef.current = [];
+
+      if (agg) {
+        // Rekap exists → langsung pakai (ringan)
+        setDailyRekap(agg);
+      } else {
+        // Tidak ada rekap → load transaksi, buat rekap sintetis, cache hasilnya
+        const [txs, saldos] = await Promise.all([
+          getTransactions({ kasirName: kname, startDate: date, endDate: date }).catch(() => []),
+          getSaldoHistory({ kasirName: kname, startDate: date, endDate: date }).catch(() => [])
+        ]);
+        // Cache untuk dipakai tab Detail nanti
+        txCacheRef.current = txs;
+        saldoCacheRef.current = saldos;
+        // Buat rekap sintetis dari data transaksi
+        const synth: any = {
+          total_bank: txs.filter(t => t.category === "BANK").reduce((s, t) => s + (t.nominal || 0), 0),
+          total_flip: txs.filter(t => t.category === "FLIP").reduce((s, t) => s + (t.nominal || 0), 0),
+          total_app: txs.filter(t => t.category === "APP PULSA").reduce((s, t) => s + (t.nominal || 0), 0),
+          total_dana: txs.filter(t => t.category === "DANA").reduce((s, t) => s + (t.nominal || 0), 0),
+          total_tarik: txs.filter(t => t.category === "TARIK TUNAI").reduce((s, t) => s + (t.nominal || 0), 0),
+          total_aks: txs.filter(t => t.category === "AKSESORIS").reduce((s, t) => s + (t.nominal || 0), 0),
+          total_closing: txs.filter(t => t.category === "CLOSING").reduce((s, t) => s + (t.nominal || 0), 0),
+          total_admin: txs.reduce((s, t) => s + (!t.adminNonTunai ? (t.admin || 0) : 0), 0),
+          total_admin_non_tunai: txs.reduce((s, t) => s + (t.adminNonTunai ? (t.admin || 0) : 0), 0),
+          total_non_tunai: txs.filter(t => (t.paymentMethod || "").toLowerCase().includes("non-tunai") && t.category !== "CLOSING").reduce((s, t) => s + (t.nominal || 0), 0),
+          total_isi_bank: saldos.filter(s => s.jenis === "Bank").reduce((s, h) => s + (h.nominal || 0), 0),
+          count_bank: txs.filter(t => t.category === "BANK").length,
+          count_flip: txs.filter(t => t.category === "FLIP").length,
+          count_app: txs.filter(t => t.category === "APP PULSA").length,
+          count_dana: txs.filter(t => t.category === "DANA").length,
+          count_aks: txs.filter(t => t.category === "AKSESORIS").length,
+          count_tarik: txs.filter(t => t.category === "TARIK TUNAI").length,
+          count_closing: txs.filter(t => t.category === "CLOSING").length,
+          // Saldo terakhir dari transaksi pertama (terbaru)
+          saldo_bank_last: txs[0]?.saldoBankAfter ?? 0,
+          saldo_cash_last: txs[0]?.saldoCashAfter ?? 0,
+        };
+        setDailyRekap(synth);
+      }
+
+      // Auto-load details jika user sudah di tab detail
+      if (viewModeRef.current === 'detail') {
+        if (txCacheRef.current.length > 0) {
+          setTransactions(txCacheRef.current);
+          setSaldoHistory(saldoCacheRef.current);
+          setIsDetailsLoaded(true);
+        } else {
+          loadFullDetails(kname, true);
+        }
       }
     } catch (err) {
       console.error("Load Error:", err);
@@ -104,6 +152,13 @@ export default function Laporan() {
   const loadFullDetails = async (forcedKname?: string, force: boolean = false) => {
     if (!user || loadingDetails) return;
     if (!force && isDetailsLoaded) return;
+    // Cek cache dulu — kalau sudah pernah load, langsung pakai
+    if (txCacheRef.current.length > 0) {
+      setTransactions(txCacheRef.current);
+      setSaldoHistory(saldoCacheRef.current);
+      setIsDetailsLoaded(true);
+      return;
+    }
     setLoadingDetails(true);
     try {
       let kname = forcedKname || (isOwner ? (kasirFilter === "Semua" ? undefined : kasirFilter) : user.name);
@@ -113,6 +168,8 @@ export default function Laporan() {
       ]);
       setTransactions(fullTxs);
       setSaldoHistory(fullSaldo);
+      txCacheRef.current = fullTxs;
+      saldoCacheRef.current = fullSaldo;
       setIsDetailsLoaded(true);
     } catch (err) {
       toast({ title: "Gagal memuat detail", variant: "destructive" });
@@ -149,8 +206,12 @@ export default function Laporan() {
     const tPenjualan = tBank + tFlip + tApp + tDana;
     const sisaCashTotal = tPenjualan - tTarik + tAdmin + tAks;
     const tIsiBank = (!isDetailsLoaded && dailyRekap) ? (dailyRekap.total_isi_bank || 0) : shList.filter(s => s.jenis === "Bank").reduce((s, h) => s + (h.nominal || 0), 0);
-    const sBank = txList[0]?.saldoBankAfter ?? 0;
-    const sCash = txList[0]?.saldoCashAfter ?? 0;
+    const sBank = (!isDetailsLoaded && dailyRekap && (dailyRekap as any).saldo_bank_last !== undefined)
+      ? (dailyRekap as any).saldo_bank_last
+      : (txList[0]?.saldoBankAfter ?? 0);
+    const sCash = (!isDetailsLoaded && dailyRekap && (dailyRekap as any).saldo_cash_last !== undefined)
+      ? (dailyRekap as any).saldo_cash_last
+      : (txList[0]?.saldoCashAfter ?? 0);
     const sReal = dailyNotes?.saldoRealApp || 0;
     const selisih = sReal - sBank;
     const totalTxCount = (!isDetailsLoaded && dailyRekap)
@@ -188,31 +249,35 @@ export default function Laporan() {
     const pageWidth = doc.internal.pageSize.width;
     const contentWidth = pageWidth - (margin * 2);
 
-    // --- HELPER: Draw Bar ---
-    const drawBar = (text: string, color: [number, number, number], textColor: [number, number, number] = [255, 255, 255]) => {
-      doc.setFillColor(color[0], color[1], color[2]);
-      doc.roundedRect(margin, y, contentWidth, 10, 2, 2, "F");
-      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+    // --- HELPER: Draw Section Title (clean, no colored bar) ---
+    const drawSectionTitle = (text: string) => {
+      doc.setTextColor(30, 30, 30);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
-      doc.text(text.toUpperCase(), margin + 5, y + 6.5);
-      y += 10.5;
+      doc.text(text.toUpperCase(), margin + 2, y + 1);
+      y += 3;
+      // Subtle underline
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.4);
+      doc.line(margin, y, pageWidth - margin, y);
+      doc.setLineWidth(0.2);
+      y += 4;
     };
 
-    const drawRow = (label: string, value: string, color: [number, number, number] = [75, 85, 99], isBold = false) => {
-      doc.setTextColor(color[0], color[1], color[2]);
+    const drawRow = (label: string, value: string, isBold = false) => {
+      doc.setTextColor(50, 50, 50);
       doc.setFont("helvetica", isBold ? "bold" : "normal");
       doc.setFontSize(9);
-      doc.text(label, margin + 5, y);
-      doc.text(value, pageWidth - margin - 5, y, { align: "right" });
+      doc.text(label, margin + 4, y);
+      doc.text(value, pageWidth - margin - 4, y, { align: "right" });
       y += 5;
-      // Draw thin line
-      doc.setDrawColor(240, 240, 240);
-      doc.line(margin + 5, y - 1, pageWidth - margin - 5, y - 1);
+      // Draw thin separator line
+      doc.setDrawColor(230, 230, 230);
+      doc.line(margin + 4, y - 1, pageWidth - margin - 4, y - 1);
       y += 1.5;
     };
 
-    // --- HEADER ---
+    // --- HEADER (satu-satunya yang berwarna) ---
     doc.setFillColor(59, 130, 246); // Blue
     doc.roundedRect(margin, y, contentWidth, 18, 3, 3, "F");
     doc.setTextColor(255, 255, 255);
@@ -225,56 +290,55 @@ export default function Laporan() {
     y += 22;
 
     // --- SUB-HEADER (Info) ---
-    doc.setFillColor(243, 244, 246); // Light Gray
-    doc.roundedRect(margin, y, contentWidth, 8, 2, 2, "F");
-    doc.setTextColor(107, 114, 128);
+    doc.setTextColor(100, 100, 100);
     doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
     const infoText = `Kasir: ${kasirFilter === "Semua" ? (user?.name || "-") : kasirFilter}  |  Tanggal: ${date}`;
-    doc.text(infoText, pageWidth / 2, y + 5.2, { align: "center" });
-    y += 14;
+    doc.text(infoText, pageWidth / 2, y + 2, { align: "center" });
+    y += 10;
 
     // --- SECTION: RINCIAN KATEGORI ---
-    drawBar("Rincian Kategori", [16, 185, 129]); // Emerald Green
+    drawSectionTitle("Rincian Kategori");
     drawRow(`BANK (${countVal("count_bank", "BANK")}x)`, formatRupiah(tBank));
     drawRow(`FLIP (${countVal("count_flip", "FLIP")}x)`, formatRupiah(tFlip));
     drawRow(`DANA (${countVal("count_dana", "DANA")}x)`, formatRupiah(tDana));
     drawRow(`APP PULSA (${countVal("count_app", "APP PULSA")}x)`, formatRupiah(tApp));
     drawRow(`ISI BANK (History)`, formatRupiah(tIsiBank));
-    y += 2.5;
+    y += 3;
 
     // --- SECTION: TOTAL PENJUALAN ---
-    drawBar("Total Penjualan", [5, 150, 105]); // Darker Green
-    drawRow("Total Penjualan", formatRupiah(tPenjualan), [16, 185, 129], true);
-    drawRow(`Tarik Tunai (${countVal("count_tarik", "TARIK TUNAI")}x)`, `-${formatRupiah(tTarik)}`, [239, 68, 68]);
-    drawRow("Sisa Cash Penjualan", formatRupiah(tPenjualan - tTarik), [16, 185, 129]);
-    drawRow("Admin", formatRupiah(tAdmin), [245, 158, 11]);
-    drawRow("Non Tunai", formatRupiah(tNT), [139, 92, 246]);
-    y += 2.5;
+    drawSectionTitle("Total Penjualan");
+    drawRow("Total Penjualan", formatRupiah(tPenjualan), true);
+    drawRow(`Tarik Tunai (${countVal("count_tarik", "TARIK TUNAI")}x)`, `-${formatRupiah(tTarik)}`);
+    drawRow("Sisa Cash Penjualan", formatRupiah(tPenjualan - tTarik));
+    drawRow("Admin", formatRupiah(tAdmin));
+    drawRow("Non Tunai", formatRupiah(tNT));
+    y += 3;
 
-    // --- SECTION: SISA CASH TOTAL (Big Yellow Bar) ---
-    doc.setFillColor(245, 158, 11); // Amber
-    doc.roundedRect(margin, y, contentWidth, 12, 3, 3, "F");
-    doc.setTextColor(255, 255, 255);
+    // --- SECTION: SISA CASH TOTAL (highlighted with light gray bg) ---
+    doc.setFillColor(240, 240, 240);
+    doc.roundedRect(margin, y, contentWidth, 12, 2, 2, "F");
+    doc.setTextColor(30, 30, 30);
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.text("SISA CASH TOTAL", margin + 5, y + 7.5);
     doc.text(formatRupiah(sisaCashTotal), pageWidth - margin - 5, y + 7.5, { align: "right" });
-    y += 14.5;
+    y += 16;
 
     // --- SECTION: JURNAL PENYESUAIAN ---
-    drawBar("Jurnal Penyesuaian", [139, 92, 246]); // Purple
+    drawSectionTitle("Jurnal Penyesuaian");
     drawRow("Total Tambah/Isi Saldo Bank", formatRupiah(tIsiBank));
-    y += 2.5;
+    y += 3;
 
     // --- SECTION: SALDO & SELISIH ---
-    drawBar("Saldo & Selisih", [16, 185, 129]); // Green
-    drawRow("Sisa Saldo Bank (Catatan)", formatRupiah(sBank), [59, 130, 246]);
-    drawRow("Saldo Real App", formatRupiah(sReal), [220, 38, 38]);
-    drawRow("Selisih", formatRupiah(selisih), selisih === 0 ? [16, 185, 129] : [220, 38, 38], true);
-    y += 2.5;
+    drawSectionTitle("Saldo & Selisih");
+    drawRow("Sisa Saldo Bank (Catatan)", formatRupiah(sBank));
+    drawRow("Saldo Real App", formatRupiah(sReal));
+    drawRow("Selisih", formatRupiah(selisih), true);
+    y += 3;
 
     // --- SECTION: SALDO AKHIR PERIODE ---
-    drawBar("Saldo Akhir Periode", [30, 41, 59]); // Slate Dark
+    drawSectionTitle("Saldo Akhir Periode");
     drawRow("Saldo Bank (Terakhir)", formatRupiah(sBank));
     drawRow("Saldo Cash (Terakhir)", formatRupiah(sCash));
 
@@ -424,6 +488,8 @@ export default function Laporan() {
 
         {viewMode === 'ringkasan' ? (
           <div className="animate-in fade-in duration-300">
+
+
 
         {/* 1. RINGKASAN UTAMA (KARTU HIJAU, KUNING, UNGU) */}
         <div className="bg-white rounded-[14px] border border-gray-100 overflow-hidden mb-2 shadow-sm">

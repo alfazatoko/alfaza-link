@@ -1,9 +1,29 @@
 import {
   collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc,
-  setDoc, query, where, writeBatch, increment, limit
+  setDoc, query, where, writeBatch, increment, limit,
+  getDocsFromCache, getDocFromCache,
+  type Query, type DocumentReference
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { getWibDate } from "./utils";
+
+// ── Cache-First Helpers ──
+// Baca dari IndexedDB cache dulu (instan), fallback ke server jika cache kosong
+async function cacheFirstGetDocs<T>(q: Query): Promise<import("firebase/firestore").QuerySnapshot<T>> {
+  try {
+    const cached = await getDocsFromCache(q as any);
+    if (cached.docs.length > 0) return cached as any;
+  } catch (_) { /* cache miss, lanjut ke server */ }
+  return getDocs(q) as any;
+}
+
+async function cacheFirstGetDoc(ref: DocumentReference) {
+  try {
+    const cached = await getDocFromCache(ref);
+    if (cached.exists()) return cached;
+  } catch (_) { /* cache miss */ }
+  return getDoc(ref);
+}
 
 export interface UserRecord {
   id: string;
@@ -214,8 +234,8 @@ async function updateRekap(batch: any, date: string, kasirName: string | null, i
 }
 
 export async function getUsers(): Promise<UserRecord[]> {
-  const snap = await getDocs(collection(db, "users"));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as UserRecord));
+  const snap = await cacheFirstGetDocs(query(collection(db, "users")));
+  return snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as UserRecord));
 }
 
 export async function createUser(data: Omit<UserRecord, "id">): Promise<string> {
@@ -234,7 +254,7 @@ export async function deleteUser(id: string): Promise<void> {
 export async function getSettings(): Promise<SettingsRecord> {
   const ref = doc(db, "settings", "main");
   try {
-    const snap = await getDoc(ref);
+    const snap = await cacheFirstGetDoc(ref);
     if (!snap.exists()) {
       const defaults: SettingsRecord = {
         shopName: "ALFAZA LINK",
@@ -315,8 +335,8 @@ export async function getTransactions(params: {
     q = query(q, limit(params.limit));
   }
 
-  const snap = await getDocs(q);
-  let results = snap.docs.map(d => ({ id: d.id, ...d.data() } as TransactionRecord));
+  const snap = await cacheFirstGetDocs(q);
+  let results = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as TransactionRecord));
 
   // Filter kasirName di memori aplikasi
   if (params.kasirName && params.kasirName !== "Semua") {
@@ -556,7 +576,7 @@ async function reverseBalance(kasirName: string, tx: TransactionRecord) {
 
 export async function getBalance(kasirName: string): Promise<BalanceRecord> {
   const ref = doc(db, "balances", kasirName);
-  const snap = await getDoc(ref);
+  const snap = await cacheFirstGetDoc(ref);
   const today = getWibDate();
 
   const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, adminNonTunaiTotal: 0, lastUpdateDate: today };
@@ -580,7 +600,7 @@ export async function getBalance(kasirName: string): Promise<BalanceRecord> {
 
 export async function getDailyRekap(date: string): Promise<DailyRekapRecord | null> {
   const ref = doc(db, "rekap_harian", date);
-  const snap = await getDoc(ref);
+  const snap = await cacheFirstGetDoc(ref);
   if (!snap.exists()) return null;
   return snap.data() as DailyRekapRecord;
 }
@@ -588,8 +608,8 @@ export async function getDailyRekap(date: string): Promise<DailyRekapRecord | nu
 export async function getDailyRekapByRange(startDate: string, endDate: string): Promise<DailyRekapRecord[]> {
   const colRef = collection(db, "rekap_harian");
   const q = query(colRef, where("__name__", ">=", startDate), where("__name__", "<=", endDate));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ date: d.id, ...d.data() } as any));
+  const snap = await cacheFirstGetDocs(q);
+  return snap.docs.map(d => ({ date: d.id, ...(d.data() as any) } as any));
 }
 
 export async function getRekapKasirByRange(kasirName: string, startDate: string, endDate: string): Promise<KasirRekapRecord[]> {
@@ -599,7 +619,7 @@ export async function getRekapKasirByRange(kasirName: string, startDate: string,
     where("date", ">=", startDate),
     where("date", "<=", endDate)
   );
-  const snap = await getDocs(q);
+  const snap = await cacheFirstGetDocs(q);
   return snap.docs.map(d => d.data() as KasirRekapRecord);
 }
 
@@ -609,7 +629,7 @@ export async function getAllRekapKasirByRange(startDate: string, endDate: string
     where("date", ">=", startDate),
     where("date", "<=", endDate)
   );
-  const snap = await getDocs(q);
+  const snap = await cacheFirstGetDocs(q);
   return snap.docs.map(d => d.data() as KasirRekapRecord);
 }
 
@@ -640,8 +660,8 @@ export async function getSaldoHistory(params: {
     q = query(q, limit(params.limit));
   }
 
-  const snap = await getDocs(q);
-  let results = snap.docs.map(d => ({ id: d.id, ...d.data() } as SaldoHistoryRecord));
+  const snap = await cacheFirstGetDocs(q);
+  let results = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as SaldoHistoryRecord));
 
   // Filter kasirName di memori aplikasi
   if (params.kasirName && params.kasirName !== "Semua") {
@@ -939,7 +959,7 @@ export async function updateIzin(id: string, data: Partial<IzinRecord>): Promise
 export async function getDailyNotes(kasirName: string, date: string): Promise<DailyNoteRecord> {
   const docId = `${kasirName}_${date}`;
   const ref = doc(db, "daily_notes", docId);
-  const snap = await getDoc(ref);
+  const snap = await cacheFirstGetDoc(ref);
   if (!snap.exists()) {
     return { sisaSaldoBank: 0, saldoRealApp: 0 };
   }
