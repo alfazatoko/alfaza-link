@@ -1391,113 +1391,58 @@ function SettingPage({ goBack }: { goBack: () => void }) {
   };
   const [catLabels, setCatLabels] = useState<CategoryLabels>(defaultLabels);
 
-  // PWA Install State
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [installing, setInstalling] = useState(false);
 
   // Check if already installed
-  const isStandalone = typeof window !== 'undefined' && (
-    window.matchMedia('(display-mode: standalone)').matches || 
-    (window.navigator as any).standalone === true
-  );
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                      (window.navigator as any).standalone === true;
 
-  // Capture beforeinstallprompt event - only run once on mount
   useEffect(() => {
-    // Skip if already in standalone mode
-    if (window.matchMedia('(display-mode: standalone)').matches || 
-        (window.navigator as any).standalone === true) {
-      return;
-    }
-
-    const handler = (e: Event) => {
+    const handler = (e: any) => {
       e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-      console.log('PWA: beforeinstallprompt captured');
+      setInstallPrompt(e);
     };
-
-    window.addEventListener('beforeinstallprompt', handler);
-    
-    // Listen for successful install
-    const installedHandler = () => {
-      console.log('PWA: App was installed');
-      setDeferredPrompt(null);
-      setIsInstallable(false);
-      toast({ title: "Aplikasi berhasil diinstall!" });
-    };
-    window.addEventListener('appinstalled', installedHandler);
-    
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-      window.removeEventListener('appinstalled', installedHandler);
-    };
-  }, []); // Empty deps - run once on mount
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
 
   const handleInstallPWA = async () => {
     if (isStandalone) {
-      toast({ 
-        title: "Sudah Terpasang", 
-        description: "Aplikasi sudah terinstall di perangkat Anda." 
-      });
+      toast({ title: "Aplikasi sudah terpasang", description: "Anda sedang menggunakan aplikasi yang sudah diinstal." });
       return;
     }
 
-    // iOS Safari doesn't support beforeinstallprompt
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    
-    if (isIOS || (isSafari && !deferredPrompt)) {
-      toast({ 
-        title: "Instalasi Manual", 
-        description: "Tap Share ➜ Add to Home Screen di browser Anda",
-        duration: 6000 
-      });
-      return;
-    }
-
-    if (!deferredPrompt) {
-      toast({ 
-        title: "Tidak Dapat Install", 
-        description: "Browser tidak mendukung PWA install. Gunakan Chrome/Edge/Samsung Browser.",
-        variant: "destructive" 
-      });
+    if (!installPrompt) {
+      // Check if it's iOS Safari
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        toast({ 
+          title: "Petunjuk Instalasi iOS", 
+          description: "Tap tombol Share di Safari, lalu pilih 'Add to Home Screen'",
+          duration: 5000 
+        });
+      } else {
+        toast({ title: "Gunakan menu browser untuk instalasi", variant: "default" });
+      }
       return;
     }
 
     setInstalling(true);
-    
     try {
-      // Trigger install prompt
-      deferredPrompt.prompt();
+      installPrompt.prompt();
       
-      // Wait for user choice with timeout
-      const timeoutPromise = new Promise<{ outcome: string }>((_, reject) => 
-        setTimeout(() => reject(new Error('User did not respond')), 10000)
-      );
+      const { outcome } = await installPrompt.userChoice;
       
-      const userChoice = await Promise.race([
-        deferredPrompt.userChoice,
-        timeoutPromise
-      ]);
-      
-      if (userChoice.outcome === 'accepted') {
-        toast({ title: "Berhasil!", description: "Aplikasi telah diinstall di layar utama" });
-        setDeferredPrompt(null);
-        setIsInstallable(false);
-      } else {
-        toast({ title: "Dibatalkan", description: "Anda membatalkan instalasi" });
+      if (outcome === 'accepted') {
+        toast({ title: "Aplikasi berhasil diinstal!" });
+        setInstallPrompt(null);
+      } else if (outcome === 'dismissed') {
+        toast({ title: "Instalasi dibatalkan" });
       }
     } catch (err) {
       console.error('PWA Install error:', err);
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      toast({ 
-        title: "Gagal Install", 
-        description: errorMsg.includes('did not respond') 
-          ? "Silakan tap 'Add' pada dialog instalasi" 
-          : "Coba refresh halaman dan ulangi",
-        variant: "destructive" 
-      });
+      toast({ title: "Gagal memasang aplikasi", description: "Silakan coba lagi atau gunakan menu browser", variant: "destructive" });
     } finally {
       setInstalling(false);
     }
@@ -1603,11 +1548,11 @@ function SettingPage({ goBack }: { goBack: () => void }) {
             </div>
             <button 
               onClick={handleInstallPWA} 
-              disabled={installing || isStandalone}
-              className="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              disabled={installing}
+              className="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition disabled:opacity-60 flex items-center gap-1"
             >
               {installing ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-              {isStandalone ? "TERPASANG" : installing ? "Memproses..." : deferredPrompt ? "INSTAL" : "STATUS"}
+              {installing ? "Memproses..." : installPrompt ? "INSTAL" : "STATUS"}
             </button>
           </div>
         </div>
