@@ -1403,8 +1403,16 @@ function SettingPage({ goBack }: { goBack: () => void }) {
       e.preventDefault();
       setInstallPrompt(e);
     };
+    const installedHandler = () => {
+      setInstallPrompt(null);
+      toast({ title: "Aplikasi berhasil dipasang!" });
+    };
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", installedHandler);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installedHandler);
+    };
   }, []);
 
   const handleInstallPWA = async () => {
@@ -1430,19 +1438,16 @@ function SettingPage({ goBack }: { goBack: () => void }) {
 
     setInstalling(true);
     try {
-      installPrompt.prompt();
-      
-      const { outcome } = await installPrompt.userChoice;
-      
+      const promptObj = installPrompt;
+      setInstallPrompt(null); // Reset immediately to prevent multiple triggers
+      await promptObj.prompt();
+      const { outcome } = await promptObj.userChoice;
       if (outcome === 'accepted') {
-        toast({ title: "Aplikasi berhasil diinstal!" });
-        setInstallPrompt(null);
-      } else if (outcome === 'dismissed') {
-        toast({ title: "Instalasi dibatalkan" });
+        toast({ title: "Memulai pemasangan..." });
       }
     } catch (err) {
       console.error('PWA Install error:', err);
-      toast({ title: "Gagal memasang aplikasi", description: "Silakan coba lagi atau gunakan menu browser", variant: "destructive" });
+      toast({ title: "Gagal memasang", variant: "destructive" });
     } finally {
       setInstalling(false);
     }
