@@ -312,6 +312,7 @@ export default function Laporan() {
     drawRow(`Tarik Tunai (${countVal("count_tarik", "TARIK TUNAI")}x)`, `-${formatRupiah(tTarik)}`);
     drawRow("Sisa Cash Penjualan", formatRupiah(tPenjualan - tTarik));
     drawRow("Admin", formatRupiah(tAdmin));
+    drawRow(`Aksesoris (${countVal("count_aks", "AKSESORIS")}x)`, formatRupiah(tAks));
     drawRow("Non Tunai", formatRupiah(tNT));
     y += 3;
 
@@ -326,21 +327,23 @@ export default function Laporan() {
     y += 16;
 
     // --- SECTION: JURNAL PENYESUAIAN ---
-    drawSectionTitle("Jurnal Penyesuaian");
-    drawRow("Total Tambah/Isi Saldo Bank", formatRupiah(tIsiBank));
+    drawSectionTitle("Jurnal Penyesuaian Saldo");
+    drawRow("Total Isi Saldo Bank", formatRupiah(tIsiBank));
+    drawRow(`S.Akhir(${formatRupiah(sBank)}) + Penjualan(${formatRupiah(tPenjualan)})`, formatRupiah(sBank + tPenjualan));
+    drawRow("Total Selisih", formatRupiah((sBank + tPenjualan) - tIsiBank), true);
     y += 3;
 
     // --- SECTION: SALDO & SELISIH ---
     drawSectionTitle("Saldo & Selisih");
-    drawRow("Sisa Saldo Bank (Catatan)", formatRupiah(sBank));
-    drawRow("Saldo Real App", formatRupiah(sReal));
+    drawRow("Saldo Akhir Bank", formatRupiah(sBank));
+    drawRow("Saldo Real Aplikasi", formatRupiah(sReal));
     drawRow("Selisih", formatRupiah(selisih), true);
     y += 3;
 
     // --- SECTION: SALDO AKHIR PERIODE ---
     drawSectionTitle("Saldo Akhir Periode");
-    drawRow("Saldo Bank (Terakhir)", formatRupiah(sBank));
-    drawRow("Saldo Cash (Terakhir)", formatRupiah(sCash));
+    drawRow("Saldo Akhir Bank", formatRupiah(sBank));
+    drawRow("Saldo Akhir Cash", formatRupiah(sCash));
 
     // Footer
     y = doc.internal.pageSize.height - 10;
@@ -412,11 +415,11 @@ export default function Laporan() {
         ["SALDO AKHIR PERIODE", ""],
         ["Saldo Bank", sBank], ["Saldo Cash", sCash],
         ["", ""],
-        ["JURNAL PENYESUAIAN", ""],
-        ["Isi Saldo Bank", tIsiBank], ["Sisa Saldo Bank", sBank],
+        ["JURNAL PENYESUAIAN SALDO", ""],
+        ["Total Isi Saldo Bank", tIsiBank], ["Saldo Akhir Bank", sBank], ["Total Penjualan", tPenjualan], ["Total (Sisa + Terjual)", sBank + tPenjualan], ["Total Selisih", (sBank + tPenjualan) - tIsiBank],
         ["", ""],
         ["SALDO & SELISIH", ""],
-        ["Catatan Bank", sBank], ["Real Aplikasi", sReal], ["Selisih", selisih]
+        ["Saldo Akhir Bank", sBank], ["Saldo Real Aplikasi", sReal], ["Selisih", selisih]
       ];
       const ws = XLSX.utils.aoa_to_sheet(data);
       const wb = XLSX.utils.book_new();
@@ -515,6 +518,10 @@ export default function Laporan() {
               <div className="flex justify-between items-center py-0">
                 <span className="text-[10px] font-bold text-gray-600 uppercase flex items-center gap-1.5 leading-tight">📱 ADMIN</span>
                 <span className="font-bold text-orange-500 text-[11px] leading-tight">{formatRupiah(tAdmin)}</span>
+              </div>
+              <div className="flex justify-between items-center py-0">
+                <span className="text-[10px] font-bold text-gray-600 uppercase flex items-center gap-1.5 leading-tight">🎧 AKSESORIS ({countVal("count_aks", "AKSESORIS")}X)</span>
+                <span className="font-bold text-blue-600 text-[11px] leading-tight">{formatRupiah(tAks)}</span>
               </div>
               <div className="bg-[#FEF3C7] -mx-3 px-3 py-1.5 flex justify-between items-start border-t border-amber-200/60 mt-0.5">
                 <div>
@@ -616,6 +623,10 @@ export default function Laporan() {
                         <span className="text-[10px] font-bold text-gray-600 uppercase flex items-center gap-1.5 leading-tight">📱 ADMIN</span>
                         <span className="font-bold text-orange-500 text-[11px] leading-tight">{formatRupiah(tAdmin)}</span>
                       </div>
+                      <div className="flex justify-between items-center py-0">
+                        <span className="text-[10px] font-bold text-gray-600 uppercase flex items-center gap-1.5 leading-tight">🎧 AKSESORIS ({countVal("count_aks", "AKSESORIS")}X)</span>
+                        <span className="font-bold text-blue-600 text-[11px] leading-tight">{formatRupiah(tAks)}</span>
+                      </div>
                       <div className="bg-[#FEF3C7] -mx-3 px-3 py-1.5 flex justify-between items-start border-t border-amber-200/60 mt-0.5">
                         <div>
                           <h3 className="text-black font-black text-[11px] uppercase tracking-wide flex items-center gap-1">💰 TOTAL UANG CASH</h3>
@@ -664,11 +675,11 @@ export default function Laporan() {
             {showSaldoAkhir && (
               <div className="px-3 py-1">
                 <div className="flex justify-between items-center py-0">
-                  <span className="text-[11px] font-medium text-gray-700">Saldo Bank</span>
+                  <span className="text-[11px] font-medium text-gray-700">Saldo Akhir Bank</span>
                   <span className="font-bold text-blue-600 text-[11px]">{formatRupiah(sBank)}</span>
                 </div>
                 <div className="flex justify-between items-center py-0">
-                  <span className="text-[11px] font-medium text-gray-700">Saldo Cash</span>
+                  <span className="text-[11px] font-medium text-gray-700">Saldo Akhir Cash</span>
                   <span className="font-bold text-emerald-600 text-[11px]">{formatRupiah(sCash)}</span>
                 </div>
               </div>
@@ -677,18 +688,36 @@ export default function Laporan() {
 
           <div className="bg-white rounded-[14px] border border-gray-100 overflow-hidden mb-2 shadow-sm">
             <div onClick={() => setShowJurnal(!showJurnal)} className="bg-[#8B5CF6] px-3 py-1.5 flex justify-between items-center cursor-pointer">
-              <h3 className="text-white font-bold text-[11px] uppercase tracking-wide flex items-center gap-1.5">📒 JURNAL PENYESUAIAN</h3>
+              <h3 className="text-white font-bold text-[11px] uppercase tracking-wide flex items-center gap-1.5">📒 JURNAL PENYESUAIAN SALDO</h3>
               {showJurnal ? <ChevronUp className="w-4 h-4 text-white/80" /> : <ChevronDown className="w-4 h-4 text-white/80" />}
             </div>
             {showJurnal && (
               <div className="px-3 py-1">
                 <div className="flex justify-between items-center py-0">
-                  <span className="text-[11px] font-medium text-gray-700">Isi Saldo Bank</span>
+                  <span className="text-[11px] font-medium text-gray-700">Total Isi Saldo Bank</span>
                   <span className="font-bold text-blue-600 text-[11px]">{formatRupiah(tIsiBank)}</span>
                 </div>
-                <div className="flex justify-between items-center py-0">
-                  <span className="text-[11px] font-medium text-gray-700">Sisa Saldo Bank</span>
-                  <span className="font-bold text-red-500 text-[11px]">{formatRupiah(sBank)}</span>
+
+                <div className="border-t border-dashed border-gray-100">
+                  <div className="flex justify-between items-center py-0">
+                    <div className="flex flex-wrap items-center gap-x-1 text-[10px] text-gray-600 font-medium">
+                      <span>Saldo Akhir Bank</span>
+                      <span className="text-blue-600 font-bold">{formatRupiah(sBank)}</span>
+                      <span>+</span>
+                      <span>Total Penjualan</span>
+                      <span className="text-emerald-600 font-bold">{formatRupiah(tPenjualan)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-900 font-black text-[11px]">{formatRupiah(sBank + tPenjualan)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center py-0 border-t border-gray-200">
+                  <span className="text-[11px] font-bold text-gray-800 uppercase tracking-tighter">Total Selisih</span>
+                  <span className={`font-black text-[13px] ${((sBank + tPenjualan) - tIsiBank) < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                    {formatRupiah((sBank + tPenjualan) - tIsiBank)}
+                  </span>
                 </div>
               </div>
             )}
@@ -702,11 +731,11 @@ export default function Laporan() {
             {showSelisih && (
               <div className="px-3 py-1.5">
                 <div className="flex justify-between items-center py-0">
-                  <span className="text-[11px] font-medium text-gray-700">Catatan Bank</span>
+                  <span className="text-[11px] font-medium text-gray-700">Saldo Akhir Bank</span>
                   <span className="font-bold text-blue-600 text-[11px]">{formatRupiah(sBank)}</span>
                 </div>
                 <div className="flex justify-between items-center py-0">
-                  <span className="text-[11px] font-medium text-gray-700">Real Aplikasi</span>
+                  <span className="text-[11px] font-medium text-gray-700">Saldo Real Aplikasi</span>
                   <span className="font-bold text-purple-600 text-[11px]">{formatRupiah(sReal)}</span>
                 </div>
                 <div className="flex justify-between items-center py-1 mt-1 border-t border-gray-100">
@@ -741,6 +770,7 @@ export default function Laporan() {
                         tx.category === 'TARIK TUNAI' ? 'bg-red-50 text-red-600' :
                         tx.category === 'FLIP' ? 'bg-orange-50 text-orange-600' :
                         tx.category === 'DANA' ? 'bg-emerald-50 text-emerald-600' :
+                        tx.category === 'AKSESORIS' ? 'bg-purple-50 text-purple-600' :
                         'bg-gray-50 text-gray-600'
                       }`}>
                         {tx.category.substring(0, 1)}

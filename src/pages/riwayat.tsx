@@ -23,6 +23,7 @@ export default function Riwayat() {
   const [selectedCategory, setSelectedCategory] = useState("20 Riwayat Terakhir");
   const [selectedSaldoTab, setSelectedSaldoTab] = useState("Semua");
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
+  const [expandedSaldo, setExpandedSaldo] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
 
   // Edit transaksi
@@ -61,8 +62,8 @@ export default function Riwayat() {
         }),
         getSaldoHistory({ 
           kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), 
-          startDate: today, 
-          endDate: today 
+          startDate, 
+          endDate 
         }),
         getUsers(),
         isDailyAll ? getDailyRekap(startDate) : Promise.resolve(null)
@@ -195,7 +196,6 @@ export default function Riwayat() {
 
   // Saldo: hanya tampil hari ini
   const filteredSaldo = saldoHistory.filter(s => {
-    if (s.saldoDate !== today) return false;
     if (selectedSaldoTab === "Semua") return true;
     if (selectedSaldoTab === "Bank") return s.jenis === "Bank";
     if (selectedSaldoTab === "Cash") return s.jenis === "Cash";
@@ -257,8 +257,18 @@ export default function Riwayat() {
         </select>
       </div>
 
+      {/* Header Transaksi */}
+      <div className="bg-gradient-to-r from-blue-900 to-blue-600 rounded-t-[14px] px-3.5 py-2.5 flex items-center justify-between">
+        <span className="text-white font-bold text-[13px]">RIWAYAT TRANSAKSI</span>
+        <div className="flex items-center gap-2">
+          <span className="text-blue-200 text-[10px] font-semibold">
+            {startDate === endDate ? `Tanggal · ${startDate}` : `${startDate} s/d ${endDate}`}
+          </span>
+        </div>
+      </div>
+
       {/* Tabel Transaksi */}
-      <div className="bg-white rounded-[14px] overflow-hidden shadow-sm mb-3.5">
+      <div className="bg-white rounded-b-[14px] overflow-hidden shadow-sm mb-3.5">
         <div className="grid gap-0.5 px-1.5 py-1.5 border-b-2 border-gray-200 text-[9px] font-bold text-gray-500" style={{ gridTemplateColumns: '20px 36px 48px 1fr 52px 1fr 18px' }}>
           <span>#</span><span>Jam</span><span>Tipe</span><span>Nominal</span><span>Admin</span><span>Ket</span><span></span>
         </div>
@@ -384,7 +394,9 @@ export default function Riwayat() {
         <span className="text-white font-bold text-[13px]">RIWAYAT TAMBAH SALDO</span>
         <div className="flex items-center gap-2">
           {isOwner && <span className="bg-amber-400 text-amber-900 text-[9px] font-black px-2 py-0.5 rounded-full">OWNER</span>}
-          <span className="text-blue-200 text-[10px] font-semibold">Hari ini · {today}</span>
+          <span className="text-blue-200 text-[10px] font-semibold">
+            {startDate === endDate ? `Tanggal · ${startDate}` : `${startDate} s/d ${endDate}`}
+          </span>
         </div>
       </div>
       <div className="bg-white rounded-b-[14px] shadow-sm mb-4">
@@ -397,9 +409,9 @@ export default function Riwayat() {
         {/* Header kolom — pakai inline style agar tidak bergantung Tailwind JIT */}
         <div
           className="grid px-2.5 py-2 bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-500"
-          style={{ gridTemplateColumns: isOwner ? '28px 1fr 1fr 1fr 1fr 64px' : '28px 1fr 1fr 1fr 1fr' }}
+          style={{ gridTemplateColumns: isOwner ? '28px 36px 50px 1fr 1fr 18px 64px' : '28px 36px 50px 1fr 1fr 18px' }}
         >
-          <span>#</span><span>Jam</span><span>Jenis</span><span>Nominal</span><span>Ket</span>
+          <span>#</span><span>Jam</span><span>Jenis</span><span>Nominal</span><span>Ket</span><span></span>
           {isOwner && <span className="text-center">Aksi</span>}
         </div>
 
@@ -409,37 +421,63 @@ export default function Riwayat() {
             Tidak ada riwayat tambah saldo hari ini
           </div>
         ) : (
-          filteredSaldo.map((s, i) => (
-            <div
-              key={s.id}
-              className="grid px-2.5 py-2 border-b border-gray-100 text-[10px] items-center"
-              style={{ gridTemplateColumns: isOwner ? '28px 1fr 1fr 1fr 1fr 64px' : '28px 1fr 1fr 1fr 1fr' }}
-            >
-              <span className="text-gray-400">{i + 1}</span>
-              <span>{s.saldoTime}</span>
-              <span className={`font-semibold ${s.jenis === "Bank" ? "text-blue-700" : s.jenis === "Cash" ? "text-emerald-700" : "text-purple-600"}`}>{s.jenis}</span>
-              <span className="font-bold text-gray-800">{formatRupiah(s.nominal)}</span>
-              <span className="text-gray-500 truncate">{s.keterangan || ""}</span>
-              {isOwner && (
-                <div className="flex gap-1 justify-center">
-                  <button
-                    onClick={() => openEditSaldo(s)}
-                    className="p-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 active:scale-90 transition"
-                    title="Edit"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteSaldo(s)}
-                    className="p-1.5 rounded-lg bg-red-50 border border-red-200 text-red-500 active:scale-90 transition"
-                    title="Hapus"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+          filteredSaldo.map((s, i) => {
+            const isExpanded = expandedSaldo === s.id;
+            return (
+              <div key={s.id}>
+                <div
+                  onClick={() => setExpandedSaldo(isExpanded ? null : s.id)}
+                  className="grid px-2.5 py-2 border-b border-gray-100 text-[10px] items-center cursor-pointer active:bg-gray-50"
+                  style={{ gridTemplateColumns: isOwner ? '28px 36px 50px 1fr 1fr 18px 64px' : '28px 36px 50px 1fr 1fr 18px' }}
+                >
+                  <span className="text-gray-400">{i + 1}</span>
+                  <span>{s.saldoTime}</span>
+                  <span className={`font-semibold truncate ${s.jenis === "Bank" ? "text-blue-700" : s.jenis === "Cash" ? "text-emerald-700" : "text-purple-600"}`}>{s.jenis}</span>
+                  <span className="font-bold text-gray-800">{formatRupiah(s.nominal)}</span>
+                  <span className="text-gray-500 truncate">{s.keterangan || ""}</span>
+                  <span className="text-gray-400 text-[8px] text-center">{isExpanded ? "▲" : "▼"}</span>
+                  {isOwner && (
+                    <div className="flex gap-1 justify-center" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => openEditSaldo(s)}
+                        className="p-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 active:scale-90 transition"
+                        title="Edit"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSaldo(s)}
+                        className="p-1.5 rounded-lg bg-red-50 border border-red-200 text-red-500 active:scale-90 transition"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ))
+
+                {isExpanded && (
+                  <div className="px-3.5 py-2.5 bg-blue-50/30 border-b border-gray-100">
+                    <div className="flex justify-between items-center bg-white rounded-xl border border-blue-100 p-2.5 shadow-sm">
+                      <div className="flex gap-4 text-[10px]">
+                        <div>
+                          <p className="font-bold text-blue-400 uppercase mb-0.5 text-[8px]">Saldo Bank</p>
+                          <p className="font-black text-blue-700">{formatRupiah(s.saldoBankAfter || 0)}</p>
+                        </div>
+                        <div className="pl-4 border-l border-blue-100">
+                          <p className="font-bold text-orange-400 uppercase mb-0.5 text-[8px]">Saldo Cash</p>
+                          <p className="font-black text-orange-600">{formatRupiah(s.saldoCashAfter || 0)}</p>
+                        </div>
+                      </div>
+                      <div className="text-[9px] text-gray-400 font-medium">
+                        Sisa Akhir 🏛️
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
 
         {filteredSaldo.length > 0 && (
