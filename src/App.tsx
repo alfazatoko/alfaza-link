@@ -67,7 +67,7 @@ function Router() {
   return (
     <>
       <div className={`w-full ${maxW} mx-auto min-h-screen bg-background ${shadowClass} ${containerBorder} ${transitionClass} relative`}>
-        <div className="pb-20">
+        <div className="pb-[5.5rem]">
         <Switch>
           <Route path="/">
             <Login />

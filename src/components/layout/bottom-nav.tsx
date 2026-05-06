@@ -39,8 +39,8 @@ export function BottomNav() {
   return (
     <div
       className={cn(
-        "fixed bottom-0 left-1/2 -translate-x-1/2 w-full bg-background border-t border-border z-[9999] flex justify-between items-end",
-        "px-1.5 pb-0 pt-0 -mb-4", // Menempel paling bawah dengan margin negatif
+        "fixed bottom-0 left-1/2 -translate-x-1/2 w-full bg-background border-t border-border z-[9999] flex justify-between items-center",
+        "px-2 pt-0.5 pb-[max(2px,env(safe-area-inset-bottom,0px))]", 
         maxW
       )}
     >
@@ -53,12 +53,12 @@ export function BottomNav() {
           <>
             <div className={cn(
               "flex items-center justify-center rounded-full transition-all",
-              isActive ? "w-10 h-10 bg-primary -translate-y-1" : "w-8 h-8"
+              isActive ? "w-9 h-9 bg-primary -translate-y-1" : "w-7 h-7"
             )}>
-              <item.icon size={18} className={cn(isActive ? "text-white" : isLogout ? "text-red-500" : "text-black")} />
+              <item.icon size={16} className={cn(isActive ? "text-white" : isLogout ? "text-red-500" : "text-black")} />
             </div>
             <span className={cn(
-              "text-[9px] font-bold",
+              "text-[9px] font-bold mt-0.5",
               isActive ? "text-primary" : isLogout ? "text-red-500" : "text-black"
             )}>
               {item.label}
@@ -69,21 +69,21 @@ export function BottomNav() {
         return (
           <div key={idx} className="flex-1 flex justify-center">
             {isLogout ? (
-              <button onClick={handleLogout} className="flex flex-col items-center justify-end w-full pb-0">
+              <button onClick={handleLogout} className="flex flex-col items-center justify-center w-full">
                 {content}
               </button>
             ) : isFAB ? (
               <button 
                 onClick={() => window.dispatchEvent(new CustomEvent("open-isi-saldo"))}
-                className="flex flex-col items-center justify-end w-full pb-0"
+                className="flex flex-col items-center justify-center w-full"
               >
-                <div className="w-8 h-8 flex items-center justify-center">
-                  <item.icon size={18} className="text-black" />
+                <div className="w-7 h-7 flex items-center justify-center">
+                  <item.icon size={16} className="text-black" />
                 </div>
-                <span className="text-[9px] font-bold text-black">Isi Saldo</span>
+                <span className="text-[9px] font-bold mt-0.5 text-black">Isi Saldo</span>
               </button>
             ) : (
-              <Link href={item.href} className="flex flex-col items-center justify-end w-full pb-0">
+              <Link href={item.href} className="flex flex-col items-center justify-center w-full">
                 {content}
               </Link>
             )}
