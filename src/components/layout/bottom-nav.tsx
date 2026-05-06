@@ -2,25 +2,13 @@ import { Link, useLocation } from "wouter";
 import { Home, Clock, CreditCard, BarChart3, Settings, LogOut, History, ArrowLeft, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-import { useState, useEffect } from "react";
-import { LogoutConfirmModal } from "@/components/auth/logout-confirm-modal";
 import { useDisplayMode, getMaxWidth } from "@/hooks/use-display-mode";
 
 export function BottomNav() {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const { logout } = useAuth();
   const { mode } = useDisplayMode();
   const maxW = getMaxWidth(mode);
-
-  const [isNavVisible, setIsNavVisible] = useState(true);
-  const [lastClickTime, setLastClickTime] = useState(0);
-
-  useEffect(() => {
-    if (location !== "/beranda" && location !== "/owner") {
-      setIsNavVisible(true);
-    }
-  }, [location]);
 
   if (location === "/") return null;
 
@@ -41,100 +29,61 @@ export function BottomNav() {
     { icon: LogOut, label: "Keluar", href: "logout", isLogout: true },
   ];
 
-  const navItems = isOwnerMode ? ownerNav : kasirNav.filter(item => {
-    if (item.href === "/non-tunai" && user?.role === "owner") return false;
-    return true;
-  });
+  const navItems = isOwnerMode ? ownerNav : kasirNav;
 
   const handleLogout = () => {
-    setIsLogoutModalOpen(true);
-  };
-
-  const confirmLogout = () => {
-    setIsLogoutModalOpen(false);
     logout();
     window.location.href = import.meta.env.BASE_URL || "/";
-  };
-
-  const handleBerandaClick = () => {
-    const currentTime = new Date().getTime();
-    if (currentTime - lastClickTime < 400) {
-      setIsNavVisible(prev => !prev);
-    }
-    setLastClickTime(currentTime);
   };
 
   return (
     <div
       className={cn(
-        "fixed bottom-0 left-0 right-0 mx-auto bg-white flex justify-evenly items-center z-50 transition-all duration-300 ease-in-out overflow-hidden",
-        "rounded-t-[28px] shadow-[0_-4px_18px_rgba(0,0,0,.08)]",
-        "h-[82px] pb-[env(safe-area-inset-bottom,0px)]",
-        "landscape:h-[56px] landscape:pb-0 landscape:rounded-none landscape:shadow-[0_-2px_10px_rgba(0,0,0,.05)]",
+        "fixed bottom-0 left-1/2 -translate-x-1/2 w-full bg-background border-t border-border z-50 flex justify-between items-center transition-all duration-300",
+        "px-2 pt-1.5 pb-[calc(2px+env(safe-area-inset-bottom,0px))]",
         maxW
       )}
     >
       {navItems.map((item, idx) => {
         const isActive = item.href !== "logout" && location === item.href;
         const isLogout = (item as any).isLogout;
-        const isBeranda = item.href === "/beranda" || item.href === "/owner";
+        const isFAB = (item as any).isModal;
 
-        if (!isNavVisible && !isBeranda) {
-          return <div key={idx} className="flex-1 pointer-events-none" />;
-        }
+        const content = (
+          <>
+            <item.icon size={20} className={cn(isActive ? "text-primary" : isLogout ? "text-red-500" : "text-muted-foreground")} />
+            <span className={cn(
+              "text-[9px] font-bold",
+              isActive ? "text-primary" : isLogout ? "text-red-500" : "text-muted-foreground"
+            )}>
+              {item.label}
+            </span>
+          </>
+        );
 
         return (
-          <div key={idx} className="flex-1 overflow-hidden">
+          <div key={idx} className="flex-1 flex justify-center">
             {isLogout ? (
-              <button
-                onClick={handleLogout}
-                className="w-full flex flex-col landscape:flex-row items-center justify-center gap-[6px] landscape:gap-[5px] overflow-hidden whitespace-nowrap"
-              >
-                <item.icon className="shrink-0 w-[26px] h-[26px] landscape:w-[18px] landscape:h-[18px] text-[#ff3152]" strokeWidth={2} />
-                <span className="overflow-hidden text-ellipsis text-[14px] landscape:text-[11px] font-semibold text-[#ff3152]">{item.label}</span>
+              <button onClick={handleLogout} className="flex flex-col items-center gap-0.5">
+                {content}
               </button>
-            ) : (item as any).isModal ? (
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent("open-isi-saldo"))}
-                className="w-full flex flex-col landscape:flex-row items-center justify-center gap-[6px] landscape:gap-[5px] overflow-hidden whitespace-nowrap"
-              >
-                <item.icon className="shrink-0 w-[26px] h-[26px] landscape:w-[18px] landscape:h-[18px] text-[#777]" strokeWidth={2} />
-                <span className="overflow-hidden text-ellipsis text-[14px] landscape:text-[11px] font-semibold text-[#777]">{item.label}</span>
-              </button>
-            ) : (
-              <Link href={item.href} className="block overflow-hidden">
-                <div 
-                  className="flex flex-col landscape:flex-row items-center justify-center gap-[6px] landscape:gap-[5px] transition-all overflow-hidden whitespace-nowrap"
-                  onClick={isBeranda ? handleBerandaClick : undefined}
+            ) : isFAB ? (
+              <div className="relative bottom-4">
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-isi-saldo"))}
+                  className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white shadow-lg border-4 border-background transition-transform active:scale-90"
                 >
-                  <item.icon 
-                    className={cn(
-                      "shrink-0 w-[26px] h-[26px] landscape:w-[18px] landscape:h-[18px] transition-colors",
-                      isActive ? "text-[#2f7cff]" : "text-[#777]"
-                    )} 
-                    strokeWidth={2}
-                  />
-                  <span className={cn(
-                    "overflow-hidden text-ellipsis text-[14px] landscape:text-[11px] font-semibold transition-colors",
-                    isActive ? "text-[#2f7cff]" : "text-[#777]"
-                  )}>
-                    {item.label}
-                  </span>
-                </div>
+                  <item.icon size={24} />
+                </button>
+              </div>
+            ) : (
+              <Link href={item.href} className="flex flex-col items-center gap-0.5">
+                {content}
               </Link>
             )}
           </div>
         );
       })}
-      
-      <LogoutConfirmModal 
-        isOpen={isLogoutModalOpen}
-        onClose={() => setIsLogoutModalOpen(false)}
-        onConfirm={confirmLogout}
-        title="Konfirmasi Keluar"
-        description="Apakah Anda yakin ingin keluar dari akun ini?"
-      />
     </div>
-
   );
 }

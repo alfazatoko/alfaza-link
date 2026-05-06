@@ -8,7 +8,7 @@ echo [1/4] Menambahkan perubahan ke Git...
 git add .
 
 echo [2/4] Membuat commit...
-git commit -m "feat(laporan): modernisasi UI dan perbaikan sistem rekap harian serta export PDF/Share"
+git commit -m "feat(nav): sync bottom navigation design with KINK app and fix responsive landscape layout"
 if %ERRORLEVEL% NEQ 0 (
     echo [INFO] Tidak ada perubahan kode baru untuk di-commit.
 )
