@@ -1392,6 +1392,11 @@ function SettingPage({ goBack }: { goBack: () => void }) {
   const [catLabels, setCatLabels] = useState<CategoryLabels>(defaultLabels);
 
   const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [installing, setInstalling] = useState(false);
+
+  // Check if already installed
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                      (window.navigator as any).standalone === true;
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -1403,13 +1408,50 @@ function SettingPage({ goBack }: { goBack: () => void }) {
   }, []);
 
   const handleInstallPWA = async () => {
-    if (!installPrompt) {
-      toast({ title: "Gunakan menu browser untuk instalasi", variant: "default" });
+    if (isStandalone) {
+      toast({ title: "Aplikasi sudah terpasang", description: "Anda sedang menggunakan aplikasi yang sudah diinstal." });
       return;
     }
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === 'accepted') setInstallPrompt(null);
+
+    if (!installPrompt) {
+      // Check if it's iOS Safari
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        toast({ 
+          title: "Petunjuk Instalasi iOS", 
+          description: "Tap tombol Share di Safari, lalu pilih 'Add to Home Screen'",
+          duration: 5000 
+        });
+      } else {
+        toast({ title: "Gunakan menu browser untuk instalasi", variant: "default" });
+      }
+      return;
+    }
+
+    setInstalling(true);
+    try {
+      installPrompt.prompt();
+      
+      // Add timeout for userChoice (3 seconds)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 3000)
+      );
+      
+      const choicePromise = installPrompt.userChoice;
+      const { outcome } = await Promise.race([choicePromise, timeoutPromise]) as any;
+      
+      if (outcome === 'accepted') {
+        toast({ title: "Aplikasi berhasil diinstal!" });
+        setInstallPrompt(null);
+      } else if (outcome === 'dismissed') {
+        toast({ title: "Instalasi dibatalkan" });
+      }
+    } catch (err) {
+      console.error('PWA Install error:', err);
+      toast({ title: "Gagal memasang aplikasi", description: "Silakan coba lagi atau gunakan menu browser", variant: "destructive" });
+    } finally {
+      setInstalling(false);
+    }
   };
 
   useEffect(() => {
@@ -1510,8 +1552,13 @@ function SettingPage({ goBack }: { goBack: () => void }) {
                 <p className="text-[10px] opacity-80">Akses lebih cepat & ikon di layar utama</p>
               </div>
             </div>
-            <button onClick={handleInstallPWA} className="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition">
-              {installPrompt ? "INSTAL" : "STATUS"}
+            <button 
+              onClick={handleInstallPWA} 
+              disabled={installing}
+              className="bg-white text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition disabled:opacity-60 flex items-center gap-1"
+            >
+              {installing ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+              {installing ? "Memproses..." : installPrompt ? "INSTAL" : "STATUS"}
             </button>
           </div>
         </div>
