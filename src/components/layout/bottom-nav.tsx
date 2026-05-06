@@ -67,10 +67,10 @@ export function BottomNav() {
   return (
     <div
       className={cn(
-        "fixed bottom-0 left-0 right-0 mx-auto bg-white flex justify-around items-center z-50 transition-all duration-300 ease-in-out",
-        "rounded-t-[28px] shadow-[0_-5px_20px_rgba(0,0,0,.08)]",
-        "h-[85px] pb-[env(safe-area-inset-bottom,0px)]",
-        "landscape:h-[58px] landscape:pb-0 landscape:rounded-none",
+        "fixed bottom-0 left-0 right-0 mx-auto bg-white flex justify-evenly items-center z-50 transition-all duration-300 ease-in-out overflow-hidden",
+        "rounded-t-[28px] shadow-[0_-4px_18px_rgba(0,0,0,.08)]",
+        "h-[82px] pb-[env(safe-area-inset-bottom,0px)]",
+        "landscape:h-[56px] landscape:pb-0 landscape:rounded-none landscape:shadow-[0_-2px_10px_rgba(0,0,0,.05)]",
         maxW
       )}
     >
@@ -84,38 +84,38 @@ export function BottomNav() {
         }
 
         return (
-          <div key={idx} className="flex-1">
+          <div key={idx} className="flex-1 overflow-hidden">
             {isLogout ? (
               <button
                 onClick={handleLogout}
-                className="w-full flex flex-col landscape:flex-row items-center justify-center gap-[6px] landscape:gap-[10px]"
+                className="w-full flex flex-col landscape:flex-row items-center justify-center gap-[6px] landscape:gap-[5px] overflow-hidden whitespace-nowrap"
               >
-                <item.icon className="w-[26px] h-[26px] landscape:w-[20px] landscape:h-[20px] text-[#ff2f48]" strokeWidth={2} />
-                <span className="text-[14px] landscape:text-[13px] font-semibold text-[#ff2f48]">{item.label}</span>
+                <item.icon className="shrink-0 w-[26px] h-[26px] landscape:w-[18px] landscape:h-[18px] text-[#ff3152]" strokeWidth={2} />
+                <span className="overflow-hidden text-ellipsis text-[14px] landscape:text-[11px] font-semibold text-[#ff3152]">{item.label}</span>
               </button>
             ) : (item as any).isModal ? (
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent("open-isi-saldo"))}
-                className="w-full flex flex-col landscape:flex-row items-center justify-center gap-[6px] landscape:gap-[10px]"
+                className="w-full flex flex-col landscape:flex-row items-center justify-center gap-[6px] landscape:gap-[5px] overflow-hidden whitespace-nowrap"
               >
-                <item.icon className="w-[26px] h-[26px] landscape:w-[20px] landscape:h-[20px] text-[#777]" strokeWidth={2} />
-                <span className="text-[14px] landscape:text-[13px] font-semibold text-[#777]">{item.label}</span>
+                <item.icon className="shrink-0 w-[26px] h-[26px] landscape:w-[18px] landscape:h-[18px] text-[#777]" strokeWidth={2} />
+                <span className="overflow-hidden text-ellipsis text-[14px] landscape:text-[11px] font-semibold text-[#777]">{item.label}</span>
               </button>
             ) : (
-              <Link href={item.href} className="block">
+              <Link href={item.href} className="block overflow-hidden">
                 <div 
-                  className="flex flex-col landscape:flex-row items-center justify-center gap-[6px] landscape:gap-[10px] transition-all"
+                  className="flex flex-col landscape:flex-row items-center justify-center gap-[6px] landscape:gap-[5px] transition-all overflow-hidden whitespace-nowrap"
                   onClick={isBeranda ? handleBerandaClick : undefined}
                 >
                   <item.icon 
                     className={cn(
-                      "w-[26px] h-[26px] landscape:w-[20px] landscape:h-[20px] transition-colors",
+                      "shrink-0 w-[26px] h-[26px] landscape:w-[18px] landscape:h-[18px] transition-colors",
                       isActive ? "text-[#2f7cff]" : "text-[#777]"
                     )} 
                     strokeWidth={2}
                   />
                   <span className={cn(
-                    "text-[14px] landscape:text-[13px] font-semibold transition-colors",
+                    "overflow-hidden text-ellipsis text-[14px] landscape:text-[11px] font-semibold transition-colors",
                     isActive ? "text-[#2f7cff]" : "text-[#777]"
                   )}>
                     {item.label}
