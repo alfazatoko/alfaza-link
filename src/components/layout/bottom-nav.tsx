@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { Home, Clock, CreditCard, BarChart3, Settings, LogOut, History, ArrowLeft, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LogoutConfirmModal } from "@/components/auth/logout-confirm-modal";
 import { useDisplayMode, getMaxWidth } from "@/hooks/use-display-mode";
 
@@ -12,6 +12,15 @@ export function BottomNav() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const { mode } = useDisplayMode();
   const maxW = getMaxWidth(mode);
+
+  const [isNavVisible, setIsNavVisible] = useState(true);
+  const [lastClickTime, setLastClickTime] = useState(0);
+
+  useEffect(() => {
+    if (location !== "/beranda" && location !== "/owner") {
+      setIsNavVisible(true);
+    }
+  }, [location]);
 
   if (location === "/") return null;
 
@@ -47,10 +56,19 @@ export function BottomNav() {
     window.location.href = import.meta.env.BASE_URL || "/";
   };
 
+  const handleBerandaClick = () => {
+    const currentTime = new Date().getTime();
+    if (currentTime - lastClickTime < 400) {
+      setIsNavVisible(prev => !prev);
+    }
+    setLastClickTime(currentTime);
+  };
+
   return (
     <div
       className={cn(
         "fixed bottom-0 left-0 right-0 mx-auto bg-transparent flex justify-around items-end px-2 z-50 transition-colors duration-300",
+        "landscape:translate-y-[2px]",
         maxW
       )}
       style={{ paddingTop: '2px', paddingBottom: 'calc(0px + env(safe-area-inset-bottom, 0px))' }}
@@ -58,6 +76,12 @@ export function BottomNav() {
       {navItems.map((item, idx) => {
         const isActive = item.href !== "logout" && location === item.href;
         const isLogout = (item as any).isLogout;
+        const isBeranda = item.href === "/beranda" || item.href === "/owner";
+
+        if (!isNavVisible && !isBeranda) {
+          return <div key={idx} className="flex-1 pointer-events-none" />;
+        }
+
         return (
           <div key={idx} className="flex-1">
             {isLogout ? (
@@ -82,10 +106,13 @@ export function BottomNav() {
               </button>
             ) : (
               <Link href={item.href} className="block">
-                <div className="flex flex-col items-center justify-center gap-0.5 transition-all">
+                <div 
+                  className="flex flex-col items-center justify-center gap-0.5 transition-all"
+                  onClick={isBeranda ? handleBerandaClick : undefined}
+                >
                   <div
                     className={cn(
-                      
+                      "w-8 h-8 rounded-full flex items-center justify-center",
                       isActive
                         ? "bg-primary text-white -translate-y-2 scale-110 shadow-lg shadow-primary/30"
                         : "text-foreground/60 active:bg-gray-100"
