@@ -40,7 +40,7 @@ export function BottomNav() {
     <div
       className={cn(
         "fixed bottom-0 left-1/2 -translate-x-1/2 w-full bg-background border-t border-border z-[9999] flex justify-between items-center",
-        "px-2 pt-0.5 pb-[max(2px,env(safe-area-inset-bottom,0px))]", 
+        "px-2 pt-0.5 pb-[max(2px,env(safe-area-inset-bottom,0px))] landscape:pb-0 landscape:-mb-4", 
         maxW
       )}
     >
