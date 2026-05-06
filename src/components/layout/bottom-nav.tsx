@@ -53,7 +53,7 @@ export function BottomNav() {
         "fixed bottom-0 left-0 right-0 mx-auto bg-transparent flex justify-around items-end px-2 z-50 transition-colors duration-300",
         maxW
       )}
-      style={{ paddingTop: '2px', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      style={{ paddingTop: '2px', paddingBottom: 'calc(0px + env(safe-area-inset-bottom, 0px))' }}
     >
       {navItems.map((item, idx) => {
         const isActive = item.href !== "logout" && location === item.href;
@@ -65,7 +65,7 @@ export function BottomNav() {
                 onClick={handleLogout}
                 className="w-full flex flex-col items-center justify-center gap-0.5"
               >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center transition-all">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center transition-all">
                   <item.icon className="w-5 h-5 text-red-500" strokeWidth={2.5} />
                 </div>
                 <span className="text-[9px] font-bold text-red-500">{item.label}</span>
@@ -75,7 +75,7 @@ export function BottomNav() {
                 onClick={() => window.dispatchEvent(new CustomEvent("open-isi-saldo"))}
                 className="w-full flex flex-col items-center justify-center gap-0.5"
               >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-foreground/60 transition-all active:bg-gray-100">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-foreground/60 transition-all active:bg-gray-100">
                   <item.icon className="w-5 h-5" strokeWidth={2} />
                 </div>
                 <span className="text-[9px] font-medium text-foreground/60">{item.label}</span>
@@ -85,7 +85,7 @@ export function BottomNav() {
                 <div className="flex flex-col items-center justify-center gap-0.5 transition-all">
                   <div
                     className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300",
+                      
                       isActive
                         ? "bg-primary text-white -translate-y-2 scale-110 shadow-lg shadow-primary/30"
                         : "text-foreground/60 active:bg-gray-100"
