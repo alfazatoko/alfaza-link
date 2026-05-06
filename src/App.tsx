@@ -62,11 +62,11 @@ function Router() {
 
   const shadowClass = theme === "light" ? "shadow-[0_0_40px_rgba(0,0,0,0.05)]" : "shadow-none";
   const containerBorder = mode !== "pc" ? "border-x border-border/50" : "";
-  const transitionClass = "transition-all duration-500 ease-in-out";
+  const transitionClass = "";
 
   return (
     <>
-      <div className={`w-full ${maxW} mx-auto min-h-[100dvh] bg-background ${shadowClass} ${containerBorder} ${transitionClass} relative`}>
+      <div className={`w-full ${maxW} mx-auto min-h-screen bg-background ${shadowClass} ${containerBorder} ${transitionClass} relative`}>
         <div className="pb-20">
         <Switch>
           <Route path="/">

@@ -39,8 +39,8 @@ export function BottomNav() {
   return (
     <div
       className={cn(
-        "fixed bottom-0 left-1/2 -translate-x-1/2 w-full bg-background border-t border-border z-50 flex justify-between items-center transition-all duration-300",
-        "px-2 pt-1.5 pb-[calc(2px+env(safe-area-inset-bottom,0px))]",
+        "fixed bottom-0 left-1/2 -translate-x-1/2 w-full bg-background border-t border-border z-[9999] flex justify-between items-center",
+        "px-2 pt-2 pb-[max(8px,env(safe-area-inset-bottom))] landscape:pb-2", // Safe-area dinamis, landscape menempel di bawah
         maxW
       )}
     >
@@ -51,10 +51,15 @@ export function BottomNav() {
 
         const content = (
           <>
-            <item.icon size={20} className={cn(isActive ? "text-primary" : isLogout ? "text-red-500" : "text-muted-foreground")} />
+            <div className={cn(
+              "flex items-center justify-center rounded-full transition-all",
+              isActive ? "w-10 h-10 bg-primary -translate-y-1" : "w-8 h-8"
+            )}>
+              <item.icon size={18} className={cn(isActive ? "text-white" : isLogout ? "text-red-500" : "text-black")} />
+            </div>
             <span className={cn(
-              "text-[9px] font-bold",
-              isActive ? "text-primary" : isLogout ? "text-red-500" : "text-muted-foreground"
+              "text-[9px] font-bold mt-1",
+              isActive ? "text-primary" : isLogout ? "text-red-500" : "text-black"
             )}>
               {item.label}
             </span>
@@ -64,20 +69,21 @@ export function BottomNav() {
         return (
           <div key={idx} className="flex-1 flex justify-center">
             {isLogout ? (
-              <button onClick={handleLogout} className="flex flex-col items-center gap-0.5">
+              <button onClick={handleLogout} className="flex flex-col items-center justify-center w-full">
                 {content}
               </button>
             ) : isFAB ? (
-              <div className="relative bottom-4">
-                <button 
-                  onClick={() => window.dispatchEvent(new CustomEvent("open-isi-saldo"))}
-                  className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white shadow-lg border-4 border-background transition-transform active:scale-90"
-                >
-                  <item.icon size={24} />
-                </button>
-              </div>
+              <button 
+                onClick={() => window.dispatchEvent(new CustomEvent("open-isi-saldo"))}
+                className="flex flex-col items-center justify-center w-full"
+              >
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <item.icon size={18} className="text-black" />
+                </div>
+                <span className="text-[9px] font-bold mt-1 text-black">Isi Saldo</span>
+              </button>
             ) : (
-              <Link href={item.href} className="flex flex-col items-center gap-0.5">
+              <Link href={item.href} className="flex flex-col items-center justify-center w-full">
                 {content}
               </Link>
             )}
