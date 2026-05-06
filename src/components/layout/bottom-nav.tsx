@@ -39,8 +39,8 @@ export function BottomNav() {
   return (
     <div
       className={cn(
-        "fixed bottom-0 left-1/2 -translate-x-1/2 w-full bg-background border-t border-border z-[9999] flex justify-between items-center",
-        "px-2 pt-2 pb-[max(8px,env(safe-area-inset-bottom))] landscape:pb-2", // Safe-area dinamis, landscape menempel di bawah
+        "fixed bottom-0 left-1/2 -translate-x-1/2 w-full bg-background border-t border-border z-[9999] flex justify-between items-end",
+        "px-1.5 pb-0 pt-0 -mb-4", // Menempel paling bawah dengan margin negatif
         maxW
       )}
     >
@@ -58,7 +58,7 @@ export function BottomNav() {
               <item.icon size={18} className={cn(isActive ? "text-white" : isLogout ? "text-red-500" : "text-black")} />
             </div>
             <span className={cn(
-              "text-[9px] font-bold mt-1",
+              "text-[9px] font-bold",
               isActive ? "text-primary" : isLogout ? "text-red-500" : "text-black"
             )}>
               {item.label}
@@ -69,21 +69,21 @@ export function BottomNav() {
         return (
           <div key={idx} className="flex-1 flex justify-center">
             {isLogout ? (
-              <button onClick={handleLogout} className="flex flex-col items-center justify-center w-full">
+              <button onClick={handleLogout} className="flex flex-col items-center justify-end w-full pb-0">
                 {content}
               </button>
             ) : isFAB ? (
               <button 
                 onClick={() => window.dispatchEvent(new CustomEvent("open-isi-saldo"))}
-                className="flex flex-col items-center justify-center w-full"
+                className="flex flex-col items-center justify-end w-full pb-0"
               >
                 <div className="w-8 h-8 flex items-center justify-center">
                   <item.icon size={18} className="text-black" />
                 </div>
-                <span className="text-[9px] font-bold mt-1 text-black">Isi Saldo</span>
+                <span className="text-[9px] font-bold text-black">Isi Saldo</span>
               </button>
             ) : (
-              <Link href={item.href} className="flex flex-col items-center justify-center w-full">
+              <Link href={item.href} className="flex flex-col items-center justify-end w-full pb-0">
                 {content}
               </Link>
             )}
