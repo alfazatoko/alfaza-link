@@ -42,6 +42,7 @@ export default function Beranda() {
   const nominalRef = useRef<HTMLInputElement>(null);
   const adminRef = useRef<HTMLInputElement>(null);
   const ketRef = useRef<HTMLInputElement>(null);
+  const nonTunaiRef = useRef<HTMLInputElement>(null);
 
   const { toast } = useToast();
 
@@ -425,18 +426,20 @@ export default function Beranda() {
                 placeholder="Admin"
                 value={adminDisplay}
                 onChange={(e) => setAdminDisplay(formatThousands(e.target.value))}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleProses(); } }}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); nonTunaiRef.current?.focus(); } }}
                 className="flex-1 bg-transparent outline-none text-sm font-bold text-gray-800 placeholder:text-gray-400 placeholder:font-normal w-full h-full"
               />
             </div>
             <label className="flex items-center gap-2 border-l border-black/10 pl-4 cursor-pointer h-full group active:bg-gray-100 transition-colors">
+              <span className="text-[10px] font-black text-purple-700 uppercase tracking-tighter">Non Tunai</span>
               <input 
+                ref={nonTunaiRef}
                 type="checkbox" 
                 checked={isAdminNonTunai}
                 onChange={e => setIsAdminNonTunai(e.target.checked)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleProses(); } }}
                 className="w-4.5 h-4.5 rounded-lg border-gray-300 text-purple-600 focus:ring-purple-500 transition-all cursor-pointer"
               />
-              <span className="text-[10px] font-black text-purple-700 uppercase tracking-tighter">Non Tunai</span>
             </label>
           </div>
         </div>
