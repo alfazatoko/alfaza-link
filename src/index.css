@@ -329,3 +329,8 @@
   95% { opacity: 1; }
   100% { top: 0%; opacity: 0; }
 }
+
+.mask-pin {
+  -webkit-text-security: disc;
+  text-security: disc;
+}

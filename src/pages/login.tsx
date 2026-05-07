@@ -227,7 +227,7 @@ function KasirSelectionScreen() {
   const [showPin, setShowPin] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [, setLocation] = useLocation();
-  const { login, firebaseLogout, firebaseUser } = useAuth();
+  const { login, firebaseLogout, firebaseUser, shift: currentShift } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
@@ -284,15 +284,17 @@ function KasirSelectionScreen() {
       const deviceM = now.getMinutes().toString().padStart(2, "0");
       const deviceTime = `${deviceH}:${deviceM}`;
 
+      const finalShift = currentShift || selectedShift;
+
       const result = await loginUser(
         userName,
         pinEnabled ? pin : undefined,
-        user.role !== "owner" ? selectedShift : undefined,
+        user.role !== "owner" ? finalShift : undefined,
         deviceTime
       );
 
       if (result.success && result.user) {
-        login(result.user, selectedShift || "", result.absenTime);
+        login(result.user, finalShift || "", result.absenTime);
         setLocation(result.role === "owner" ? "/owner" : "/beranda");
       } else {
         setError(result.message || "Login gagal");
@@ -416,7 +418,7 @@ function KasirSelectionScreen() {
               </div>
             )}
 
-            {selectedUser && selectedUser.role !== "owner" && (
+            {selectedUser && selectedUser.role !== "owner" && !currentShift && (
               <>
                 <p className="text-center text-gray-500 font-semibold mb-3">Pilih Shift</p>
                 <div className="grid grid-cols-2 gap-3 mb-5">
@@ -441,12 +443,31 @@ function KasirSelectionScreen() {
               </>
             )}
 
+            {selectedUser && selectedUser.role !== "owner" && currentShift && (
+              <div className="mb-5 p-3 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <span className="text-xs font-bold text-blue-800 uppercase tracking-tight">Shift Aktif: {currentShift}</span>
+                </div>
+                <button 
+                  onClick={() => {
+                    localStorage.removeItem("alfaza_shift");
+                    window.location.reload();
+                  }}
+                  className="text-[10px] font-bold text-blue-500 underline"
+                >
+                  Ganti
+                </button>
+              </div>
+            )}
+
             {pinEnabled && (
               <div className="flex items-center gap-3 border-2 border-gray-200 rounded-2xl px-4 h-14 bg-gray-50 mb-4 focus-within:border-blue-500">
                 <Lock className="w-5 h-5 text-gray-500" />
                 <input
-                  type={showPin ? "text" : "password"}
+                  type="text"
                   inputMode="numeric"
+                  autocomplete="one-time-code"
                   maxLength={4}
                   placeholder="PIN"
                   value={pin}
@@ -460,18 +481,15 @@ function KasirSelectionScreen() {
                       void doLogin(selected);
                     }
                   }}
-                  className="flex-1 bg-transparent outline-none text-base font-bold text-gray-800 tracking-widest placeholder:text-gray-400 placeholder:font-normal placeholder:tracking-normal"
+                  className="flex-1 bg-transparent outline-none text-base font-bold text-gray-800 tracking-widest placeholder:text-gray-400 placeholder:font-normal placeholder:tracking-normal mask-pin"
                 />
-                <button type="button" onClick={() => setShowPin(!showPin)} className="text-gray-400 hover:text-gray-600 p-1">
-                  {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
               </div>
             )}
 
             <button
               type="button"
               onClick={() => selected && void doLogin(selected)}
-              disabled={loggingIn || !selected || (selectedUser?.role !== "owner" && !selectedShift)}
+              disabled={loggingIn || !selected || (selectedUser?.role !== "owner" && !selectedShift && !currentShift)}
               className="w-full h-14 rounded-3xl font-extrabold text-lg bg-primary text-white shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 active:scale-[0.98] transition disabled:opacity-50 mb-3"
             >
               {loggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : null}

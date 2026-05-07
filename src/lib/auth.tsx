@@ -38,21 +38,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       setFirebaseUser(fbUser);
       setFirebaseLoading(false);
-      if (!fbUser) {
-        setUser(null);
-        setShift(null);
-        setLoginTime(null);
-        localStorage.removeItem("alfaza_user");
-        localStorage.removeItem("alfaza_shift");
-        localStorage.removeItem("alfaza_login_time");
+      
+      const storedUser = localStorage.getItem("alfaza_user");
+      const storedShift = localStorage.getItem("alfaza_shift");
+      const storedShiftDate = localStorage.getItem("alfaza_shift_date");
+      const storedLoginTime = localStorage.getItem("alfaza_login_time");
+      
+      // Check if shift is from today
+      const today = new Date().toISOString().split('T')[0];
+      if (storedShift && storedShiftDate === today) {
+        setShift(storedShift);
       } else {
-        const storedUser = localStorage.getItem("alfaza_user");
-        const storedShift = localStorage.getItem("alfaza_shift");
-        const storedLoginTime = localStorage.getItem("alfaza_login_time");
-        if (storedUser) setUser(JSON.parse(storedUser));
-        if (storedShift) setShift(storedShift);
-        if (storedLoginTime) setLoginTime(storedLoginTime);
+        setShift(null);
+        localStorage.removeItem("alfaza_shift");
+        localStorage.removeItem("alfaza_shift_date");
       }
+
+      if (storedUser) setUser(JSON.parse(storedUser));
+      if (storedLoginTime) setLoginTime(storedLoginTime);
     });
     return () => unsubscribe();
   }, []);
@@ -62,21 +65,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const h = now.getHours().toString().padStart(2, "0");
     const m = now.getMinutes().toString().padStart(2, "0");
     const s = now.getSeconds().toString().padStart(2, "0");
-    const timeStr = `${h}:${m}:${s}`;
+    const timeStr = serverAbsenTime || `${h}:${m}:${s}`;
+    const today = now.toISOString().split('T')[0];
+
     setUser(newUser);
     setShift(newShift);
     setLoginTime(timeStr);
+    
     localStorage.setItem("alfaza_user", JSON.stringify(newUser));
     localStorage.setItem("alfaza_shift", newShift);
+    localStorage.setItem("alfaza_shift_date", today);
     localStorage.setItem("alfaza_login_time", timeStr);
   };
 
   const logout = () => {
     setUser(null);
-    setShift(null);
+    // Kita TIDAK menghapus shift di sini agar "Shift" tetap diingat di perangkat ini untuk hari yang sama.
+    // Shift hanya akan dihapus jika ganti hari (cek di useEffect initialization).
     setLoginTime(null);
     localStorage.removeItem("alfaza_user");
-    localStorage.removeItem("alfaza_shift");
     localStorage.removeItem("alfaza_login_time");
   };
 
