@@ -166,6 +166,9 @@ export default function Beranda() {
         e.preventDefault();
         const nextIdx = (catIdx + 1) % CATEGORIES.length;
         setCategory(CATEGORIES[nextIdx].id);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        ketRef.current?.focus();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -342,13 +345,25 @@ export default function Beranda() {
             return (
               <button
                 key={cat.id}
-                onClick={() => setCategory(cat.id)}
-                className="flex flex-col items-center gap-1 transition-all"
+                type="button"
+                onClick={() => {
+                  setCategory(cat.id);
+                  // Optional: auto-focus Keterangan on click might be too aggressive, 
+                  // but user asked for Enter functionality.
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    setCategory(cat.id);
+                    ketRef.current?.focus();
+                  }
+                }}
+                className="flex flex-col items-center gap-1 transition-all outline-none"
               >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm transition-all ${isActive ? cat.activeColor + ' shadow-lg scale-110' : 'bg-card text-gray-950 border border-border'}`}>
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-950'}`} strokeWidth={isActive ? 2.5 : 1.8} />
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm transition-all duration-300 ${isActive ? cat.activeColor + ' shadow-lg scale-110' : 'bg-white text-gray-400 border border-gray-100 hover:border-gray-300'}`}>
+                  <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-400'}`} strokeWidth={isActive ? 2.5 : 1.8} />
                 </div>
-                <span className={`text-[10px] font-black ${isActive ? 'text-gray-950' : 'text-gray-950'}`}>{cat.label}</span>
+                <span className={`text-[10px] font-black tracking-tight transition-colors ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>{cat.label}</span>
               </button>
             );
           })}
@@ -366,35 +381,43 @@ export default function Beranda() {
         </div>
       )}
 
-      <div className="bg-card rounded-2xl p-4 shadow-sm border border-border mt-3">
-        <div className="space-y-3 mb-4">
-          <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-11 bg-muted/30">
-            <span className="text-blue-400 text-sm">📝</span>
+      <div className={`rounded-3xl p-5 shadow-xl border-2 transition-all duration-500 mt-3 ${
+        category === 'BANK' ? 'bg-blue-50/40 border-blue-200 shadow-blue-500/5' :
+        category === 'FLIP' ? 'bg-orange-50/40 border-orange-200 shadow-orange-500/5' :
+        category === 'APP PULSA' ? 'bg-purple-50/40 border-purple-200 shadow-purple-600/5' :
+        category === 'DANA' ? 'bg-sky-50/40 border-sky-200 shadow-sky-500/5' :
+        category === 'TARIK TUNAI' ? 'bg-emerald-50/40 border-emerald-200 shadow-emerald-600/5' :
+        category === 'AKSESORIS' ? 'bg-rose-50/40 border-rose-200 shadow-rose-500/5' :
+        'bg-card border-border'
+      }`}>
+        <div className="space-y-3.5 mb-5">
+          <div className="flex items-center gap-3 border border-black/10 rounded-2xl px-4 h-12 bg-white/80 backdrop-blur-sm shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+            <span className="text-blue-500 text-lg">📝</span>
             <input
               ref={ketRef}
-              placeholder="Keterangan"
+              placeholder="Keterangan transaksi..."
               value={keterangan}
               onChange={(e) => setKeterangan(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); nominalRef.current?.focus(); } }}
-              className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
+              className="flex-1 bg-transparent outline-none text-sm font-bold text-gray-800 placeholder:text-gray-400 placeholder:font-normal"
             />
           </div>
-          <div className="flex items-center gap-2 border border-border rounded-xl px-3 h-12 bg-muted/30">
-            <span className="text-primary font-bold text-sm">Rp</span>
+          <div className="flex items-center gap-3 border border-black/10 rounded-2xl px-4 h-14 bg-white/80 backdrop-blur-sm shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+            <span className="text-primary font-black text-lg">Rp</span>
             <input
               ref={nominalRef}
               type="text"
               inputMode="numeric"
-              placeholder="Nominal"
+              placeholder="0"
               value={nominalDisplay}
               onChange={(e) => setNominalDisplay(formatThousands(e.target.value))}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); adminRef.current?.focus(); } }}
-              className="flex-1 bg-transparent outline-none text-base font-bold text-foreground placeholder:text-muted-foreground placeholder:font-normal"
+              className="flex-1 bg-transparent outline-none text-xl font-black text-gray-900 placeholder:text-gray-300 placeholder:font-normal"
             />
           </div>
-          <div className="flex items-center justify-between border border-border rounded-xl pr-3 h-11 bg-muted/30">
-            <div className="flex items-center gap-2 px-3 flex-1 h-full">
-              <span className="text-amber-500 font-bold text-sm">Rp</span>
+          <div className="flex items-center justify-between border border-black/10 rounded-2xl pr-3 h-12 bg-white/80 backdrop-blur-sm shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all overflow-hidden">
+            <div className="flex items-center gap-3 px-4 flex-1 h-full">
+              <span className="text-amber-500 font-black text-lg">Rp</span>
               <input
                 ref={adminRef}
                 type="text"
@@ -403,17 +426,17 @@ export default function Beranda() {
                 value={adminDisplay}
                 onChange={(e) => setAdminDisplay(formatThousands(e.target.value))}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleProses(); } }}
-                className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground w-full h-full"
+                className="flex-1 bg-transparent outline-none text-sm font-bold text-gray-800 placeholder:text-gray-400 placeholder:font-normal w-full h-full"
               />
             </div>
-            <label className="flex items-center gap-1.5 border-l border-border pl-3 cursor-pointer h-full">
+            <label className="flex items-center gap-2 border-l border-black/10 pl-4 cursor-pointer h-full group active:bg-gray-100 transition-colors">
               <input 
                 type="checkbox" 
                 checked={isAdminNonTunai}
                 onChange={e => setIsAdminNonTunai(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+                className="w-4.5 h-4.5 rounded-lg border-gray-300 text-purple-600 focus:ring-purple-500 transition-all cursor-pointer"
               />
-              <span className="text-[10px] font-bold text-purple-600 uppercase">Non Tunai</span>
+              <span className="text-[10px] font-black text-purple-700 uppercase tracking-tighter">Non Tunai</span>
             </label>
           </div>
         </div>

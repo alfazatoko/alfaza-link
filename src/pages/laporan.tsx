@@ -105,7 +105,28 @@ export default function Laporan() {
         // Cache untuk dipakai tab Detail nanti
         txCacheRef.current = txs;
         saldoCacheRef.current = saldos;
-        // Buat rekap sintetis dari data transaksi
+        // Ambil saldo dari aktivitas terbaru (bandingkan Transaksi vs Tambah Saldo)
+        const latestTx = txs[0];
+        const latestSh = saldos[0];
+        let sBankLast = 0;
+        let sCashLast = 0;
+
+        if (latestTx && latestSh) {
+          if ((latestTx.createdAt || "") > (latestSh.createdAt || "")) {
+            sBankLast = latestTx.saldoBankAfter ?? 0;
+            sCashLast = latestTx.saldoCashAfter ?? 0;
+          } else {
+            sBankLast = latestSh.saldoBankAfter ?? 0;
+            sCashLast = latestSh.saldoCashAfter ?? 0;
+          }
+        } else if (latestTx) {
+          sBankLast = latestTx.saldoBankAfter ?? 0;
+          sCashLast = latestTx.saldoCashAfter ?? 0;
+        } else if (latestSh) {
+          sBankLast = latestSh.saldoBankAfter ?? 0;
+          sCashLast = latestSh.saldoCashAfter ?? 0;
+        }
+
         const synth: any = {
           total_bank: txs.filter(t => t.category === "BANK").reduce((s, t) => s + (t.nominal || 0), 0),
           total_flip: txs.filter(t => t.category === "FLIP").reduce((s, t) => s + (t.nominal || 0), 0),
@@ -125,9 +146,8 @@ export default function Laporan() {
           count_aks: txs.filter(t => t.category === "AKSESORIS").length,
           count_tarik: txs.filter(t => t.category === "TARIK TUNAI").length,
           count_closing: txs.filter(t => t.category === "CLOSING").length,
-          // Saldo terakhir dari transaksi pertama (terbaru)
-          saldo_bank_last: txs[0]?.saldoBankAfter ?? 0,
-          saldo_cash_last: txs[0]?.saldoCashAfter ?? 0,
+          saldo_bank_last: sBankLast,
+          saldo_cash_last: sCashLast,
         };
         setDailyRekap(synth);
       }
@@ -206,12 +226,33 @@ export default function Laporan() {
     const tPenjualan = tBank + tFlip + tApp + tDana;
     const sisaCashTotal = tPenjualan - tTarik + tAdmin + tAks;
     const tIsiBank = (!isDetailsLoaded && dailyRekap) ? (dailyRekap.total_isi_bank || 0) : shList.filter(s => s.jenis === "Bank").reduce((s, h) => s + (h.nominal || 0), 0);
+    const latestTx = txList[0];
+    const latestSh = shList[0];
+    let sBankLast = 0;
+    let sCashLast = 0;
+
+    if (latestTx && latestSh) {
+      if ((latestTx.createdAt || "") > (latestSh.createdAt || "")) {
+        sBankLast = latestTx.saldoBankAfter ?? 0;
+        sCashLast = latestTx.saldoCashAfter ?? 0;
+      } else {
+        sBankLast = latestSh.saldoBankAfter ?? 0;
+        sCashLast = latestSh.saldoCashAfter ?? 0;
+      }
+    } else if (latestTx) {
+      sBankLast = latestTx.saldoBankAfter ?? 0;
+      sCashLast = latestTx.saldoCashAfter ?? 0;
+    } else if (latestSh) {
+      sBankLast = latestSh.saldoBankAfter ?? 0;
+      sCashLast = latestSh.saldoCashAfter ?? 0;
+    }
+
     const sBank = (!isDetailsLoaded && dailyRekap && (dailyRekap as any).saldo_bank_last !== undefined)
       ? (dailyRekap as any).saldo_bank_last
-      : (txList[0]?.saldoBankAfter ?? 0);
+      : sBankLast;
     const sCash = (!isDetailsLoaded && dailyRekap && (dailyRekap as any).saldo_cash_last !== undefined)
       ? (dailyRekap as any).saldo_cash_last
-      : (txList[0]?.saldoCashAfter ?? 0);
+      : sCashLast;
     const sReal = dailyNotes?.saldoRealApp || 0;
     const selisih = sReal - sBank;
     const totalTxCount = (!isDetailsLoaded && dailyRekap)
