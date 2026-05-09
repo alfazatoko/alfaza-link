@@ -68,8 +68,8 @@ export default function Riwayat() {
         }),
         getUsers(),
         isDailyAll ? getDailyRekap(startDate) : Promise.resolve(null),
-        (startDate === endDate && kasirFilter && kasirFilter !== "Semua Kasir" && user.role !== "owner") 
-          ? getRekapKasir(kasirFilter, startDate) 
+        (startDate === endDate && (kasirFilter || user.role !== "owner")) 
+          ? getRekapKasir(kasirFilter || user.name, startDate) 
           : Promise.resolve(null)
       ]);
       setTransactions(txs || []);
@@ -368,7 +368,7 @@ export default function Riwayat() {
               <span className="font-bold text-gray-700">
                 {kasirRekap 
                   ? ((kasirRekap.count_bank || 0) + (kasirRekap.count_flip || 0) + (kasirRekap.count_app || 0) + (kasirRekap.count_dana || 0) + (kasirRekap.count_tarik || 0) + (kasirRekap.count_aks || 0)) 
-                  : (dailyRekap && !kasirFilter)
+                  : (dailyRekap && !kasirFilter && isOwner)
                     ? ((dailyRekap.count_bank || 0) + (dailyRekap.count_flip || 0) + (dailyRekap.count_app || 0) + (dailyRekap.count_dana || 0) + (dailyRekap.count_tarik || 0) + (dailyRekap.count_aks || 0))
                     : filteredTx.length} transaksi
               </span>
@@ -376,14 +376,14 @@ export default function Riwayat() {
                 <span className="font-bold text-gray-800">
                   Total: {kasirRekap 
                     ? formatRupiah((kasirRekap.total_bank || 0) + (kasirRekap.total_flip || 0) + (kasirRekap.total_app || 0) + (kasirRekap.total_dana || 0)) 
-                    : (dailyRekap && !kasirFilter)
+                    : (dailyRekap && !kasirFilter && isOwner)
                       ? formatRupiah((dailyRekap.total_bank || 0) + (dailyRekap.total_flip || 0) + (dailyRekap.total_app || 0) + (dailyRekap.total_dana || 0))
                       : formatRupiah(filteredTx.reduce((sum, tx) => sum + (tx.nominal || 0), 0))}
                 </span>
                 <span className="text-gray-500 font-medium border-l border-gray-300 pl-2.5">
                   Admin: {kasirRekap 
                     ? formatRupiah(kasirRekap.total_admin || 0) 
-                    : (dailyRekap && !kasirFilter)
+                    : (dailyRekap && !kasirFilter && isOwner)
                       ? formatRupiah(dailyRekap.total_admin || 0)
                       : formatRupiah(filteredTx.reduce((sum, tx) => sum + (!tx.adminNonTunai ? (tx.admin || 0) : 0), 0))}
                   {((kasirRekap ? (kasirRekap.total_admin_non_tunai || 0) : (dailyRekap && !kasirFilter) ? (dailyRekap.total_admin_non_tunai || 0) : filteredTx.reduce((sum, tx) => sum + (tx.adminNonTunai ? (tx.admin || 0) : 0), 0))) > 0 && (
