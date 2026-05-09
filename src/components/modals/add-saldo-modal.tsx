@@ -123,7 +123,7 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
   };
 
   const getInfoText = () => {
-    if (jenis === "Real App") return "Isi saldo real aplikasi.";
+    if (jenis === "Real App") return "Catat saldo real app (catatan manual). Nilai akan diakumulasi dan tampil di laporan.";
     return "";
   };
 
@@ -132,7 +132,7 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
       <DialogContent className="rounded-3xl max-w-sm mx-auto p-0 overflow-hidden">
         <DialogHeader className="bg-primary text-white p-4 pb-3">
           <DialogTitle className="text-lg font-extrabold">
-            {mode === "isi-saldo" ? "Isi Saldo" : mode === "penyesuaian" ? "Penyesuaian Saldo" : "+ Tambah Saldo"}
+            {jenis === "Real App" ? "Isi saldo real aplikasi" : (mode === "isi-saldo" ? "Isi Saldo" : "+ Tambah Saldo")}
           </DialogTitle>
           <p className="text-white/70 text-[11px]">Kasir: {isOwner ? (effectiveKasir || "Pilih kasir") : kasirName}</p>
         </DialogHeader>
