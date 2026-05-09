@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { Header } from "@/components/layout/header";
 import { AddSaldoModal } from "@/components/modals/add-saldo-modal";
 import { getBalance, createTransaction, getSettings, type BalanceRecord, type SettingsRecord } from "@/lib/firestore";
-import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
+import { formatRupiah, formatThousands, parseThousands, getWibDate, forceUpdateApp } from "@/lib/utils";
 import { Landmark, Wallet, ArrowDownToLine, Gem, RefreshCw, Send, Lock, Save, Settings, SlidersHorizontal, SmartphoneNfc, NotebookPen, ListPlus, Receipt, X, Home, FileText, Ticket, CalendarDays, CalendarCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -130,17 +130,8 @@ export default function Beranda() {
   }, [user, nominalDisplay, adminDisplay, isAdminNonTunai, category, keterangan, toast, loadBalance]);
 
   const handleUpdate = useCallback(() => {
-    if (confirm("Perbarui aplikasi ke versi terbaru? Halaman akan dimuat ulang.")) {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-          }
-          window.location.reload();
-        });
-      } else {
-        window.location.reload();
-      }
+    if (confirm("Perbarui aplikasi ke versi terbaru? Halaman akan dibersihkan dan dimuat ulang secara paksa.")) {
+      forceUpdateApp();
     }
   }, []);
 
@@ -456,7 +447,7 @@ export default function Beranda() {
         {updateAvailable && (
           <div className="mt-4 flex justify-center">
             <button
-              onClick={() => window.location.reload()}
+              onClick={handleUpdate}
               className="w-full h-12 rounded-2xl font-black text-sm bg-red-600 text-white shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 active:scale-[0.98] transition animate-bounce border-2 border-white"
             >
               <RefreshCw className="w-4 h-4" />

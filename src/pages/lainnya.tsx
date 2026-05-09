@@ -1,23 +1,15 @@
 import { useLocation } from "wouter";
 import { ArrowLeft, Printer, Package, Ticket, CalendarDays, RefreshCw } from "lucide-react";
+import { forceUpdateApp } from "@/lib/utils";
 
-const APP_VERSION = "2.1.0 (Build 2026-04-26)";
+const APP_VERSION = "2.2.1 (Build 2026-05-09)";
 
 export default function Lainnya() {
   const [, setLocation] = useLocation();
 
   const handleUpdate = () => {
-    if (confirm("Perbarui aplikasi ke versi terbaru? Halaman akan dimuat ulang.")) {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-          }
-          window.location.reload();
-        });
-      } else {
-        window.location.reload();
-      }
+    if (confirm("Perbarui aplikasi ke versi terbaru? Halaman akan dibersihkan dan dimuat ulang secara paksa.")) {
+      forceUpdateApp();
     }
   };
 

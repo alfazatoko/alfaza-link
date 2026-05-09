@@ -52,3 +52,40 @@ export function parseThousands(formatted: string): string {
 export function generateUniqueId() {
   return Math.random().toString(36).substring(2, 9).toUpperCase();
 }
+
+/**
+ * Memaksa aplikasi untuk update ke versi terbaru dengan cara:
+ * 1. Menghapus Service Worker
+ * 2. Membersihkan Cache Storage (PWA)
+ * 3. Hard Reload dengan query string untuk mem-bypass cache browser
+ */
+export async function forceUpdateApp() {
+  try {
+    // 1. Unregister Service Workers
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+      }
+    }
+
+    // 2. Clear Cache Storage
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      for (const name of cacheNames) {
+        await caches.delete(name);
+      }
+    }
+
+    // 3. Clear Session Storage
+    sessionStorage.clear();
+
+    // 4. Hard Reload ke Origin (Beranda/Login) dengan cache-buster
+    const url = new URL(window.location.origin);
+    url.searchParams.set('update', Date.now().toString());
+    window.location.href = url.toString();
+  } catch (err) {
+    console.error("Critical Update Error:", err);
+    window.location.reload();
+  }
+}

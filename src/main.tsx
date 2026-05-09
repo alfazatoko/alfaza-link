@@ -3,6 +3,7 @@ import App from "./App";
 import "./index.css";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
+import { forceUpdateApp } from "@/lib/utils";
 
 createRoot(document.getElementById("root")!).render(<App />);
 
@@ -17,10 +18,10 @@ if ("serviceWorker" in navigator) {
             window.dispatchEvent(new CustomEvent("pwa-update-available"));
             toast({
               title: "Pembaruan Tersedia",
-              description: "Versi terbaru KasLink Pro tersedia. Klik muat ulang untuk memperbarui.",
+              description: "Versi terbaru Kasir Trendy tersedia. Klik perbarui untuk mengupdate.",
               action: (
-                <ToastAction altText="Muat Ulang" onClick={() => window.location.reload()}>
-                  Muat Ulang
+                <ToastAction altText="Perbarui" onClick={() => forceUpdateApp()}>
+                  Perbarui
                 </ToastAction>
               ),
               duration: 100000,
