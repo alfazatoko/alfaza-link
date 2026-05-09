@@ -45,6 +45,7 @@ export default function Riwayat() {
   const [allUsers, setAllUsers] = useState<UserRecord[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [dailyRekap, setDailyRekap] = useState<DailyRekapRecord | null>(null);
+  const [kasirRekap, setKasirRekap] = useState<DailyRekapRecord | null>(null);
 
   const kasirFilter = selectedKasir === "Semua Kasir" ? undefined : selectedKasir;
 
@@ -52,7 +53,7 @@ export default function Riwayat() {
     if (!user?.name) return;
     try {
       const isDailyAll = startDate === endDate && (!kasirFilter || kasirFilter === "Semua Kasir");
-      const [txs, saldo, users, rekap] = await Promise.all([
+      const [txs, saldo, users, rekap, kRekap] = await Promise.all([
         getTransactions({ 
           kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), 
           startDate, 
@@ -66,12 +67,16 @@ export default function Riwayat() {
           forceServer: refreshKey > 0
         }),
         getUsers(),
-        isDailyAll ? getDailyRekap(startDate) : Promise.resolve(null)
+        isDailyAll ? getDailyRekap(startDate) : Promise.resolve(null),
+        (startDate === endDate && (kasirFilter || user.role !== "owner")) 
+          ? getRekapKasir(kasirFilter || user.name, startDate) 
+          : Promise.resolve(null)
       ]);
       setTransactions(txs || []);
       setSaldoHistory(saldo || []);
       setAllUsers(users || []);
       setDailyRekap(rekap);
+      setKasirRekap(kRekap as any);
     } catch (err) {
       console.error("Riwayat Load Error:", err);
       toast({ title: "Gagal memuat data", variant: "destructive" });
@@ -357,22 +362,28 @@ export default function Riwayat() {
           <div className="border-t border-gray-200 px-3 py-3 text-[11px] bg-gray-50/50">
             <div className="flex justify-between items-center mb-2">
               <span className="font-bold text-gray-700">
-                {dailyRekap 
-                  ? ((dailyRekap.count_bank || 0) + (dailyRekap.count_flip || 0) + (dailyRekap.count_app || 0) + (dailyRekap.count_dana || 0) + (dailyRekap.count_tarik || 0) + (dailyRekap.count_aks || 0)) 
-                  : filteredTx.length} transaksi
+                {kasirRekap 
+                  ? ((kasirRekap.count_bank || 0) + (kasirRekap.count_flip || 0) + (kasirRekap.count_app || 0) + (kasirRekap.count_dana || 0) + (kasirRekap.count_tarik || 0) + (kasirRekap.count_aks || 0)) 
+                  : (dailyRekap && !kasirFilter)
+                    ? ((dailyRekap.count_bank || 0) + (dailyRekap.count_flip || 0) + (dailyRekap.count_app || 0) + (dailyRekap.count_dana || 0) + (dailyRekap.count_tarik || 0) + (dailyRekap.count_aks || 0))
+                    : filteredTx.length} transaksi
               </span>
               <div className="flex items-center gap-2.5">
                 <span className="font-bold text-gray-800">
-                  Total: {dailyRekap 
-                    ? formatRupiah((dailyRekap.total_bank || 0) + (dailyRekap.total_flip || 0) + (dailyRekap.total_app || 0) + (dailyRekap.total_dana || 0)) 
-                    : formatRupiah(filteredTx.reduce((sum, tx) => sum + (tx.nominal || 0), 0))}
+                  Total: {kasirRekap 
+                    ? formatRupiah((kasirRekap.total_bank || 0) + (kasirRekap.total_flip || 0) + (kasirRekap.total_app || 0) + (kasirRekap.total_dana || 0)) 
+                    : (dailyRekap && !kasirFilter)
+                      ? formatRupiah((dailyRekap.total_bank || 0) + (dailyRekap.total_flip || 0) + (dailyRekap.total_app || 0) + (dailyRekap.total_dana || 0))
+                      : formatRupiah(filteredTx.reduce((sum, tx) => sum + (tx.nominal || 0), 0))}
                 </span>
                 <span className="text-gray-500 font-medium border-l border-gray-300 pl-2.5">
-                  Admin: {dailyRekap 
-                    ? formatRupiah(dailyRekap.total_admin || 0) 
-                    : formatRupiah(filteredTx.reduce((sum, tx) => sum + (!tx.adminNonTunai ? (tx.admin || 0) : 0), 0))}
-                  {((dailyRekap ? (dailyRekap.total_admin_non_tunai || 0) : filteredTx.reduce((sum, tx) => sum + (tx.adminNonTunai ? (tx.admin || 0) : 0), 0))) > 0 && (
-                    <> / <span className="text-purple-600">{(dailyRekap ? (dailyRekap.total_admin_non_tunai || 0) : filteredTx.reduce((sum, tx) => sum + (tx.adminNonTunai ? (tx.admin || 0) : 0), 0)).toLocaleString('id-ID')}</span></>
+                  Admin: {kasirRekap 
+                    ? formatRupiah(kasirRekap.total_admin || 0) 
+                    : (dailyRekap && !kasirFilter)
+                      ? formatRupiah(dailyRekap.total_admin || 0)
+                      : formatRupiah(filteredTx.reduce((sum, tx) => sum + (!tx.adminNonTunai ? (tx.admin || 0) : 0), 0))}
+                  {((kasirRekap ? (kasirRekap.total_admin_non_tunai || 0) : (dailyRekap && !kasirFilter) ? (dailyRekap.total_admin_non_tunai || 0) : filteredTx.reduce((sum, tx) => sum + (tx.adminNonTunai ? (tx.admin || 0) : 0), 0))) > 0 && (
+                    <> / <span className="text-purple-600">{(kasirRekap ? (kasirRekap.total_admin_non_tunai || 0) : (dailyRekap && !kasirFilter) ? (dailyRekap.total_admin_non_tunai || 0) : filteredTx.reduce((sum, tx) => sum + (tx.adminNonTunai ? (tx.admin || 0) : 0), 0)).toLocaleString('id-ID')}</span></>
                   )}
                 </span>
               </div>

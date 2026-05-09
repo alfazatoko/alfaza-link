@@ -326,12 +326,17 @@ export async function getTransactions(params: {
   const colRef = collection(db, "transactions");
   let q = query(colRef);
 
-  // Filter server-side hanya berdasarkan range tanggal (Single-field index, tidak butuh composite index)
+  // Filter server-side
   if (params.startDate) {
     q = query(q, where("transDate", ">=", params.startDate));
   }
   if (params.endDate) {
     q = query(q, where("transDate", "<=", params.endDate));
+  }
+
+  // Filter server-side kasirName (Gunakan index transDate & kasirName jika tersedia)
+  if (params.kasirName && params.kasirName !== "Semua") {
+    q = query(q, where("kasirName", "==", params.kasirName));
   }
 
   if (params.limit) {
@@ -608,6 +613,13 @@ export async function getDailyRekap(date: string): Promise<DailyRekapRecord | nu
   return snap.data() as DailyRekapRecord;
 }
 
+export async function getRekapKasir(kasirName: string, date: string): Promise<KasirRekapRecord | null> {
+  const ref = doc(db, "rekap_kasir", `${kasirName}_${date}`);
+  const snap = await cacheFirstGetDoc(ref);
+  if (!snap.exists()) return null;
+  return snap.data() as KasirRekapRecord;
+}
+
 export async function getDailyRekapByRange(startDate: string, endDate: string): Promise<DailyRekapRecord[]> {
   const colRef = collection(db, "rekap_harian");
   const q = query(colRef, where("__name__", ">=", startDate), where("__name__", "<=", endDate));
@@ -652,12 +664,17 @@ export async function getSaldoHistory(params: {
   const colRef = collection(db, "saldo_history");
   let q = query(colRef);
 
-  // Filter server-side hanya berdasarkan range tanggal
+  // Filter server-side
   if (params.startDate) {
     q = query(q, where("saldoDate", ">=", params.startDate));
   }
   if (params.endDate) {
     q = query(q, where("saldoDate", "<=", params.endDate));
+  }
+
+  // Filter server-side kasirName
+  if (params.kasirName && params.kasirName !== "Semua") {
+    q = query(q, where("kasirName", "==", params.kasirName));
   }
 
   if (params.limit) {
