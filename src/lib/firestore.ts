@@ -7,24 +7,26 @@ import {
 import { db } from "./firebase";
 import { getWibDate } from "./utils";
 
-// ── Cache-First Helpers ──
-// Baca dari IndexedDB cache dulu (instan), fallback ke server jika cache kosong
-async function cacheFirstGetDocs<T>(q: Query, forceServer = false): Promise<import("firebase/firestore").QuerySnapshot<T>> {
-  if (!forceServer) {
-    try {
-      const cached = await getDocsFromCache(q as any);
-      if (cached.docs.length > 0) return cached as any;
-    } catch (_) { /* cache miss, lanjut ke server */ }
+// ── Smart Data Fetching Helpers ──
+// Mencoba ambil data terbaru dari Server. Jika offline/gagal, otomatis ambil dari Cache lokal.
+async function smartGetDocs<T>(q: Query, forceServer = false): Promise<import("firebase/firestore").QuerySnapshot<T>> {
+  if (forceServer) return getDocs(q) as any;
+  try {
+    // getDocs secara default akan mencoba ke server, lalu fallback ke cache jika offline.
+    return await getDocs(q) as any;
+  } catch (err) {
+    console.warn("[smartGetDocs] Server fetch failed, trying cache...", err);
+    return await getDocsFromCache(q as any) as any;
   }
-  return getDocs(q) as any;
 }
 
-async function cacheFirstGetDoc(ref: DocumentReference) {
+async function smartGetDoc(ref: DocumentReference) {
   try {
-    const cached = await getDocFromCache(ref);
-    if (cached.exists()) return cached;
-  } catch (_) { /* cache miss */ }
-  return getDoc(ref);
+    return await getDoc(ref);
+  } catch (err) {
+    console.warn("[smartGetDoc] Server fetch failed, trying cache...", err);
+    return await getDocFromCache(ref);
+  }
 }
 
 export interface UserRecord {
@@ -236,7 +238,7 @@ async function updateRekap(batch: any, date: string, kasirName: string | null, i
 }
 
 export async function getUsers(): Promise<UserRecord[]> {
-  const snap = await cacheFirstGetDocs(query(collection(db, "users")));
+  const snap = await smartGetDocs(query(collection(db, "users")));
   return snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as UserRecord));
 }
 
@@ -256,7 +258,7 @@ export async function deleteUser(id: string): Promise<void> {
 export async function getSettings(): Promise<SettingsRecord> {
   const ref = doc(db, "settings", "main");
   try {
-    const snap = await cacheFirstGetDoc(ref);
+    const snap = await smartGetDoc(ref);
     if (!snap.exists()) {
       const defaults: SettingsRecord = {
         shopName: "ALFAZA LINK",
@@ -343,7 +345,7 @@ export async function getTransactions(params: {
     q = query(q, limit(params.limit));
   }
   
-  const snap = await cacheFirstGetDocs(q, params.forceServer);
+  const snap = await smartGetDocs(q, params.forceServer);
   let results = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as TransactionRecord));
 
   // Filter kasirName di memori aplikasi
@@ -584,7 +586,7 @@ async function reverseBalance(kasirName: string, tx: TransactionRecord) {
 
 export async function getBalance(kasirName: string): Promise<BalanceRecord> {
   const ref = doc(db, "balances", kasirName);
-  const snap = await cacheFirstGetDoc(ref);
+  const snap = await smartGetDoc(ref);
   const today = getWibDate();
 
   const emptyBal: BalanceRecord = { bank: 0, cash: 0, tarik: 0, aks: 0, adminTotal: 0, bankNonTunai: 0, cashNonTunai: 0, tarikNonTunai: 0, aksNonTunai: 0, adminNonTunaiTotal: 0, lastUpdateDate: today };
@@ -608,14 +610,14 @@ export async function getBalance(kasirName: string): Promise<BalanceRecord> {
 
 export async function getDailyRekap(date: string): Promise<DailyRekapRecord | null> {
   const ref = doc(db, "rekap_harian", date);
-  const snap = await cacheFirstGetDoc(ref);
+  const snap = await smartGetDoc(ref);
   if (!snap.exists()) return null;
   return snap.data() as DailyRekapRecord;
 }
 
 export async function getRekapKasir(kasirName: string, date: string): Promise<KasirRekapRecord | null> {
   const ref = doc(db, "rekap_kasir", `${kasirName}_${date}`);
-  const snap = await cacheFirstGetDoc(ref);
+  const snap = await smartGetDoc(ref);
   if (!snap.exists()) return null;
   return snap.data() as KasirRekapRecord;
 }
@@ -623,7 +625,7 @@ export async function getRekapKasir(kasirName: string, date: string): Promise<Ka
 export async function getDailyRekapByRange(startDate: string, endDate: string): Promise<DailyRekapRecord[]> {
   const colRef = collection(db, "rekap_harian");
   const q = query(colRef, where("__name__", ">=", startDate), where("__name__", "<=", endDate));
-  const snap = await cacheFirstGetDocs(q);
+  const snap = await smartGetDocs(q);
   return snap.docs.map(d => ({ date: d.id, ...(d.data() as any) } as any));
 }
 
@@ -634,7 +636,7 @@ export async function getRekapKasirByRange(kasirName: string, startDate: string,
     where("date", ">=", startDate),
     where("date", "<=", endDate)
   );
-  const snap = await cacheFirstGetDocs(q);
+  const snap = await smartGetDocs(q);
   return snap.docs.map(d => d.data() as KasirRekapRecord);
 }
 
@@ -644,7 +646,7 @@ export async function getAllRekapKasirByRange(startDate: string, endDate: string
     where("date", ">=", startDate),
     where("date", "<=", endDate)
   );
-  const snap = await cacheFirstGetDocs(q);
+  const snap = await smartGetDocs(q);
   return snap.docs.map(d => d.data() as KasirRekapRecord);
 }
 
@@ -681,7 +683,7 @@ export async function getSaldoHistory(params: {
     q = query(q, limit(params.limit));
   }
 
-  const snap = await cacheFirstGetDocs(q, params.forceServer);
+  const snap = await smartGetDocs(q, params.forceServer);
   let results = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as SaldoHistoryRecord));
 
   // Filter kasirName di memori aplikasi
@@ -980,7 +982,7 @@ export async function updateIzin(id: string, data: Partial<IzinRecord>): Promise
 export async function getDailyNotes(kasirName: string, date: string): Promise<DailyNoteRecord> {
   const docId = `${kasirName}_${date}`;
   const ref = doc(db, "daily_notes", docId);
-  const snap = await cacheFirstGetDoc(ref);
+  const snap = await smartGetDoc(ref);
   if (!snap.exists()) {
     return { sisaSaldoBank: 0, saldoRealApp: 0 };
   }
