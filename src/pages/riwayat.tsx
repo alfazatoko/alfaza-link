@@ -56,12 +56,14 @@ export default function Riwayat() {
         getTransactions({ 
           kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), 
           startDate, 
-          endDate
+          endDate,
+          forceServer: refreshKey > 0
         }),
         getSaldoHistory({ 
           kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), 
           startDate, 
-          endDate 
+          endDate,
+          forceServer: refreshKey > 0
         }),
         getUsers(),
         isDailyAll ? getDailyRekap(startDate) : Promise.resolve(null)
@@ -169,7 +171,7 @@ export default function Riwayat() {
     let result = transactions;
     
     // Filter Category
-    if (selectedCategory !== "Semua" && selectedCategory !== "20 Riwayat Terakhir") {
+    if (selectedCategory !== "Semua") {
       const mapped = CATEGORY_MAP[selectedCategory];
       if (mapped) result = result.filter(tx => tx.category === mapped);
     }

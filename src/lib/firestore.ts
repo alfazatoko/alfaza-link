@@ -9,11 +9,13 @@ import { getWibDate } from "./utils";
 
 // ── Cache-First Helpers ──
 // Baca dari IndexedDB cache dulu (instan), fallback ke server jika cache kosong
-async function cacheFirstGetDocs<T>(q: Query): Promise<import("firebase/firestore").QuerySnapshot<T>> {
-  try {
-    const cached = await getDocsFromCache(q as any);
-    if (cached.docs.length > 0) return cached as any;
-  } catch (_) { /* cache miss, lanjut ke server */ }
+async function cacheFirstGetDocs<T>(q: Query, forceServer = false): Promise<import("firebase/firestore").QuerySnapshot<T>> {
+  if (!forceServer) {
+    try {
+      const cached = await getDocsFromCache(q as any);
+      if (cached.docs.length > 0) return cached as any;
+    } catch (_) { /* cache miss, lanjut ke server */ }
+  }
   return getDocs(q) as any;
 }
 
@@ -319,6 +321,7 @@ export async function getTransactions(params: {
   startDate?: string;
   endDate?: string;
   limit?: number;
+  forceServer?: boolean;
 }): Promise<TransactionRecord[]> {
   const colRef = collection(db, "transactions");
   let q = query(colRef);
@@ -334,8 +337,8 @@ export async function getTransactions(params: {
   if (params.limit) {
     q = query(q, limit(params.limit));
   }
-
-  const snap = await cacheFirstGetDocs(q);
+  
+  const snap = await cacheFirstGetDocs(q, params.forceServer);
   let results = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as TransactionRecord));
 
   // Filter kasirName di memori aplikasi
@@ -644,6 +647,7 @@ export async function getSaldoHistory(params: {
   startDate?: string;
   endDate?: string;
   limit?: number;
+  forceServer?: boolean;
 }): Promise<SaldoHistoryRecord[]> {
   const colRef = collection(db, "saldo_history");
   let q = query(colRef);
@@ -660,7 +664,7 @@ export async function getSaldoHistory(params: {
     q = query(q, limit(params.limit));
   }
 
-  const snap = await cacheFirstGetDocs(q);
+  const snap = await cacheFirstGetDocs(q, params.forceServer);
   let results = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) } as SaldoHistoryRecord));
 
   // Filter kasirName di memori aplikasi
