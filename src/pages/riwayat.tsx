@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
 import { formatRupiah, formatThousands, parseThousands, getWibDate } from "@/lib/utils";
-import { getTransactions, getSaldoHistory, getUsers, updateTransaction, deleteTransaction, updateSaldoHistory, deleteSaldoHistory, getDailyRekap, type TransactionRecord, type SaldoHistoryRecord, type UserRecord, type DailyRekapRecord } from "@/lib/firestore";
+import { getTransactions, getSaldoHistory, getUsers, updateTransaction, deleteTransaction, updateSaldoHistory, deleteSaldoHistory, getDailyRekap, getRekapKasir, type TransactionRecord, type SaldoHistoryRecord, type UserRecord, type DailyRekapRecord } from "@/lib/firestore";
 import { Receipt, AlertCircle, X, Lock, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
