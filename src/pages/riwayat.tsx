@@ -6,7 +6,7 @@ import { getTransactions, getSaldoHistory, getUsers, updateTransaction, deleteTr
 import { Receipt, AlertCircle, X, Lock, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const CATEGORY_FILTERS = ["20 Riwayat Terakhir", "Semua", "Bank", "Flip", "App", "Dana", "Tarik", "Aks"];
+const CATEGORY_FILTERS = ["Semua", "Bank", "Flip", "App", "Dana", "Tarik", "Aks"];
 const CATEGORY_MAP: Record<string, string> = {
   Bank: "BANK", Flip: "FLIP", App: "APP PULSA", Dana: "DANA", Tarik: "TARIK TUNAI", Aks: "AKSESORIS",
 };
@@ -20,7 +20,7 @@ export default function Riwayat() {
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [selectedKasir, setSelectedKasir] = useState("Semua Kasir");
-  const [selectedCategory, setSelectedCategory] = useState("20 Riwayat Terakhir");
+  const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [selectedSaldoTab, setSelectedSaldoTab] = useState("Semua");
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [expandedSaldo, setExpandedSaldo] = useState<string | null>(null);
@@ -52,13 +52,11 @@ export default function Riwayat() {
     if (!user?.name) return;
     try {
       const isDailyAll = startDate === endDate && (!kasirFilter || kasirFilter === "Semua Kasir");
-      const isLast20 = selectedCategory === "20 Riwayat Terakhir";
       const [txs, saldo, users, rekap] = await Promise.all([
         getTransactions({ 
           kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), 
           startDate, 
-          endDate,
-          limit: isLast20 ? 20 : undefined
+          endDate
         }),
         getSaldoHistory({ 
           kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), 
@@ -184,11 +182,6 @@ export default function Riwayat() {
         (tx.category || "").toLowerCase().includes(q) ||
         (tx.kasirName || "").toLowerCase().includes(q)
       );
-    }
-    
-    // Slice if 20 Riwayat Terakhir
-    if (selectedCategory === "20 Riwayat Terakhir") {
-      return result.slice(0, 20);
     }
     
     return result;
