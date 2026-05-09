@@ -55,21 +55,21 @@ export default function Riwayat() {
       const isDailyAll = startDate === endDate && (!kasirFilter || kasirFilter === "Semua Kasir");
       const [txs, saldo, users, rekap, kRekap] = await Promise.all([
         getTransactions({ 
-          kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), 
+          kasirName: kasirFilter === "Semua Kasir" ? undefined : (kasirFilter || (user.role === "owner" ? undefined : user.name)), 
           startDate, 
           endDate,
           forceServer: refreshKey > 0
         }),
         getSaldoHistory({ 
-          kasirName: kasirFilter || (user.role === "owner" ? undefined : user.name), 
+          kasirName: kasirFilter === "Semua Kasir" ? undefined : (kasirFilter || (user.role === "owner" ? undefined : user.name)), 
           startDate, 
           endDate,
           forceServer: refreshKey > 0
         }),
         getUsers(),
         isDailyAll ? getDailyRekap(startDate) : Promise.resolve(null),
-        (startDate === endDate && (kasirFilter || user.role !== "owner")) 
-          ? getRekapKasir(kasirFilter || user.name, startDate) 
+        (startDate === endDate && kasirFilter && kasirFilter !== "Semua Kasir" && user.role !== "owner") 
+          ? getRekapKasir(kasirFilter, startDate) 
           : Promise.resolve(null)
       ]);
       setTransactions(txs || []);
@@ -79,7 +79,11 @@ export default function Riwayat() {
       setKasirRekap(kRekap as any);
     } catch (err) {
       console.error("Riwayat Load Error:", err);
-      toast({ title: "Gagal memuat data", variant: "destructive" });
+      toast({ 
+        title: "Gagal memuat data", 
+        variant: "destructive",
+        description: err.message 
+      });
     }
   }, [user?.name, user?.role, kasirFilter, startDate, endDate, today, refreshKey, selectedCategory]);
 

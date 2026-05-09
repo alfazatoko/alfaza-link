@@ -35,7 +35,6 @@ export default function Beranda() {
   const [balance, setBalance] = useState<BalanceRecord | null>(null);
   const [shopSettings, setShopSettings] = useState<SettingsRecord | null>(null);
   const [saving, setSaving] = useState(false);
-  const [isPenyesuaianModalOpen, setIsPenyesuaianModalOpen] = useState(false);
   const [showLainnyaMenu, setShowLainnyaMenu] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
@@ -240,14 +239,7 @@ export default function Beranda() {
       </div>
 
 
-      <div className="grid grid-cols-5 gap-2 mb-4">
-        <button 
-          onClick={() => setIsPenyesuaianModalOpen(true)} 
-          className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
-        >
-          <SlidersHorizontal className="w-5 h-5 text-[#1a5276] group-hover:scale-110 transition-transform" strokeWidth={1.8} />
-          <span className="text-[8px] font-bold text-[#1a5276] uppercase tracking-wide">Sesuaian</span>
-        </button>
+      <div className="grid grid-cols-4 gap-2 mb-4">
         <button 
           onClick={() => setLocation("/non-tunai")} 
           className="flex flex-col items-center justify-center gap-1.5 h-[65px] rounded-2xl bg-white shadow-sm active:scale-95 transition-all group hover:shadow-md border border-gray-100"
@@ -463,15 +455,6 @@ export default function Beranda() {
         kasirName={user?.name || ""}
         isOwner={user?.role === "owner"}
         mode="isi-saldo"
-        onSuccess={loadBalance}
-      />
-
-      <AddSaldoModal
-        open={isPenyesuaianModalOpen}
-        onOpenChange={setIsPenyesuaianModalOpen}
-        kasirName={user?.name || ""}
-        isOwner={user?.role === "owner"}
-        mode="penyesuaian"
         onSuccess={loadBalance}
       />
     </div>

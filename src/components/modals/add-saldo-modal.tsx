@@ -9,7 +9,7 @@ import { Building2, Wallet, Smartphone, Landmark, User } from "lucide-react";
 const JENIS_TABS = [
   { id: "Bank", label: "Bank", icon: Building2, color: "bg-primary" },
   { id: "Cash", label: "Cash", icon: Wallet, color: "bg-emerald-600" },
-  { id: "Real App", label: "+ Saldo real aplikasi", icon: Smartphone, color: "bg-purple-600" },
+  { id: "Real App", label: "Saldo Real", icon: Smartphone, color: "bg-purple-600" },
 ];
 
 interface AddSaldoModalProps {
@@ -32,7 +32,7 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
   const ketRef = useRef<HTMLInputElement>(null);
 
   const filteredTabs = JENIS_TABS.filter(tab => {
-    if (mode === "isi-saldo") return tab.id === "Bank" || tab.id === "Cash";
+    if (mode === "isi-saldo") return true; // Show all 3 for isi-saldo
     if (mode === "penyesuaian") return tab.id === "Real App";
     return true;
   });
@@ -123,7 +123,7 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
   };
 
   const getInfoText = () => {
-    if (jenis === "Real App") return "Catat saldo real app (catatan manual). Nilai akan diakumulasi dan tampil di laporan.";
+    if (jenis === "Real App") return "Isi saldo real aplikasi.";
     return "";
   };
 
@@ -151,7 +151,7 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
               </select>
             </div>
           )}
-          <div className={`grid ${filteredTabs.length <= 2 ? 'grid-cols-2' : 'grid-cols-4'} gap-2`}>
+          <div className={`grid grid-cols-3 gap-2`}>
             {filteredTabs.map(tab => {
               const Icon = tab.icon;
               const isActive = jenis === tab.id;
