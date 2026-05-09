@@ -123,7 +123,7 @@ export function AddSaldoModal({ open, onOpenChange, kasirName, isOwner, mode, on
   };
 
   const getInfoText = () => {
-    if (jenis === "Real App") return "Catat saldo real app (catatan manual). Nilai akan diakumulasi dan tampil di laporan.";
+    if (jenis === "Real App") return "Catat Sisa saldo real aplikasi (catatan manual). Nilai akan diakumulasi dan tampil di laporan.";
     return "";
   };
 
