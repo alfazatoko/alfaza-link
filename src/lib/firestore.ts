@@ -224,16 +224,21 @@ async function updateRekap(batch: any, date: string, kasirName: string | null, i
   // Per Kasir (jika ada)
   if (kasirName && kasirName !== "owner") {
     const kasirRef = doc(db, "rekap_kasir", `${kasirName}_${date}`);
-    const kasirIncrements: any = { ...increments, kasirName, date };
     
-    // Jika ada raw data, tambahkan ke field spesifik kasir
+    // Build increments object explicitly to avoid spread issues with increment() sentinels
+    const kasirData: any = { 
+      ...increments,
+      kasirName, 
+      date 
+    };
+    
     if (rawData) {
-      if (rawData.nominal) kasirIncrements.total_nominal = increment(rawData.nominal);
-      if (rawData.admin) kasirIncrements.total_admin = increment(rawData.admin);
-      if (rawData.count) kasirIncrements.count_tx = increment(rawData.count);
+      if (rawData.nominal) kasirData.total_nominal = increment(rawData.nominal);
+      if (rawData.admin) kasirData.total_admin = increment(rawData.admin);
+      if (rawData.count) kasirData.count_tx = increment(rawData.count);
     }
 
-    batch.set(kasirRef, kasirIncrements, { merge: true });
+    batch.set(kasirRef, kasirData, { merge: true });
   }
 }
 
@@ -336,8 +341,10 @@ export async function getTransactions(params: {
     q = query(q, where("transDate", "<=", params.endDate));
   }
 
-  // Filter server-side kasirName dihapus untuk menghindari error Missing Index.
-  // Penyaringan dilakukan di client-side di bagian bawah fungsi ini.
+  // Filter server-side
+  if (params.kasirName && params.kasirName !== "Semua") {
+    q = query(q, where("kasirName", "==", params.kasirName));
+  }
 
   if (params.limit) {
     q = query(q, limit(params.limit));
@@ -630,11 +637,12 @@ export async function getDailyRekapByRange(startDate: string, endDate: string): 
 export async function getRekapKasirByRange(kasirName: string, startDate: string, endDate: string): Promise<KasirRekapRecord[]> {
   const colRef = collection(db, "rekap_kasir");
   const q = query(colRef, 
+    where("kasirName", "==", kasirName),
     where("date", ">=", startDate),
     where("date", "<=", endDate)
   );
   const snap = await smartGetDocs(q);
-  return snap.docs.map(d => d.data() as KasirRekapRecord).filter(r => r.kasirName === kasirName);
+  return snap.docs.map(d => d.data() as KasirRekapRecord);
 }
 
 export async function getAllRekapKasirByRange(startDate: string, endDate: string): Promise<KasirRekapRecord[]> {
@@ -671,8 +679,10 @@ export async function getSaldoHistory(params: {
     q = query(q, where("saldoDate", "<=", params.endDate));
   }
 
-  // Filter server-side kasirName dihapus untuk menghindari error Missing Index.
-  // Penyaringan dilakukan di client-side.
+  // Filter server-side
+  if (params.kasirName && params.kasirName !== "Semua") {
+    q = query(q, where("kasirName", "==", params.kasirName));
+  }
 
   if (params.limit) {
     q = query(q, limit(params.limit));
