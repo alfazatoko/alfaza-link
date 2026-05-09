@@ -76,7 +76,7 @@ export default function Riwayat() {
       console.error("Riwayat Load Error:", err);
       toast({ title: "Gagal memuat data", variant: "destructive" });
     }
-  }, [user?.name, user?.role, kasirFilter, startDate, endDate, today, refreshKey]);
+  }, [user?.name, user?.role, kasirFilter, startDate, endDate, today, refreshKey, selectedCategory]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
