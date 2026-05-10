@@ -50,7 +50,7 @@ export default function Absen() {
   }, [loadAttendance]);
 
   const handleClockIn = async (shift: string) => {
-    if (!user?.name) return;
+    if (!user?.name || saving) return;
     setSaving(true);
     try {
       const today = getWibDate();
@@ -75,7 +75,7 @@ export default function Absen() {
   };
 
   const handleClockOut = async () => {
-    if (!attendanceToday) return;
+    if (!attendanceToday || saving) return;
     setSaving(true);
     try {
       const now = new Date();

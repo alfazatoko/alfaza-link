@@ -24,7 +24,7 @@ export default function NonTunai() {
   const { toast } = useToast();
 
   const handleProses = async () => {
-    if (!user) return;
+    if (!user || saving) return;
     const n = parseInt(parseThousands(nominalDisplay));
     const a = parseInt(parseThousands(adminDisplay)) || 0;
     if (!n || n <= 0) {

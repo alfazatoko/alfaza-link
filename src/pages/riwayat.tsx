@@ -273,8 +273,9 @@ export default function Riwayat() {
 
       {/* Tabel Transaksi */}
       <div className="bg-white rounded-b-[14px] overflow-hidden shadow-sm mb-3.5">
-        <div className="grid gap-0.5 px-1.5 py-1.5 border-b-2 border-gray-200 text-[9px] font-bold text-gray-500" style={{ gridTemplateColumns: '20px 36px 48px 1fr 52px 1fr 18px' }}>
+        <div className="grid gap-0.5 px-1.5 py-1.5 border-b-2 border-gray-200 text-[9px] font-bold text-gray-500" style={{ gridTemplateColumns: isOwner ? '16px 32px 42px 1fr 40px 1fr 14px 28px' : '20px 36px 48px 1fr 52px 1fr 18px' }}>
           <span>#</span><span>Jam</span><span>Tipe</span><span>Nominal</span><span>Admin</span><span>Ket</span><span></span>
+          {isOwner && <span className="text-center">Hapus</span>}
         </div>
 
         {filteredTx.length === 0 ? (
@@ -289,7 +290,7 @@ export default function Riwayat() {
             const ketText = tx.keterangan || "";
             return (
               <div key={tx.id}>
-                <div onClick={() => setExpandedTx(isExpanded ? null : tx.id)} className="grid gap-0.5 px-1.5 py-1.5 border-b border-gray-100 text-[9px] items-center cursor-pointer" style={{ gridTemplateColumns: '20px 36px 48px 1fr 52px 1fr 18px' }}>
+                <div onClick={() => setExpandedTx(isExpanded ? null : tx.id)} className="grid gap-0.5 px-1.5 py-1.5 border-b border-gray-100 text-[9px] items-center cursor-pointer" style={{ gridTemplateColumns: isOwner ? '16px 32px 42px 1fr 40px 1fr 14px 28px' : '20px 36px 48px 1fr 52px 1fr 18px' }}>
                   <span className="text-gray-400">{i + 1}</span>
                   <span>{(tx.transTime || "").slice(0, 5)}</span>
                   <span className={`font-bold truncate ${nt ? 'text-purple-600' : 'text-blue-900'}`}>{getShortCategory(tx.category)}</span>
@@ -297,6 +298,17 @@ export default function Riwayat() {
                   <span className={`truncate font-semibold ${tx.adminNonTunai ? 'text-purple-600' : 'text-gray-900'}`}>{formatRupiah(tx.admin || 0)}</span>
                   <span className="text-gray-500 truncate">{nt ? "💳 " : ""}{ketText}</span>
                   <span className="text-gray-400 text-[10px] text-center">{isExpanded ? "▲" : "▼"}</span>
+                  {isOwner && (
+                    <div className="flex justify-center" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleDelete(tx.id)}
+                        className="p-1.5 rounded-lg bg-red-50 border border-red-200 text-red-500 active:scale-90 transition"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {isExpanded && (

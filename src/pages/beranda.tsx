@@ -88,7 +88,7 @@ export default function Beranda() {
   };
   
   const handleProses = useCallback(async () => {
-    if (!user) return;
+    if (!user || saving) return;
     const now = new Date();
     const dateStr = getWibDate();
     const timeStr = now.toTimeString().substring(0, 5);
@@ -126,7 +126,7 @@ export default function Beranda() {
     } finally {
       setSaving(false);
     }
-  }, [user, nominalDisplay, adminDisplay, isAdminNonTunai, category, keterangan, toast, loadBalance]);
+  }, [user, shift, nominalDisplay, adminDisplay, isAdminNonTunai, category, keterangan, saving, toast, loadBalance]);
 
   const handleUpdate = useCallback(() => {
     if (confirm("Perbarui aplikasi ke versi terbaru? Halaman akan dibersihkan dan dimuat ulang secara paksa.")) {

@@ -56,6 +56,7 @@ export default function Catatan() {
   };
 
   const handleSaveKasbon = async () => {
+    if (saving) return;
     if (!nama.trim()) { toast({ title: "Nama harus diisi", variant: "destructive" }); return; }
     const n = parseInt(parseThousands(nominalDisplay));
     if (!n || n <= 0) { toast({ title: "Nominal harus diisi", variant: "destructive" }); return; }
@@ -75,6 +76,7 @@ export default function Catatan() {
   };
 
   const handleSaveKontak = async () => {
+    if (saving) return;
     if (!nama.trim()) { toast({ title: "Nama harus diisi", variant: "destructive" }); return; }
     setSaving(true);
     try {
