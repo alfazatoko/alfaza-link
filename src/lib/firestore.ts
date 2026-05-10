@@ -760,6 +760,10 @@ export async function addSaldo(kasirName: string, data: {
     batch.set(rekapRef, { total_isi_bank: increment(data.nominal) }, { merge: true });
   } else if (data.jenis === "Cash") {
     batch.set(rekapRef, { total_isi_cash: increment(data.nominal) }, { merge: true });
+  } else if (data.jenis === "Real App") {
+    // If user wants Real App to also show up in rekap or update balances, we can add it here.
+    // For now, we just ensure it's recorded in history with snapshots.
+    batch.set(rekapRef, { total_isi_real: increment(data.nominal) }, { merge: true });
   }
 
   await batch.commit();
@@ -840,6 +844,19 @@ export async function addSaldoHistoryOnly(kasirName: string, data: {
   const saldoDate = getWibDate();
   const saldoTime = now.toTimeString().substring(0, 5);
 
+  const balRef = doc(db, "balances", kasirName);
+  const balSnap = await getDoc(balRef);
+  let currentBank = 0;
+  let currentCash = 0;
+  
+  if (balSnap.exists()) {
+    const bal = balSnap.data() as BalanceRecord;
+    if (bal.lastUpdateDate === saldoDate) {
+      currentBank = bal.bank || 0;
+      currentCash = bal.cash || 0;
+    }
+  }
+
   const ref = await addDoc(collection(db, "saldo_history"), {
     kasirName,
     jenis: data.jenis,
@@ -848,6 +865,8 @@ export async function addSaldoHistoryOnly(kasirName: string, data: {
     saldoDate,
     saldoTime,
     createdAt: new Date().toISOString(),
+    saldoBankAfter: currentBank,
+    saldoCashAfter: currentCash,
   });
   return ref.id;
 }

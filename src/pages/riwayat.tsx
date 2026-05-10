@@ -413,7 +413,10 @@ export default function Riwayat() {
 
       {/* Tabel Saldo History — hanya hari ini */}
       <div className="bg-gradient-to-r from-blue-900 to-blue-600 rounded-t-[14px] px-3.5 py-2.5 flex items-center justify-between">
-        <span className="text-white font-bold text-[13px]">RIWAYAT TAMBAH SALDO</span>
+        <div className="flex items-center gap-3">
+          <span className="text-white font-bold text-[13px]">RIWAYAT TAMBAH SALDO</span>
+          <a href="/riwayat-saldo" className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full hover:bg-white/30 transition font-bold">DETAIL →</a>
+        </div>
         <div className="flex items-center gap-2">
           {isOwner && <span className="bg-amber-400 text-amber-900 text-[9px] font-black px-2 py-0.5 rounded-full">OWNER</span>}
           <span className="text-blue-200 text-[10px] font-semibold">
